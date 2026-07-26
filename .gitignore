@@ -1,0 +1,31 @@
+# Benchmark result raw data (large files)
+*.csv.bak
+*.log
+
+# Docker volumes and temp data
+data/
+volumes/
+
+# Environment and secrets
+.env
+*.env
+config/secrets*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code settings
+.vscode/
+
+# AWS CLI v2 installer (downloaded zip + unpacked install, not thesis content)
+awscliv2.zip
+aws/
+
+# Internal planning docs, not for the tracked repo history
+Context/
+

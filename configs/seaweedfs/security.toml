@@ -1,0 +1,20 @@
+[jwt.signing]
+key = ""
+expires_after_seconds = 10
+
+[access]
+ui = false
+
+[filer.expose_directory_metadata]
+enabled = true
+
+[jwt.signing.read]
+key = ""
+expires_after_seconds = 10
+
+# Required — without this key, the S3 gateway's IAM/STS subsystem fails to
+# initialize and bucket listing silently breaks (see setup_notes.md, Issue 2).
+# Generate a real value with: openssl rand -hex 32
+[jwt.filer_signing]
+key = "REPLACE_ME_WITH_OPENSSL_RAND_HEX_32"
+expires_after_seconds = 10

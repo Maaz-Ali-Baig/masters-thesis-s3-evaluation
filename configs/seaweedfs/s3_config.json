@@ -1,0 +1,18 @@
+{
+  "identities": [
+    {
+      "name": "thesis-test-user",
+      "credentials": [
+        {
+          "accessKey": "test",
+          "secretKey": "test"
+        }
+      ],
+      "actions": [
+        "Admin",
+        "Read",
+        "Write"
+      ]
+    }
+  ]
+}
