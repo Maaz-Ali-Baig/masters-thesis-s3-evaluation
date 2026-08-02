@@ -1,0 +1,79 @@
+================================================================================
+PIPELINE VALIDATION RUN - NOT MEASUREMENT DATA - DO NOT CITE
+================================================================================
+
+Date:     3 August 2026
+System:   SeaweedFS (chrislusf/seaweedfs, "30GB 4.25 7acba59a5"), single node,
+          Docker Desktop on Windows 11 / WSL2
+Endpoint: http://localhost:8333
+Tool:     Warp v1.5.0
+
+Purpose:  Confirm that the benchmarking chain (WSL2 -> Docker -> SeaweedFS S3
+          API) functions end to end. This run answers "does the tool work?",
+          NOT "how fast is SeaweedFS?".
+
+Why these results must not be used as data:
+  - single run, not repeated (protocol requires >= 5 repetitions)
+  - short measured window (16 s)
+  - no warm-up period; SeaweedFS was still allocating storage volumes during
+    the run
+  - uncontrolled host state (laptop, other processes not accounted for)
+  - deliberately low concurrency (4) chosen for diagnosability, not realism
+
+Command:
+  warp put --host localhost:8333 --access-key test --secret-key test \
+    --bucket warp-benchmark-bucket --obj.size 1MiB --duration 20s --concurrent 4
+
+NOTE: --bucket is destructive. Warp deletes all contents of the target bucket
+before and after each run. A dedicated warp-benchmark-bucket is used so that
+thesis-test-bucket is never touched.
+
+================================================================================
+RAW OUTPUT
+================================================================================
+
+Benchmarking: Saving benchmark data...
+
+Reqs: 1732, Errs:0, Objs:1732, Bytes: 1732.0MiB
+ -       PUT Average: 95 Obj/s, 94.5MiB/s; Current 84 Obj/s, 83.7MiB/s, 46.1 ms/req, TTFB: 34.5ms
+
+Report: PUT. Concurrency: 4. Ran: 16s
+ * Average: 94.52 MiB/s, 94.52 obj/s
+ * Reqs: Avg: 46.2ms, 50%: 39.3ms, 90%: 58.5ms, 99%: 197.2ms, Fastest: 27.3ms, Slowest: 768.6ms, StdDev: 42.3ms
+ * TTFB: Avg: 35ms, Best: 18ms, 25th: 25ms, Median: 29ms, 75th: 34ms, 90th: 43ms, 99th: 175ms, Worst: 752ms StdDev: 41ms
+
+Throughput, split into 16 x 1s:
+ * Fastest: 168.6MiB/s, 168.61 obj/s
+ * 50% Median: 89.3MiB/s, 89.32 obj/s
+ * Slowest: 48.9MiB/s, 48.93 obj/s
+
+Cleanup
+Cleanup Done
+
+================================================================================
+OBSERVATIONS
+================================================================================
+
+1. RESULT: 1732 requests, 0 errors. The measurement chain works end to end.
+
+2. MEASURED WINDOW SHORTER THAN REQUESTED. Warp reported "Ran: 16s" for a
+   --duration of 20s, because it trims ramp-up and ramp-down from its analysis
+   window. Durations reported in the thesis must be the measured window.
+
+3. HIGH VARIANCE WITHIN A SINGLE RUN. Per-second throughput ranged from
+   48.9 to 168.6 MiB/s, a factor of 3.4. Latency standard deviation (42.3 ms)
+   is close to the mean (46.2 ms), and p99 (197 ms) is five times p50 (39 ms).
+
+   Probable causes are environmental rather than properties of SeaweedFS:
+   Docker Desktop virtualisation, the Windows host filesystem underneath,
+   on-demand volume allocation inside SeaweedFS during the run, and no warm-up.
+
+   This is direct empirical justification for repeating every measurement at
+   least five times: reporting this single run as "94.52 MiB/s" would have been
+   indistinguishable from a run that happened to average 49 or 169 MiB/s.
+
+4. IMPLICATIONS FOR THE MEASUREMENT PROTOCOL (to raise with the professor
+   before data collection begins, as these are protocol changes):
+     - add an explicit warm-up phase whose results are discarded
+     - use longer runs (e.g. 60 s) in addition to repetition
+     - record host state alongside each result set
