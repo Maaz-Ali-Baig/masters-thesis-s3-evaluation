@@ -1,0 +1,131 @@
+================================================================================
+PIPELINE VALIDATION RUNS - NOT MEASUREMENT DATA - DO NOT CITE
+================================================================================
+
+Date:     9 August 2026 (SeaweedFS run carried over from 3 August 2026)
+Purpose:  Confirm Warp drives all three lightweight systems, not only SeaweedFS.
+Tool:     Warp v1.5.0
+Host:     Windows 11 / WSL2 / Docker Desktop, single node per system
+
+Identical parameters for all three:
+  warp put --obj.size 1MiB --duration 20s --concurrent 4
+
+Endpoints and credentials differ per system, and Garage additionally requires
+--region garage (see setup_notes.md Issue 6). Benchdata written under
+results/warp-raw/ via --benchdata rather than the working directory.
+
+WHY THESE ARE NOT DATA
+  - single run per system, not repeated (protocol requires >= 5)
+  - short measured window (~17 s after Warp trims ramp-up/ramp-down)
+  - no warm-up period
+  - uncontrolled host state (laptop, other processes not accounted for)
+  - deliberately low concurrency (4), chosen for diagnosability not realism
+  - the three systems are NOT equivalently configured: Garage runs at
+    replication_factor = 1, SeaweedFS and RustFS are plain single-node defaults.
+    They are not comparable as deployed.
+
+================================================================================
+SUMMARY
+================================================================================
+
+                          SeaweedFS      RustFS         Garage
+  Endpoint                :8333          :9000          :3900
+  Errors                  0              0              0
+  Requests (~17 s)        1732           1825           768
+  Throughput  MiB/s       94.52          91.63          40.61
+  Latency avg     ms      46.2           39.8           97.5
+  Latency p50     ms      39.3           34.8           85.8
+  Latency p90     ms      58.5           54.3           118.5
+  Latency p99     ms      197.2          117.5          706.2
+  Latency slowest ms      768.6          688.4          1940.2
+  Latency stddev  ms      42.3           24.4           74.2
+  TTFB median     ms      29             25             78
+  TTFB worst      ms      752            681            1929
+  Per-second fastest      168.6          139.9          50.9
+  Per-second median       89.3           95.2           45.9
+  Per-second slowest      48.9           28.0           2.2
+  Intra-run spread        3.4x           5.0x           23.1x
+
+================================================================================
+OBSERVATIONS
+================================================================================
+
+1. RESULT: zero errors on all three. Warp drives every lightweight system in the
+   study. The measurement chain is validated for SeaweedFS, RustFS and Garage.
+
+2. SEAWEEDFS AND RUSTFS ARE INDISTINGUISHABLE HERE. 94.52 vs 91.63 MiB/s is well
+   inside the noise of runs this unstable. No claim should be made that either is
+   faster on this evidence.
+
+3. GARAGE DIFFERS ON EVERY AXIS, not only throughput: under half the throughput,
+   roughly 2.5x the median latency, and a p99 of 706 ms against 117-197 ms.
+
+   The TTFB figure is the informative one. A median TTFB of 78 ms against 25-29 ms
+   means the delay occurs BEFORE data transfer begins, which points at per-request
+   overhead rather than bandwidth.
+
+   HYPOTHESIS, NOT A FINDING: at 1 MiB this is a metadata-heavy workload, and
+   Garage's architecture (LMDB metadata store, 256 partitions, quorum machinery
+   present even at replication_factor = 1) plausibly costs more per object. The
+   test that would settle it is an object-size sweep: if the cause is per-request
+   overhead, the gap should narrow substantially at 100 MiB and 1 GiB. It must be
+   verified before being stated in the thesis.
+
+4. GARAGE'S VARIANCE IS THE MOST STRIKING NUMBER. Its slowest one-second window
+   managed 2.2 MiB/s against a 45.9 MiB/s median - a 23x intra-run spread, where
+   SeaweedFS and RustFS showed 3.4x and 5.0x. That is not ordinary noise; it is a
+   stall. A periodic metadata flush or fsync would be consistent with a system
+   designed to prioritise durability on unreliable nodes, but this is unverified.
+
+5. CONSEQUENCE FOR TEST DESIGN. If a system stalls periodically, run LENGTH
+   matters as much as repetition COUNT: a 17-second window may miss a stall
+   entirely or land squarely on one, and neither is representative. This is
+   concrete support for the proposal to lengthen individual runs rather than
+   relying only on repeating short ones - a question already open with the
+   supervisor.
+
+6. VARIANCE ACROSS ALL THREE reinforces the >= 5 repetitions rule. Even the most
+   stable system here (SeaweedFS, 3.4x spread) could report substantially
+   different averages between two consecutive short runs.
+
+================================================================================
+RAW OUTPUT
+================================================================================
+
+--- RustFS (9 August 2026) ---
+Reqs: 1825, Errs:0, Objs:1825, Bytes: 1825.0MiB
+
+Report: PUT. Concurrency: 4. Ran: 17s
+ * Average: 91.63 MiB/s, 91.63 obj/s
+ * Reqs: Avg: 39.8ms, 50%: 34.8ms, 90%: 54.3ms, 99%: 117.5ms, Fastest: 19.8ms, Slowest: 688.4ms, StdDev: 24.4ms
+ * TTFB: Avg: 30ms, Best: 11ms, 25th: 21ms, Median: 25ms, 75th: 33ms, 90th: 42ms, 99th: 100ms, Worst: 681ms StdDev: 23ms
+
+Throughput, split into 17 x 1s:
+ * Fastest: 139.9MiB/s, 139.86 obj/s
+ * 50% Median: 95.2MiB/s, 95.19 obj/s
+ * Slowest: 28.0MiB/s, 28.01 obj/s
+
+--- Garage (9 August 2026) ---
+Reqs: 768, Errs:0, Objs:768, Bytes: 768.0MiB
+
+Report: PUT. Concurrency: 4. Ran: 17s
+ * Average: 40.61 MiB/s, 40.61 obj/s
+ * Reqs: Avg: 97.5ms, 50%: 85.8ms, 90%: 118.5ms, 99%: 706.2ms, Fastest: 65.8ms, Slowest: 1940.2ms, StdDev: 74.2ms
+ * TTFB: Avg: 89ms, Best: 59ms, 25th: 71ms, Median: 78ms, 75th: 90ms, 90th: 108ms, 99th: 695ms, Worst: 1.929s StdDev: 73ms
+
+Throughput, split into 17 x 1s:
+ * Fastest: 50.9MiB/s, 50.93 obj/s
+ * 50% Median: 45.9MiB/s, 45.85 obj/s
+ * Slowest: 2.2MiB/s, 2.20 obj/s
+
+--- SeaweedFS (3 August 2026, carried over) ---
+See results/2026-08-03_warp_pipeline_validation_seaweedfs.txt for the full output.
+ * Average: 94.52 MiB/s, 94.52 obj/s
+ * Reqs: Avg: 46.2ms, 50%: 39.3ms, 90%: 58.5ms, 99%: 197.2ms, Slowest: 768.6ms, StdDev: 42.3ms
+ * TTFB: Median: 29ms, Worst: 752ms
+ * Throughput 16 x 1s: Fastest 168.6MiB/s, Median 89.3MiB/s, Slowest 48.9MiB/s
+
+Benchdata (re-analysable with `warp analyze`):
+  results/warp-raw/rustfs-put-validation.json.zst
+  results/warp-raw/garage-put-validation.json.zst
+  results/warp-raw/warp-put-2026-08-03[004416]-CJEt.json.zst   (SeaweedFS)

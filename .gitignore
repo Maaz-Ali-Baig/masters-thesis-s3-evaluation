@@ -10,6 +10,11 @@ volumes/
 .env
 *.env
 config/secrets*
+# Real S3 credentials for the testbed. These live in ~/.thesis-s3-env (outside
+# the repo) and are read by scripts/s3-helpers.sh. This entry is defence in
+# depth in case a copy is ever placed inside the repository by accident.
+.thesis-s3-env
+*.thesis-s3-env
 
 # OS files
 .DS_Store
