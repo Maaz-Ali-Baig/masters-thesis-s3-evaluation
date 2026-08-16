@@ -1,0 +1,52 @@
+name: OSSperf with minIO server and minIO client
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+jobs: 
+  run-workflow:
+    runs-on: self-hosted
+
+    env:
+      MIN_USER: ${{ secrets.MINIO_USER }}
+      MIN_PASS: ${{ secrets.MINIO_PASS }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Remove Existing MinIO Container
+      run: |
+        if [ $(docker ps -aq -f name=minio) ]; then
+          docker stop minio
+          docker rm minio
+        fi 
+        
+    - name: Start Minio Server
+      run: |
+        docker run -d --name minio \
+          -p 9000:9000 \
+          -e MINIO_ROOT_USER=$MIN_USER \
+          -e MINIO_ROOT_PASSWORD=$MIN_PASS \
+          minio/minio server /data
+    - name: Wait for Minio Server to Start
+      run: |
+        for i in {1..10}; do
+          if docker logs minio 2>&1 | grep -q 'API: http://'; then
+            echo "MinIO is ready!";
+            break;
+          fi
+          echo "Waiting for MinIO to start...";
+          sleep 2;
+        done
+    - name: Configure MinIO client
+      run: | 
+        mc alias set myminio http://localhost:9000 $MIN_USER $MIN_PASS
+        mc alias list
+    - name: Run ossperf.sh
+      run: |
+        cd $GITHUB_WORKSPACE 
+        chmod +x ossperf.sh
+        ./ossperf.sh -n 5 -s 1048576 -b ossperf-testbucket -p -m myminio 
