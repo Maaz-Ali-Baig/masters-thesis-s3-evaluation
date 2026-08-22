@@ -103,6 +103,96 @@ Three observations worth carrying forward as hypotheses to test, not as findings
    A 17-second window may miss a stall entirely or land squarely on one, and neither is representative.
    This is concrete support for lengthening individual runs rather than only repeating short ones.
 
+## ossperf (baseline benchmarking tool, cross-check against Warp)
+- Source: github.com/christianbaun/ossperf, vendored into this repo at `ossperf/` on 16 August 2026.
+- Install note: the tool was first obtained via `git clone`, but the checkout (on the Windows/OneDrive
+  filesystem) picked up CRLF line endings, which broke every script with `$'\r': command not found` and
+  a syntax error. Downloading a plain zip from GitHub instead avoided this entirely — a zip preserves the
+  original Unix line endings, whereas `git checkout` on Windows can convert them. The working copy in
+  `ossperf/` was obtained this way and confirmed to run cleanly (`file ossperf.sh` shows no CRLF markers).
+  One stray file, `DEADJOE` (a `joe`-editor crash-recovery dump unrelated to the tool, present in the
+  upstream repo by accident), was removed before committing.
+- Dependencies: `bash`, `bc`, `md5sum` (present by default); `parallel` (installed via
+  `sudo apt-get install -y parallel` — pulled in `sysstat` as a side effect, which is useful later for the
+  CPU/memory/I/O investigation Baun asked for, since it provides `sar`/`iostat`/`mpstat`).
+- `s3cmd` is listed as a *required* dependency in ossperf's own README even though this project uses the
+  `-w` (AWS CLI) mode instead. The check at line 201 of `ossperf.sh` is unconditional — it runs regardless
+  of which backend flag is passed, unlike the AWS CLI check further down, which is correctly gated on
+  `-w`. `s3cmd` therefore only needs to be *installed* (`sudo apt-get install -y s3cmd`), never configured,
+  since `-w` means it's never actually invoked.
+- When using `-w`, ossperf requires `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as real environment
+  variables — it does not read the AWS CLI's own credentials file or profile. No region variable is
+  required; the AWS CLI's own default profile region is used.
+
+### First successful run (16 August 2026)
+```bash
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+./ossperf.sh -n 5 -s 1048576 -w -d http://localhost:8333 -b ossperf-testbucket
+```
+Five 1 MiB files, matching ossperf's own documented example, against SeaweedFS. All six phases (create
+bucket, upload, list, download, erase objects, erase bucket) completed with `[OK]`, and
+`[OK] Checksums have been validated and match the files` confirmed byte-for-byte integrity — the same
+guarantee as `scripts/verify-roundtrip.sh`, and the same method used in Wernicke (2017).
+
+### Reporting standard: Mbps
+ossperf reports bandwidth natively in Mbps (megabits/second, decimal). Warp reports natively in MiB/s
+(mebibytes/second). Adopted Mbps as the standard unit across the thesis, since it is ossperf's native
+output and the conventional network-bandwidth unit. Conversion used throughout:
+```
+1 MiB/s = 1,048,576 bytes/s x 8 bits/byte = 8,388,608 bits/s = 8.3886 Mbps
+```
+Any figure originally measured in MiB/s and converted for comparison is marked as such; it is not a
+fresh measurement and carries the rounding of the conversion.
+
+### Sequential vs. parallel upload/download (16 and 22 August 2026)
+First comparison (16 August, `n=3` sequential then `n=3` parallel, run order tracked only by memory of
+execution sequence since ossperf's CSV output has no column recording which mode produced a row) showed
+sequential outperforming parallel on download with no overlap across the six runs, but overlapping,
+inconclusive results on upload. Raw data preserved for reference at
+`results/ossperf-seaweedfs-mode-unconfirmed-2026-08-16.csv` — kept for the record, but not relied upon,
+since the mode of each row could only be inferred, not confirmed.
+
+This exposed a real data-hygiene gap: relying on memory of run order across a working session is fragile.
+Fixed going forward by moving `results.csv` to a mode-labelled filename in `results/` immediately after
+each batch, before starting the next, so a mixed-mode file can no longer occur.
+
+Repeated cleanly on 22 August 2026, three runs per mode, each batch archived immediately:
+`results/ossperf-seaweedfs-sequential-2026-08-22.csv`,
+`results/ossperf-seaweedfs-parallel-2026-08-22.csv`.
+
+| | Upload (Mbps) | Download (Mbps) |
+|---|---|---|
+| Sequential | 12.3, 20.1, 18.4 | 28.6, 29.4, 31.5 |
+| Parallel | 10.3, 8.9, 10.9 | 9.8, 9.2, 11.9 |
+
+No overlap on either metric this time — sequential's lowest value clears parallel's highest on both
+upload and download. At this specific test shape (5 files, 1 MiB each, against SeaweedFS), sequential
+execution outperforms `-p` (GNU-parallel-driven concurrent `aws` invocations) by roughly 2-3x.
+
+**Scope of this finding, stated explicitly so it is not over-generalised:** tested on one system
+(SeaweedFS), one object size (1 MiB), one file count (5). Plausible explanation is that GNU parallel's own
+coordination overhead, plus five separate `aws` CLI process spawns (fresh Python interpreter and TLS
+handshake each), is not amortised at this small scale — `nproc` confirmed 8 cores available, ruling out
+simple core starvation as the cause. This does **not** establish that `-p` is generally worse; it may
+behave differently at larger file counts or object sizes, which would need to be tested before any such
+claim is made.
+
+### Recurring bucket-creation stall — three instances across two systems, not yet explained
+`TIME_CREATE_BUCKET` spiked to an anomalous ~10 seconds twice, against a normal range of roughly 1-6
+seconds for the same operation: 9.572 s (16 August, mode-unconfirmed batch) and 10.094 s (22 August,
+first parallel run). Bucket creation is normally a near-instant metadata operation on all three systems
+tested so far.
+
+This is the same *shape* of problem already seen on Garage via Warp — a 23x intra-run throughput spread
+with a slowest-second measurement of 2.2 MiB/s against a 45.9 MiB/s median (see the Warp section above).
+Three occurrences now, across two different systems (SeaweedFS twice, Garage once), all presenting as an
+intermittent multi-second stall rather than a steady slowdown. Worth investigating as a possible shared
+cause (e.g. Docker Desktop/WSL2 virtualisation layer, or filesystem sync behaviour under OneDrive) rather
+than three unrelated system-specific quirks. This is the concrete material for the CPU/memory/I/O
+investigation Baun asked for in response to the Warp variance question — `sysstat` (installed as a side
+effect of installing `parallel`, see above) provides `sar`, `iostat` and `mpstat` for exactly this.
+
 ## SeaweedFS
 - Ports: 9333 (master), 8080 (volume), 8888 (filer/dashboard), 8333 (S3 API)
 - Dashboard: http://localhost:9333
