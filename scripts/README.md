@@ -56,3 +56,79 @@ docker exec garage /garage key info thesis-key --show-secret
 SeaweedFS and RustFS credentials are not secret in any meaningful sense — `test`/`test` and the
 inherited MinIO default `minioadmin`/`minioadmin` respectively — but are kept in the same file so
 there is one place to look.
+
+## s3-compat.sh and s3-compat-run.sh
+
+S3 API compatibility probe (Chapter 6, Appendix C). One file, run unchanged against every
+system, so each compatibility matrix cell comes from identical requests. It runs 22 tests
+(C01 to C22): bucket and object basics, range reads, copy, listing and pagination, deletes,
+multipart upload, tagging, versioning, conditional requests, presigned URLs, bucket policy,
+CORS, lifecycle, object lock, SSE-S3, ACLs, integrity checksums, awkward key names, and
+error code fidelity.
+
+**Local systems (SeaweedFS, RustFS, Garage).** Run from WSL, from the repository root:
+
+```bash
+./scripts/s3-compat-run.sh sw
+./scripts/s3-compat-run.sh rf
+./scripts/s3-compat-run.sh ga
+```
+
+The runner reads `~/.thesis-s3-env` and passes credentials to the probe inline for that one
+run. Nothing is exported, so there is nothing to unset. Output lands in
+`results/compat-<system>-<timestamp>/`.
+
+**Ceph (on ceph0).** The probe is fetched from the public repository, then run with the
+credentials given inline:
+
+```bash
+curl -fsSL -o /root/s3-compat.sh https://raw.githubusercontent.com/Maaz-Ali-Baig/masters-thesis-s3-evaluation/main/scripts/s3-compat.sh
+S3C_NAME=ceph S3C_ENDPOINT=http://localhost:80 S3C_KEY=<key> S3C_SECRET=<secret> \
+  S3C_NOTE="Ceph 20.2.4 Tentacle, RGW" bash /root/s3-compat.sh
+```
+
+**Options and variables.** `--only C01,C08` runs selected tests, `--keep` skips bucket cleanup,
+`--list` prints the test ids. `S3C_REGION` defaults to `us-east-1` (Garage needs `garage`).
+`S3C_CHECKSUM=when_required` stops the AWS CLI adding default integrity checksums, which
+separates "the server rejects the default client" from "the server lacks the feature".
+`S3C_KEEP_BIN=1` keeps the test payloads that are normally deleted after the run.
+
+**Verdicts.** PASS means every sub-check behaved as AWS S3 documents. UNSUPPORTED means a
+sub-check failed and the server answered NotImplemented. FAIL is anything else. SKIP means a
+prerequisite failed or the installed AWS CLI lacks the flag. PASS and FAIL are decided
+mechanically against documented AWS behaviour; whether a FAIL is a defect or a legitimate
+design difference is a judgement made afterwards from the saved evidence.
+
+**Evidence.** Every request is saved under `evidence/<test>/` as `.cmd`, `.out` and `.err`
+(command, stdout, stderr), so any matrix cell traces back to the raw server reply.
+`summary.tsv` has one row per test. `env.txt` records the AWS CLI version, the server's
+response headers, and checksums of the payloads used. Credentials are never written out.
+
+**What the probe does not prove.** SSE-S3 (C18) tests that the API accepts and echoes the
+header, not that data is encrypted on disk. Lifecycle (C16) tests that the configuration is
+stored and returned, not that objects actually expire. Presigned PUT and unsigned-header
+handling belong to the security phase and need a client that can presign uploads.
+
+## verify-*.sh, second client cross checks
+
+The probe drives everything through the AWS CLI, which hides the raw HTTP status and can mislead (it already
+did once, over `KeyCount`). These scripts repeat the surprising results with `curl` signing its own requests, so
+a different client confirms or contradicts them. Each takes `sw`, `rf` or `ga` and saves its output under
+`results/`. They use the same `~/.thesis-s3-env` credentials inline and create and remove their own buckets
+(named `s3c-verify-*`), emptying them first.
+
+```bash
+./scripts/verify-bucket-delete.sh sw      # delete a bucket that still holds an object, then look at what is left
+./scripts/verify-acl-enforcement.sh sw    # object ACL, bucket ACL and bucket policy against anonymous requests
+./scripts/verify-key-limits.sh sw         # trailing slash key, path component length, exact total key length
+./scripts/verify-sse-acl.sh sw            # SSE-S3 header and canned ACL on flat and prefixed keys
+./scripts/verify-raw-http.sh sw           # conditional requests, multipart, SSE and lock headers, CORS, lifecycle
+```
+
+Run the same script on all three systems and compare, because the other two act as controls that show the test
+can detect the behaviour AWS documents. Only statuses, headers and short body excerpts are printed. The reading
+of them is done separately, never inside the script.
+
+Two traps found while writing them. `curl -T file URL/` appends the file name when the URL ends in a slash, so
+uploads to a key ending in `/` must use `--data-binary`. The AWS CLI drops `KeyCount` from listings it paginates
+automatically, so count the listed keys or use `--no-paginate`.

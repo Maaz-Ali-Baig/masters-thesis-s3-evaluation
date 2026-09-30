@@ -1,0 +1,4 @@
+# Shell scripts are run from WSL and fetched with curl onto Linux VMs, so they must keep
+# LF line endings even though core.autocrlf is on for this Windows checkout. CRLF makes
+# bash fail with "bad interpreter" or "command not found".
+*.sh text eol=lf
