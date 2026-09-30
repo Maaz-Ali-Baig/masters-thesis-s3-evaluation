@@ -267,13 +267,20 @@ to rootfs at "/etc/seaweedfs/s3_config.json": not a directory:
 Are you trying to mount a directory onto a file (or vice-versa)?
 ```
 
-Root cause: under Docker Desktop on Windows, the WSL2 distribution and the container runtime live in two
-separate VMs, so bind mounts must be bridged between them. Directory bind mounts are bridged as a live
-path mapping and remain valid indefinitely. **Single-file bind mounts are instead staged into an
-ephemeral location inside the Docker Desktop VM** (`/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/`)
-under a content hash. That staging area is discarded when Docker Desktop restarts, while the container
-retains its now-dangling reference to the hashed path — so `runc` fails during container init and the
-container cannot start. The source files in WSL are never touched or lost; only the mapping breaks.
+**Observed behaviour (proven by the table below and reproduced by the fix):** single-file bind mounts did
+not survive a Docker Desktop restart, directory bind mounts did, and the container's stored reference
+pointed at a hashed path under `/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/` that no longer
+resolved.
+
+**Proposed mechanism (inference, not verified here, and no source recorded):** under Docker Desktop on
+Windows the WSL2 distribution and the container runtime live in separate VMs, so bind mounts must be
+bridged between them; directory mounts appear to be bridged as a live path mapping while single files
+appear to be staged into the hashed location above, which is then discarded on restart, leaving the
+container holding a dangling reference. This explanation is consistent with every observation made, but it
+was not independently confirmed against Docker documentation or source, and it should be cited or
+re-verified before appearing in the thesis as a cause rather than as a hypothesis. What is certain either
+way is the observable rule and the fix. The source files in WSL were never touched or lost; only the
+mapping broke.
 
 The failure mode was directly observable in this setup, since the same container used both mount types:
 
@@ -331,6 +338,35 @@ credentials, unchanged. RustFS does not appear to force a credential change on f
 Garage, which ships no default credentials at all — a key must be explicitly created. To be confirmed and
 written up in the Security chapter.
 
+### Multi-node support — confirmed via documentation, not yet built (22 August 2026)
+Open question since Baun's reply (9 August): does RustFS support clustering at all, since only Ceph was
+originally planned as multi-node. Checked directly rather than assumed, per RustFS's own GitHub repo,
+docs, and a community discussion asking the same question (rustfs/rustfs#2248).
+
+**Answer: yes, RustFS has a distributed mode, with three caveats that matter for planning.**
+
+1. Feature status is listed as "Under Testing," not stable/production. Worth stating as a limitation
+   when RustFS's multi-node results are eventually reported.
+2. The current single-node deployment **cannot be upgraded in place**. Single-node mode uses no erasure
+   coding, and its on-disk data layout is incompatible with distributed mode. A multi-node cluster has to
+   be a fresh deployment, with all nodes defined from the start — not an extension of the running
+   container documented above.
+3. Requires `--network host` rather than the default Docker bridge networking currently used for all
+   three lightweight systems, since bridge networking does not support the node-to-node communication
+   distributed mode needs.
+
+Configuration shape (from RustFS's own docs, not yet tested locally): all nodes are listed together in a
+single `RUSTFS_VOLUMES` environment variable, e.g.
+`RUSTFS_VOLUMES="http://node1:9000/data http://node2:9000/data http://node3:9000/data"`, rather than each
+node being configured independently and joined afterward (contrast with Garage's `layout assign` /
+`layout apply` model, or Ceph's per-daemon bootstrap).
+
+**Consequence for the replication chapter's scope decision:** RustFS can now be included in the
+single-node-and-multi-node comparison Baun asked for. Actual deployment (fresh containers, host
+networking, node count — proposed as three, to match the Ceph VM count, pending Baun's confirmation) is
+scheduled together with the SeaweedFS and Garage multi-node builds, not done in isolation, so all three
+lightweight systems' clusters are stood up under comparable conditions.
+
 ## Garage
 - Ports: 3900 (S3 API), 3901 (RPC), 3902 (admin)
 - Data dir `~/garage-data`, config dir `~/garage-config` (see mount note below)
@@ -374,9 +410,23 @@ i.e. `replication_factor = 1`, no redundancy. Adequate for throughput benchmarki
 raised and a multi-node cluster built before the Replication and Fault Tolerance chapter.
 
 **Permission model.** Keys and buckets are independent objects and neither implies access to the other;
-authorisation must be granted explicitly per key per bucket (`bucket allow`). SeaweedFS and RustFS both
-treat valid credentials as access to everything. Garage is deny-by-default, which is the stronger
-security posture and should be credited as such in the Security chapter.
+authorisation must be granted explicitly per key per bucket (`bucket allow`). Garage is deny-by-default,
+which is the stronger posture *as configured by default* and should be credited as such in the Security
+chapter.
+
+**Correction (22 September 2026) — an earlier version of this paragraph claimed "SeaweedFS and RustFS both
+treat valid credentials as access to everything." That claim is not supported by anything tested here and
+has been withdrawn.** The SeaweedFS identity in use (`configs/seaweedfs/s3_config.json`) was deliberately
+created with `Admin`, `Read` and `Write` granted globally, and RustFS was addressed with its root
+administrator credentials. Under both configurations full access is the expected outcome, so the
+observation shows what was granted, not what the system is capable of restricting. The setup as built
+could not have distinguished "no scoping available" from "scoping available, not used".
+
+*Open question, with the test that settles it*: create a deliberately scoped, non-admin identity on each of
+SeaweedFS and RustFS, granting access to exactly one bucket, then attempt an operation against a second
+bucket with that identity and record the result. Only that establishes a genuine three-way comparison of
+authorisation granularity. Until it is run, the Security chapter may state Garage's deny-by-default model
+as observed, but must not characterise SeaweedFS's or RustFS's model at all.
 
 `garage key info` also reports `Can create buckets: false` for a newly created key, meaning the key
 cannot create buckets through the S3 API (`aws s3 mb`) unless separately granted with
@@ -443,3 +493,1200 @@ reproduced, most plausibly a startup race, rather than claimed as a confirmed de
 mitigation is the same either way and is already required by Issues 1 and 4: verify from the client side
 that listings are correct before starting a measurement run, and never treat an empty listing immediately
 after startup as authoritative.
+
+## Ceph
+
+- Platform: 3 VMs on university Proxmox VE 9.2.10, one per physical host (pveproj0/1/2), Debian 12.15
+  (Bookworm). Hostnames set to `ceph0` (192.168.1.72, bootstrap/admin node, reports internally as
+  `debian` — see the hostname note below), `ceph1` (192.168.1.71), `ceph2` (192.168.1.70).
+- Access constraint: the university VPN (FortiClient) reaches the Proxmox management console only, not
+  the VM subnet itself (192.168.1.0/24). Confirmed via parallel ping tests from both WSL and native
+  PowerShell (both 100% packet loss to the VM IPs, while the VMs ping each other with 0% loss), which
+  rules out a WSL-specific routing bug and points at the VPN's own routing scope. The university cluster
+  admin (Mr Petrozziello) confirmed this is a permanent limitation of the current network design, not
+  something that can be opened on request. **Consequence: all Ceph work happens by pasting commands into
+  the Proxmox browser console, one node at a time — there is no SSH path from the laptop into this
+  network.** This also means Warp and ossperf, which run from the WSL laptop against `localhost`-mapped
+  ports for the other three systems, cannot reach Ceph's S3 endpoint the same way; benchmarking Ceph will
+  need the tools installed and run from inside the VM network itself, a genuine methodology difference
+  worth stating explicitly rather than glossing over.
+- Install method: `cephadm`, the official Ceph-recommended orchestrator for multi-node clusters.
+
+### Issue 8 — documented cephadm download method (raw script from a release branch on GitHub) is dead (7 September 2026)
+Ceph's own docs and many install guides describe downloading the standalone `cephadm` script directly
+from a release branch of the GitHub repo, e.g.
+`https://raw.githubusercontent.com/ceph/ceph/reef/src/cephadm/cephadm`. This returned a 14-byte file
+whose entire content was the literal text `404: Not Found` — not a curl error, a genuine HTTP 404 with a
+plausible-looking filename, easy to mistake for a truncated but real download until the file size and
+content are actually checked. Tried three branches in sequence (`reef`, `squid`, `main`) — all three
+404'd identically. Confirmed with `curl -v` that this was a real TLS connection to
+`raw.githubusercontent.com` (valid certificate, real handshake) returning a genuine 404, not a proxy or
+network intercept substituting content.
+
+Root cause, per the current Ceph installation documentation
+([docs.ceph.com/en/latest/cephadm/install/](https://docs.ceph.com/en/latest/cephadm/install/), which
+documents the `download.ceph.com` method and no longer the GitHub raw-file one): recent Ceph releases
+distribute `cephadm` as a build artifact rather than a plain script sitting in the git tree at that path.
+*Precision note*: what is directly evidenced here is that the GitHub path 404s on all three branches tried
+and that the documented method is now the `download.ceph.com` one. The statement about **why** the file
+moved is read from the documentation's current shape, not from a changelog entry naming the change, so it
+should be cited as "the documented method is X" rather than asserted as a packaging history. The
+documented current method downloads a release-specific build from `download.ceph.com`:
+```bash
+CEPH_RELEASE=20.2.4   # latest active release at the time (Tentacle, EOL 2027-06-01)
+curl --silent --remote-name --location https://download.ceph.com/rpm-${CEPH_RELEASE}/el9/noarch/cephadm
+chmod +x cephadm
+```
+This worked immediately — a real ~1 MB executable, versus the earlier 14-byte 404 pages. Note the path
+says `el9` (Enterprise Linux 9) but the script itself is distro-agnostic; it ran correctly on Debian 12.
+Worth recording as a live example of how fast infrastructure tooling documentation drifts — several
+install guides found via search still describe the GitHub method as current.
+
+Also needed `curl` itself installed first (`apt install -y curl`), since the minimal Debian template used
+for these VM clones does not include it by default.
+
+### Ceph bootstrap and cluster build (7-17 September 2026)
+Sequence, run entirely through the Proxmox console on each node in turn:
+
+1. **cephadm install** (on `ceph0` only): `./cephadm add-repo --release tentacle` then `./cephadm install`
+   — adds Ceph's apt repo for Debian and installs the `cephadm` command properly. Confirmed with
+   `cephadm version` → `20.2.4 ... tentacle (stable)`.
+2. **Bootstrap the first node**: `cephadm bootstrap --mon-ip 192.168.1.72`. Creates the first monitor and
+   manager daemon, pulls container images (Ceph runs its daemons in Podman containers, not natively on
+   the host), and prints a generated dashboard URL/password and the cluster's SSH public key
+   (`/etc/ceph/ceph.pub`) used to add further nodes. `ceph -s` immediately afterward showed `HEALTH_WARN`
+   with `OSD count 0 < osd_pool_default_size 3` — expected and correct at this point, since no storage has
+   been added yet.
+
+### Issue 9 — hostname collision across cloned VMs (7 September 2026)
+All three VMs were cloned from the same Proxmox template and therefore all reported `hostname` as
+`debian`. Ceph identifies cluster hosts by hostname, so adding a second and third node under an identical
+name would conflict. Fixed by renaming only the two not-yet-joined nodes
+(`hostnamectl set-hostname ceph1` / `ceph2`, plus updating the `127.0.1.1` line in `/etc/hosts` to match)
+and leaving the already-bootstrapped node's hostname (`debian`) untouched, since it was already registered
+in the cluster under that name and renaming it risked disrupting the running monitor. The cluster does not
+require any particular naming scheme, only uniqueness — so `debian`, `ceph1`, `ceph2` is a valid, if
+slightly inconsistent-looking, permanent set of hostnames for this cluster.
+
+### Issue 10 — adding hosts requires SSH key distribution, which requires password auth Debian disables by default for root (7 September 2026)
+`ceph orch host add` requires the bootstrap node to SSH into each new host as root using the cluster's
+generated key (`ssh-copy-id -f -i /etc/ceph/ceph.pub root@<new-host-ip>`), which itself requires a
+one-time password login to seed that key. This failed repeatedly with `Permission denied`, even
+immediately after resetting the root password via `passwd` on the target VM's own console (ruling out a
+wrong/forgotten password). Checked `/etc/ssh/sshd_config` and `/etc/ssh/sshd_config.d/` on the target
+host for an explicit `PermitRootLogin` setting — neither had one, meaning OpenSSH's current default
+applied: `PermitRootLogin prohibit-password`, which accepts root logins by SSH key only and silently
+rejects password attempts regardless of whether the password is correct.
+
+Fix, applied on `ceph1` and `ceph2` before the key copy: appended `PermitRootLogin yes` to
+`/etc/ssh/sshd_config` and `systemctl restart ssh`, to allow one password-based login long enough to
+install the cluster's SSH key. After the key is installed, root login no longer needs a password at all,
+so this is a narrow, temporary widening of access rather than a standing weakening — worth a one-line
+mention in the Security chapter as a real hardening default encountered during setup, not something to
+gloss over.
+
+### Issue 11 — `ceph orch host add` fails a preflight check for a missing package (7 September 2026)
+Adding `ceph1` failed with `Error EINVAL: check-host failed: ... ERROR: lvcreate binary does not appear
+to be installed`, even though Podman, systemd and the hostname all passed their checks. Ceph's orchestrator
+runs a preflight host-check before accepting a new node, and requires LVM tooling to be present up front —
+even though no OSDs (which are the actual LVM users) exist yet at that point. Fixed with
+`apt install -y lvm2` on `ceph1` and `ceph2`, after which both hosts were added cleanly:
+```bash
+cephadm shell -- ceph orch host add ceph1 192.168.1.71
+cephadm shell -- ceph orch host add ceph2 192.168.1.70
+```
+`ceph orch host ls` then listed all three hosts, and `ceph -s` showed 3 mon daemons in quorum
+(`debian`, `ceph1`, `ceph2`) with a standby manager on `ceph1` — still `HEALTH_WARN` for the same reason
+as before (no OSDs yet).
+
+### OSD provisioning
+Each of the three Proxmox VMs was given a second virtual disk (32 GB each, added via the Proxmox web UI,
+Hardware → Add → Hard Disk on each VM — this step happens in Proxmox itself, not inside the VM console)
+in addition to the existing OS disk, since Ceph requires a dedicated raw, unpartitioned, unmounted disk
+per OSD and will not use free space on the OS disk. `ceph orch device ls` did not list the new disks
+until a manual refresh (`ceph orch device ls --refresh`) was run — Ceph's device inventory scans
+periodically rather than instantly picking up newly attached hardware.
+
+Once visible, all three were claimed in one command:
+```bash
+cephadm shell -- ceph orch apply osd --all-available-devices
+```
+`ceph -s` afterward showed **`HEALTH_OK`**, 3 mons in quorum, 3 OSDs up and in, 96 GiB total usable
+capacity (3 × 32 GB). This is the first fully healthy state of the cluster.
+
+### RGW (S3 gateway) deployment and verification (17 September 2026)
+```bash
+cephadm shell -- ceph orch apply rgw s3test --placement="3 debian ceph1 ceph2"
+```
+Deployed one RGW (RADOS Gateway, Ceph's S3-compatible API service) daemon on each of the three nodes,
+matching the multi-node placement already used for mons/OSDs. `ceph orch ps --daemon-type rgw` confirmed
+all three running on port 80.
+
+Created a test S3 identity via `radosgw-admin` (Ceph's own admin CLI, separate from the `ceph` command):
+```bash
+cephadm shell -- radosgw-admin user create --uid=thesis --display-name="Thesis Test User" \
+  --access-key=thesiskey --secret-key=<CEPH_TEST_SECRET_KEY>
+```
+
+S3 round trip verified directly from `ceph0`'s console (the only reachable point — see the access
+constraint note above), using AWS CLI installed on the VM itself rather than the laptop:
+```bash
+aws --endpoint-url http://localhost:80 s3 mb s3://thesis-test
+head -c 1M /dev/urandom > testfile.bin
+md5sum testfile.bin                                                   # b7e8ee47e21259c8a71f5c8b02b5a900
+aws --endpoint-url http://localhost:80 s3 cp testfile.bin s3://thesis-test/
+aws --endpoint-url http://localhost:80 s3 cp s3://thesis-test/testfile.bin testfile-downloaded.bin
+md5sum testfile-downloaded.bin                                        # b7e8ee47e21259c8a71f5c8b02b5a900
+```
+Hashes matched. Bucket create, list, upload, download and integrity all confirmed working — Ceph's S3
+pipeline is verified end to end, using the same MD5 round-trip method as `scripts/verify-roundtrip.sh`
+applied to the other three systems.
+
+**Status at this point: 3-node cluster healthy, RGW live on all three nodes, S3 basic operations
+verified. Not yet benchmarked with Warp or ossperf — pending a decision on how to run those tools against
+a network the laptop cannot reach directly (most likely: install them on `ceph0` itself and run from
+there, pulling results back via the console or a shared location). Not yet load-tested, and fault-tolerance
+testing (node failure simulation) not yet attempted.**
+
+### Benchmarking Ceph — tools installed and run on `ceph0` itself (17 September 2026)
+Confirmed the network constraint noted above in practice: with `warp`/`ossperf` on the WSL laptop, there
+is no route to any of the three VMs, only to the Proxmox console. Resolution adopted: install both
+benchmarking tools directly on `ceph0` and run them from there, pasting results out through the console —
+a real, stated methodology difference from the other three systems, which are measured from the laptop.
+
+- **Warp**: installed v1.7.0 (`dl.min.io/aistor/warp/release/linux-amd64/archive/warp`) — note this is a
+  newer version than the v1.5.0 used against SeaweedFS/RustFS/Garage in August, since Warp has moved on
+  since then. Worth a one-line mention alongside any cross-system Warp comparison.
+- **ossperf**: installed via `git clone` directly on the Linux VM (not the zip-download workaround used on
+  Windows/OneDrive) — confirmed via `file ossperf.sh` to carry no CRLF line endings, so the corruption
+  problem that forced the zip method on the laptop does not apply here, as expected since it was a
+  Windows/OneDrive-specific issue, not a property of `ossperf` itself.
+
+### Issue 12 — Warp's default chunked/streaming upload signing is rejected by this Ceph RGW build (17 September 2026)
+`warp put` against Ceph's RGW failed every upload with a bare `Access Denied`, while bucket creation,
+listing and other calls all succeeded normally:
+```
+warp: <ERROR> upload error:  Access Denied.
+```
+Isolated the cause methodically rather than guessing:
+
+1. Ruled out credentials/permissions — an `aws s3 cp` of the same file, by the same user, into the same
+   bucket Warp had just created, succeeded without issue.
+2. Ruled out clock skew — `timedatectl` showed `System clock synchronized: yes`, NTP active, correct
+   timezone.
+3. Used `warp put --debug` to capture the actual HTTP exchange. The failing request:
+   ```
+   PUT /warp-debug2-bucket/gAolg32M/2.ynpDvqQwCasoRyQ0.rnd HTTP/1.1
+   Content-Encoding: aws-chunked
+   X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+   X-Amz-Decoded-Content-Length: 1048576
+   ...
+   HTTP/1.1 403 Forbidden
+   <Error><Code>AccessDenied</Code>...
+   ```
+   Every successful call in the same session (`aws s3 cp`, and Warp's own bucket-creation/listing calls)
+   used a normally signed request body; only the object-upload calls, which Warp's underlying client
+   (`minio-go v7.3.0`) sends using AWS's chunked, streaming-signed transfer encoding
+   (`STREAMING-AWS4-HMAC-SHA256-PAYLOAD` + `Content-Encoding: aws-chunked`), were rejected.
+
+Searched for known Ceph RGW issues with this signing mode — several exist
+([PR #9484](https://github.com/ceph/ceph/pull/9484),
+[PR #10167](https://github.com/ceph/ceph/pull/10167),
+[PR #15965](https://github.com/ceph/ceph/pull/15965),
+[tracker #16146](https://tracker.ceph.com/issues/16146),
+[tracker #19754](https://tracker.ceph.com/issues/19754),
+[tracker #20665](https://tracker.ceph.com/issues/20665)) — but all found so far predate this Ceph release
+(Tentacle 20.2.4) by several years and describe different symptoms (hangs, zero-byte upload failures,
+LDAP-specific auth), not a clean `AccessDenied` on a normal-sized object.
+
+**The working hypothesis recorded at this point — that Ceph's RGW does not support the chunked/streaming
+transfer mode — later turned out to be wrong, and is left here deliberately rather than edited away, since
+the correction is itself part of the methodology.** Streaming uploads are supported; the actual fault lay in
+*which headers that mode includes in the signature*. Root cause was established on 22 September 2026 via
+RGW-side debug logging — see "Issue 12 resolved" below.
+
+**This is treated as a genuine S3 API compatibility finding, not merely a local obstacle**: a real,
+current-generation Ceph RGW deployment rejects a standard AWS SDK upload mode that a mainstream benchmarking
+tool (Warp, built on `minio-go`, the same client library many production applications use) sends by
+default. Belongs in the S3 API Compatibility chapter regardless of whether a workaround is eventually
+found, since the practical consequence — "this popular tool's default upload mode does not work against
+Ceph out of the box" — is itself the finding.
+
+**Practical resolution adopted for now**: benchmark Ceph with ossperf instead of Warp, since ossperf's `-w`
+mode uses the AWS CLI as its backend, already confirmed working against Ceph (see the manual round trip
+and `aws s3 cp` test above). Warp is not abandoned — the exact cause is worth establishing before the
+thesis is written up, and is scheduled as a dedicated follow-up investigation. *(That investigation was
+carried out on 22 September 2026 and succeeded; Warp is now usable against Ceph. See below.)*
+
+### Issue 12 resolved — root cause found, and it is a security-versus-compatibility finding (22 September 2026)
+
+Dedicated follow-up session, as planned. The decisive move was to stop inspecting the request from the
+client side and instead ask the server *why* it refused.
+
+**Step 1 — raise RGW's own log verbosity.** `ceph tell` does not accept RGW targets (`Bad target type
+'client'`, since RGW is a client-type daemon, not mon/osd/mgr/mds), so the level was set through the
+cluster config database instead, which running daemons pick up live without a restart:
+```bash
+cephadm shell -- ceph orch ps --daemon-type rgw        # identify the local daemon
+cephadm shell -- ceph config set client.rgw.s3test.debian.ghnhoi debug_rgw 20/20
+```
+The daemon serving `localhost:80` on `ceph0` is `rgw.s3test.debian.ghnhoi`.
+
+**Step 2 — reproduce with a single worker** so the debug log stays readable, then capture it:
+```bash
+warp put --duration=5s --concurrent=1 --obj.size=1MiB --host=localhost:80 \
+  --access-key=thesiskey --secret-key=<CEPH_TEST_SECRET_KEY> --bucket=warp-debug3
+cephadm logs --name rgw.s3test.debian.ghnhoi -- -n 3000 > /root/rgwdebug.log
+grep -m1 -B 50 "err_no=-1" /root/rgwdebug.log
+```
+(Note: `cephadm logs` passes extra arguments to `journalctl` only after a `--` separator; `--tail` is not
+a cephadm flag.)
+
+**Step 3 — the decisive log line.** RGW states the reason explicitly:
+```
+req ... v4 credential format = thesiskey/20260921/us-east-1/s3/aws4_request
+req ... access key id = thesiskey
+Signature rejected: 'content-type' supplied but not in CanonicalHeaders.
+req ... s3:put_obj rgw::auth::s3::LocalEngine denied with reason=-1
+req ... s3:put_obj rgw::auth::s3::AWSAuthStrategy denied with reason=-1
+req ... s3:put_obj Failed the auth strategy, reason=-1
+failed to authorize request
+req ... op->ERRORHANDLER: err_no=-1 new_err_no=-1
+```
+`err_no=-1` is `EPERM`, which RGW surfaces to the client as a bare `AccessDenied` with no message body —
+which is precisely why this was so hard to diagnose from the client side.
+
+**Step 4 — confirm the same fault from the client side.** Captured the full request with `warp put --debug`
+and isolated the failing object PUT:
+```
+PUT /warp-debug5/%29F%29B%28mvH/1.7hJLdmRlY06%28X17k.rnd HTTP/1.1
+Host: localhost
+User-Agent: MinIO (linux; amd64) minio-go/v7.3.0 warp/v1.7.0
+Authorization: AWS4-HMAC-SHA256 Credential=thesiskey/20260921/default/s3/aws4_request,
+  SignedHeaders=content-encoding;host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,
+  Signature=**REDACTED**
+Content-Encoding: aws-chunked
+Content-Type: application/octet-stream
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20260921T191924Z
+X-Amz-Decoded-Content-Length: 1048576
+
+HTTP/1.1 403 Forbidden
+```
+`Content-Type: application/octet-stream` is on the wire, but `content-type` does not appear in
+`SignedHeaders`. Server-side complaint and client-side evidence match exactly.
+
+**Step 5 — locate the fault in the client library.** Warp v1.7.0 embeds `minio-go v7.3.0`. That version's
+streaming signer excludes Content-Type from the signature unconditionally
+([`pkg/signer/request-signature-streaming.go`](https://github.com/minio/minio-go/blob/v7.3.0/pkg/signer/request-signature-streaming.go)):
+```go
+var ignoredStreamingHeaders = map[string]bool{
+	"Authorization": true,
+	"User-Agent":    true,
+	"Content-Type":  true,   // present in v7.3.0, removed upstream since
+}
+```
+The non-streaming signer signs Content-Type correctly, which is exactly why bucket creation, listing and
+`aws s3 cp` all succeeded while only object uploads failed. On current `master` the `"Content-Type"` entry
+is gone.
+
+**The full causal chain, and why this is a genuine finding rather than a local obstacle:**
+
+1. Ceph patched [CVE-2026-54330](https://docs.ceph.com/en/latest/security/CVE-2026-54330/) (CVSS 8.1,
+   rated Important by Red Hat) in **Tentacle 20.2.4 and Squid 19.2.6** — the exact release deployed on this
+   cluster. The flaw: RGW's SigV4 verifier validated only the headers listed in `X-Amz-SignedHeaders` and
+   silently accepted additional unsigned ones, so any holder of a presigned PUT URL could attach arbitrary
+   unsigned `x-amz-*` headers and escalate privileges beyond what the URL's signer authorised.
+2. The patch hardened SigV4 verification so that headers present on the wire but absent from the signature
+   cause the request to be rejected.
+3. `minio-go v7.3.0`'s streaming signer sends `Content-Type` while deliberately omitting it from
+   `SignedHeaders` — legal against AWS S3, which tolerates unsigned non-`x-amz-` headers, but rejected by
+   the newly hardened RGW.
+4. Warp v1.7.0 therefore fails **every object upload** against a patched Ceph with an unexplained
+   `AccessDenied`, while every other operation works.
+
+This was reported upstream independently as
+[minio-go issue #2300](https://github.com/minio/minio-go/issues/2300) —
+*"Streaming/chunked signer excludes Content-Type from SignedHeaders, causing rejections on hardened
+S3-compatible servers (Ceph RGW)"* — filed against this same Ceph version and explicitly attributing it to
+the post-CVE hardening. Fixed in commit `c4168e0c` on 9 September 2026 (*"signer: fix streaming signer to
+include Content-Type in SignedHeaders"*).
+
+**Resolution — upgrade the client, not the server.** Warp **v1.8.0** (released 19 September 2026) pins
+`minio-go v7.3.1-0.20260909183557-78bfa91607c2`, i.e. the commit containing the fix:
+```bash
+wget https://dl.min.io/aistor/warp/release/linux-amd64/archive/warp_1.8.0_amd64.deb \
+  -O /root/warp_1.8.0_amd64.deb
+dpkg -i /root/warp_1.8.0_amd64.deb
+warp --version        # v1.8.0
+```
+
+**Verification** — the identical command that previously failed on every single upload:
+```
+Report: PUT. Concurrency: 1. Ran: 7s
+ * Average: 28.41 MiB/s, 28.41 obj/s
+ * Reqs: Avg: 35.0ms, 50%: 36.1ms, 90%: 40.0ms, 99%: 43.5ms, Fastest: 28.7ms, Slowest: 53.3ms
+ * Reqs: 261, Errs: 0, Objs: 261, Bytes: 261.0MiB
+```
+261 objects, **zero errors**. *These numbers are not a measurement* — `debug_rgw` was still at `20/20`
+during this run, which is enormously expensive logging. Debug level was reset immediately afterwards:
+```bash
+cephadm shell -- ceph config rm client.rgw.s3test.debian.ghnhoi debug_rgw
+```
+
+**Consequences for the thesis:**
+
+- **Methodological**: Warp now works against Ceph, so Ceph can be benchmarked with *the same tool* as
+  SeaweedFS, RustFS and Garage rather than only with ossperf. This removes a real threat to comparability
+  that had been accepted as unavoidable. ossperf results already collected remain valid and are kept.
+- **S3 API Compatibility chapter**: the finding is sharper than first recorded. It is not "Ceph does not
+  support chunked uploads" (false); it is *"Ceph RGW enforces AWS SigV4 more strictly than AWS S3 itself
+  does, and that strictness breaks a mainstream client library's default upload path."* Both halves are
+  citable and reproducible.
+- **Security chapter**: this is the clearest security-versus-compatibility trade-off encountered in the
+  project so far. Ceph closed a genuine privilege-escalation vulnerability, and the correct, specification-
+  conformant fix immediately broke a widely used client whose behaviour AWS had always tolerated. The same
+  class of breakage hit other clients simultaneously: Bun's S3 client
+  ([issue #43029](https://github.com/oven-sh/bun/issues/43029), fixed in
+  [PR #43045](https://github.com/oven-sh/bun/pull/43045)) and `aws-sdk-php` as surfaced through Nextcloud
+  ([issue #63489](https://github.com/nextcloud/server/issues/63489)).
+- **Diagnostic lesson worth recording as method**: a bare `AccessDenied` with an empty message from an
+  S3-compatible server is close to undiagnosable from the client side. Server-side debug logging turned a
+  multi-day unknown into a single explicit sentence. Worth applying to the other three systems whenever an
+  opaque 403 appears.
+
+**Follow-up carried out the same day**: whether SeaweedFS, RustFS and Garage enforce the same SigV4
+strictness. See the next section.
+
+### SigV4 header strictness compared across all four systems (22 September 2026)
+
+The Ceph failure above provided an unusually clean probe. A pre-fix Warp build sends a `Content-Type`
+header that its own signature does not cover, so pointing it at each system answers one precise question:
+**does this implementation reject a request carrying a header absent from `SignedHeaders`, as the AWS SigV4
+specification requires, or does it accept it as AWS S3 itself does?** This is a direct compatibility and
+security comparison across all four systems, obtained at essentially no cost, and it was run deliberately
+before the pre-fix Warp binary was discarded.
+
+**Method.** Identical `warp put` invocation against each system, single worker, 1 MiB objects, credentials
+passed as flags rather than exported so nothing leaked between systems (see `scripts/s3-helpers.sh` for why
+that matters here). The three lightweight systems were driven from the laptop's WSL environment where they
+run in Docker; Ceph was driven from `ceph0` itself, since the laptop has no network route to the VM subnet.
+
+```bash
+# SeaweedFS
+warp put --duration=10s --concurrent=1 --obj.size=1MiB --host=127.0.0.1:8333 \
+  --access-key=test --secret-key=test --bucket=warp-sigv4-seaweedfs
+# RustFS
+warp put --duration=10s --concurrent=1 --obj.size=1MiB --host=127.0.0.1:9000 \
+  --access-key=minioadmin --secret-key=minioadmin --bucket=warp-sigv4-rustfs
+# Garage (own region required; existing bucket reused because a default Garage key
+# cannot create buckets over S3, and --noclear protects the existing test data)
+source ~/.thesis-s3-env && warp put --duration=10s --concurrent=1 --obj.size=1MiB \
+  --host=127.0.0.1:3900 --access-key="$GA_KEY" --secret-key="$GA_SECRET" \
+  --region=garage --bucket=thesis-test-bucket --noclear
+```
+
+**Results.**
+
+| System | Version under test | Unsigned `Content-Type` | Outcome |
+|---|---|---|---|
+| Ceph RGW | Tentacle **20.2.4**, 3-node VM cluster | **Rejected** | `403 AccessDenied`, every object upload failed |
+| SeaweedFS | **4.25** (`7acba59a5`), Docker, single node | Accepted | 180 objects, 0 errors, 18.94 MiB/s |
+| RustFS | **1.0.0-beta.8** (`64c0ede`), Docker, single node | Accepted | 212 objects, 0 errors, 21.12 MiB/s |
+| Garage | **v1.0.0**, Docker, single node | Accepted | 115 objects, 0 errors, 11.68 MiB/s |
+
+Exact builds recorded at test time, since a claim of the form "system X accepts unsigned headers" is only
+citable if the build it was observed on is identified:
+
+```
+chrislusf/seaweedfs  latest    sha256:c42a5268ca13fcb65e0fae925886b107f4bf294d8db15e1be5509d55104eb509
+  weed version 30GB 4.25 7acba59a5 linux amd64
+rustfs/rustfs        latest    sha256:fa19210ac4697c79d7ccca1ec9b0eb91aebacc6691991ffb14014bb3c67e6cc3
+  rustfs 1.0.0-beta.8, git 64c0ede0261eeb7ccd415221d6f102aa70829b6a, built 2026-06-10, rustc 1.96.0
+dxflrs/garage        v1.0.0    sha256:0c7ed80d22c0b0f902fbd0ec74fc68073f72a46ea15d54e3c4c484184a8c7516
+```
+SeaweedFS and RustFS were pulled as `latest` rather than pinned tags, so the image digests above are the
+authoritative identifiers for reproducibility, not the tag.
+
+**Incidental but relevant to the maturity discussion**: RustFS reports itself as `1.0.0-beta.8`. A system
+still publishing beta builds is being compared against Ceph 20.2.4 and Garage v1.0.0, both stable releases.
+That asymmetry is worth stating explicitly wherever RustFS results are presented, in either direction: it
+tempers criticism of rough edges, and it tempers claims of production readiness.
+
+**Ceph is the only one of the four that rejected this request.** The three lightweight systems all accept
+a request whose signature does not cover a header that was sent.
+
+*Scope of the claim, stated so it is not over-generalised*: one header (`Content-Type`), sent in one mode
+(streaming/chunked PUT), by one client library. This does **not** establish that the three lightweight
+systems are lax about SigV4 in general, nor that Ceph is strict about every unsigned header. It
+establishes exactly one divergence, reproducibly. Broader wording such as "Ceph enforces the
+specification and the others do not" would require testing additional headers and additional request
+shapes.
+
+**The client-side premise was verified rather than assumed.** The three lightweight systems were driven
+with Warp v1.5.0 (`minio-go v7.0.98`) while Ceph was driven with v1.7.0 (`minio-go v7.3.0`). Since the
+whole comparison rests on both builds sending the same unsigned header, this was confirmed on the wire
+rather than inferred from version dates:
+```
+PUT /warp-sigv4-seaweedfs/NSC4XV7y/1.%28iqEKm0LmYR7pv9J.rnd HTTP/1.1
+User-Agent: MinIO (linux; amd64) minio-go/v7.0.98 warp/v1.5.0
+Authorization: AWS4-HMAC-SHA256 Credential=test/20260921/us-east-1/s3/aws4_request,
+  SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,
+  Signature=**REDACTED**
+Content-Type: application/octet-stream
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+```
+`Content-Type` present, `content-type` absent from `SignedHeaders`. Identical fault shape to the Ceph
+capture. One incidental version difference: v7.0.98 does not send `Content-Encoding: aws-chunked` at all,
+whereas v7.3.0 does (added upstream in August 2026). This does not affect the property under test.
+
+**Threats to validity, stated plainly rather than glossed over:**
+
+- *Different vantage points.* Ceph was exercised from inside the VM network, the other three from the
+  laptop. This is the same network constraint already flagged for the performance chapter. It does not
+  affect this particular result, because SigV4 verification is decided from the request's own contents
+  before any network characteristic becomes relevant, but the asymmetry is real and is stated rather than
+  hidden.
+- *Different client versions.* v1.5.0 against three systems, v1.7.0 against Ceph. Mitigated by the wire
+  capture above, which shows the tested property is identical in both.
+- *The throughput figures in the table are incidental, not measurements.* They are a by-product of a
+  functional test with `--concurrent=1` and are not comparable across systems; the performance chapter's
+  numbers come from the dedicated batches, not from here.
+
+**What this does and does not establish.** It establishes that three of four systems accept a header not
+covered by the signature. It does **not** establish that they honour unsigned `x-amz-*` headers, which is
+the specific vector behind CVE-2026-54330 and the part with genuine security consequences: a server may
+accept an unsigned header while ignoring its value. Distinguishing "accepted" from "acted upon" requires a
+separate test, and the distinction must not be blurred in the write-up.
+
+**Next test, designed but not yet run**: generate a presigned PUT URL against each system, attach an
+unsigned `x-amz-*` header (for example `x-amz-acl` or a metadata header) to the request, and check whether
+the server acts on it. If SeaweedFS, RustFS or Garage honour it, they carry the same weakness Ceph patched
+in CVE-2026-54330, which would be the strongest security finding in the project. This belongs in the
+Security chapter and should be run deliberately, with the pre-fix Warp binary and the presigned URLs
+preserved as evidence.
+
+### First ossperf run against Ceph (17 September 2026)
+```bash
+export AWS_ACCESS_KEY_ID=thesiskey
+export AWS_SECRET_ACCESS_KEY=<CEPH_TEST_SECRET_KEY>
+./ossperf.sh -n 5 -s 1048576 -w -d http://localhost:80 -b ossperf-ceph-testbucket
+```
+Five 1 MiB files, same shape as the first SeaweedFS run in August, run directly on `ceph0`. All six phases
+`[OK]`, checksums matched.
+
+| Metric | Value |
+|---|---|
+| Bucket create | 0.621 s |
+| Upload | 0.764 s |
+| List | 0.543 s |
+| Download | 0.599 s |
+| Erase objects | 0.584 s |
+| Erase bucket | 0.605 s |
+| **Upload bandwidth** | **54.899 Mbps** |
+| **Download bandwidth** | **70.021 Mbps** |
+
+**Not a result, same caveats as every first run in this project**: single unrepeated pass, no warm-up, and
+critically **not directly comparable to the three lightweight systems' numbers**, since those run in Docker
+Desktop on the laptop while this runs natively on dedicated university VM hardware — different environments
+entirely, not just different systems. Exists to confirm the pipeline works end to end on Ceph, which it
+does.
+
+### Warm-up and repeated-measurement session (17 September 2026)
+Followed the same discipline established for the other three systems: unrecorded warm-up passes first,
+then a repeated real batch, with `sar` (installed via `apt install -y sysstat`) running in the background
+throughout to capture CPU, memory and disk activity per Baun's instruction on the earlier variance
+question.
+
+Two unrecorded warm-up runs (`ossperf-warmup1`, `ossperf-warmup2`) landed at 63.5/73.5 Mbps and
+59.9/68.4 Mbps upload/download respectively — close to the very first run above (54.9/70.0), suggesting
+the environment was already close to steady state rather than needing a long warm-up.
+
+**Data-hygiene note, same category of mistake as the mode-unconfirmed CSV back in August**: the first real
+5-run batch was executed without ossperf's `-o` flag, which is what actually writes `results.csv` — the
+runs themselves succeeded and were read directly from terminal output, but no file was produced to archive
+(`find / -name results.csv` afterward found nothing). Confirmed the cause by checking the script itself
+(`ossperf.sh` line 368, `OUTPUT_FILENAME=results.csv`, only written when `-o` is passed — line 72
+documents this). Re-ran the batch with `-o` included and archived immediately, per the established
+convention, to `results/ossperf-ceph-batch1-2026-09-17.csv`:
+
+```bash
+sar -u -r -d 1 60 > sar-ceph-batch1.txt &
+for i in 1 2 3 4 5; do ./ossperf.sh -n 5 -s 1048576 -w -o -d http://localhost:80 -b ossperf-ceph-run$i; done
+cp results.csv results/ossperf-ceph-batch1-2026-09-17.csv
+```
+
+| Run | Upload (Mbps) | Download (Mbps) | Total time (s) | Bucket create (s) |
+|---|---|---|---|---|
+| 1 | 59.325 | 68.985 | 4.178 | 1.155 |
+| 2 | 62.415 | 76.959 | 3.377 | 0.542 |
+| 3 | 64.231 | 70.256 | 3.742 | 0.532 |
+| 4 | 61.954 | 67.324 | 3.541 | 0.534 |
+| 5 | 58.416 | 76.398 | 3.547 | 0.609 |
+
+**No stall observed in this batch.** Bucket creation stayed at 0.53-0.61 s for runs 2-5 (only run 1 ran
+slightly higher at 1.155 s, plausibly ordinary first-request cost rather than the ~10 s anomaly seen
+earlier), a useful negative data point for the recurring-stall investigation: it did not reproduce here,
+in this environment, at this batch size. Upload ranged 58.4-64.2 Mbps, download 67.3-77.0 Mbps — a
+narrower spread than the SeaweedFS sequential/parallel comparison from August, consistent with dedicated
+VM hardware rather than a shared Docker Desktop host, though this remains a hypothesis pending an
+object-size sweep and more batches.
+
+`sar` results for this batch: CPU averaged 27.13% (%user) with one momentary spike to 87% coinciding with
+an operation, %iowait averaged only 1.19%, memory held steady around 37% used throughout, and disk write
+throughput on `sda` (the OSD's backing device) briefly burst to ~5.3 MB/s before settling to an average of
+577.64 kB/s. Nothing here points at resource saturation as a bottleneck for this workload size — worth
+revisiting at larger object sizes or higher concurrency, where a genuine bottleneck would be more likely
+to surface.
+
+**As with every other repeated-measurement result in this project: not directly comparable across
+environments.** This is real repeated data for Ceph specifically (5 runs, archived, with resource
+monitoring), but still cannot be placed on the same chart as the SeaweedFS/RustFS/Garage numbers without
+stating the environment difference explicitly, since those run in Docker Desktop on the laptop and this
+runs on dedicated university VM hardware.
+
+### Fault tolerance test — node failure and recovery (18-21 September 2026)
+First genuine multi-node fault-tolerance test in the project, made possible by Ceph being the only system
+with a real multi-node deployment so far. Procedure follows the node-failure-simulation flow already
+planned in the notebook's Replication section: baseline → write known data → kill a node → verify
+continued service and data integrity → restart the node → verify recovery.
+
+**Baseline (18 September).** `ceph -s` confirmed `HEALTH_OK`, 3 mons in quorum, 3 OSDs up/in, 162 PGs
+`active+clean`, one OSD per host (`ceph osd tree`). Wrote a known 1 MiB object
+(`faulttest.bin`, MD5 `c2c69c415819f434626b05e0686565a2`) to `s3://thesis-test/` as a fixed reference
+point before inducing any failure.
+
+**Failure induced.** `ceph1` chosen over `ceph0`/`debian`, since all commands run from `ceph0`'s own
+console — killing it would have cut off the only reachable point. Stopped (not gracefully shut down, to
+simulate a real crash rather than an orderly departure) via the Proxmox web UI.
+
+**Immediate reaction (within ~25 seconds).**
+```
+health: HEALTH_WARN
+        1/3 mons down, quorum debian,ceph2
+        1 osds down
+        1 host (1 osds) down
+        Degraded data redundancy: 323/969 objects degraded (33.333%), 90 pgs degraded
+osd: 3 osds: 2 up (since 15s), 3 in (since 8d)
+pgs: 90 active+undersized+degraded, 72 active+undersized
+```
+Quorum survived on the remaining two mons (Ceph requires a strict majority — losing 1 of 3 does not lose
+quorum, losing 2 of 3 would). All PGs stayed `active`, meaning still serving reads and writes despite
+being undersized. Confirmed directly rather than assumed: read back `faulttest.bin` (MD5 matched exactly)
+and wrote a fresh object, `faulttest2.bin`, both while the cluster was in this degraded state — both
+operations succeeded normally through `ceph0`'s RGW endpoint.
+
+**Extended outage behaviour (re-checked after ~2 days, node left down deliberately to observe longer-term
+handling, not just an instantaneous blip).**
+```
+health: HEALTH_WARN
+        1 hosts fail cephadm check
+        1/3 mons down, quorum debian,ceph2
+        Degraded data redundancy: 324/972 objects degraded (33.333%), 90 pgs degraded, 162 pgs undersized
+osd: 3 osds: 2 up (since 2d), 2 in (since 2d)
+rgw: 2 daemons active (2 hosts, 1 zones)
+usage: 1.9 GiB used, 62 GiB / 64 GiB avail
+```
+Ceph automatically marked the down OSD **out** (not just down) after its default timeout
+(`mon_osd_down_out_interval`, 600 s), removing it from capacity accounting entirely — usable capacity
+dropped from 96 to 64 GiB accordingly. This is expected self-healing behaviour (the cluster stops counting
+on a host it no longer expects back soon), not a fault. RGW dropped to 2 active gateways, consistent with
+losing `ceph1`'s instance. PGs were `active` (undersized and degraded, but active) at every point the
+cluster was observed. **No S3 operation was issued at the 2-day mark**, so continued serving across the
+outage is inferred from cluster state rather than demonstrated by a client request. Stated as an inference,
+not a measurement.
+
+**Recovery.** Restarted `ceph1`'s VM via Proxmox. `ceph -s` immediately after showed the previous (stale,
+2-day-old) `HEALTH_WARN` state — a reminder that `ceph -s` reflects the state at query time, not a live
+push, so it must be re-run rather than trusted from a prior paste. A clean re-run once the VM had booted
+showed:
+```
+health: HEALTH_OK
+mon: 3 daemons, quorum debian,ceph1,ceph2 (age 12m)
+osd: 3 osds: 3 up (since 11m), 3 in (since 11m)
+rgw: 3 daemons active (3 hosts, 1 zones)
+pgs: 162 active+clean
+usage: 2.1 GiB used, 94 GiB / 96 GiB avail
+```
+Full recovery to `HEALTH_OK`: mon rejoined quorum, OSD came back up and in, all 162 PGs returned to
+`active+clean`, full 96 GiB capacity restored automatically, with no manual intervention beyond starting
+the VM.
+
+**Timing claim, stated precisely rather than generously.** Recovery *duration* was not measured. No
+timestamp was taken at the moment the VM was started, and `ceph -s` was run only once after booting. The
+counters above (`quorum ... age 12m`, `3 up (since 11m)`) record when each daemon came up relative to the
+query, not how long recovery took from node start. What the evidence supports is therefore: *recovery had
+fully completed by the time the cluster was checked, with the OSD having been back up for 11 minutes and
+quorum re-formed 12 minutes earlier.* The actual recovery window is bounded above by roughly 12 minutes
+and is otherwise unknown — it may have been considerably shorter, with the remainder idle.
+**To quote a recovery time in the thesis, the test must be repeated with `date` recorded at VM start and
+`ceph -s` polled at intervals until `active+clean`.** Cheap to do and worth doing, since recovery time is
+one of the few directly comparable numbers the Replication chapter can offer once the other systems are
+multi-node.
+
+**Final integrity check.** Both test objects read back from the bucket after full recovery and compared
+against their original checksums:
+- `faulttest.bin` (written before the failure): `c2c69c415819f434626b05e0686565a2`, matched.
+- `faulttest2.bin` (written *during* the degraded window): local source hash `793b910d6b0ff133757b79c9a47bd5e7`,
+  and a fresh download from the bucket after full recovery matched exactly.
+
+**Result, stated at exactly the strength the evidence supports:**
+
+- **Zero data loss.** Proven. Both objects verified by MD5 after recovery, including the one written while
+  degraded.
+- **S3 reads and writes worked while degraded.** Proven, but at one point in time: immediately after the
+  node was killed. A read and a write were each performed once and both succeeded.
+- **S3 remained available across the full two-day outage.** *Not proven.* No client operation was issued
+  between the immediate-reaction check and the recovery check. What is known for the intervening period is
+  only that the pool never left `active` at the points it was observed, which is an indicator of
+  availability, not a measurement of it. The earlier phrasing of this as "continuous availability
+  throughout" claimed more than was tested and has been corrected here.
+- **Full automatic recovery with no manual intervention.** Proven, with the timing caveat above.
+
+**Both gaps were closed by a repeat run the same night — see "Fault tolerance rerun" below, which measured
+recovery time and logged 268 availability probes with zero failures.** This is the strongest evidence in
+the project so far for
+Ceph's core value proposition —
+durability and availability under node failure — and is exactly the kind of result the other three systems
+cannot yet be compared against, since none of them has a multi-node deployment yet. Directly reusable for
+the Replication and Fault Tolerance chapter, including as the worked example for the node-failure-simulation
+flowchart already sketched in the notebook.
+
+### Fault tolerance rerun — recovery time and availability measured (21-22 September 2026)
+The 18-21 September test above proved zero data loss but only *inferred* continued availability, and its
+recovery time was read indirectly off `ceph -s` counters rather than measured. Both claims were withdrawn
+during the evidence audit. This rerun closes both gaps. Full record, including the exact scripts and the
+complete timeline, in `results/ceph-faulttolerance-rerun-2026-09-22.txt`.
+
+**Method.** Two instruments, both started before the failure was induced:
+
+1. An **availability probe** on `ceph0`, writing and reading a small object through the local RGW every
+   ~5 s and logging the outcome of each with a timestamp (`/root/availlog.sh`, run under `nohup`). This is
+   what converts "the cluster looked healthy whenever I checked" into an actual availability record.
+2. Explicit **event markers** (`echo "CEPH1_STOP $(date +%H:%M:%S)"`) written before each Proxmox action,
+   so node stop and node start are timestamped rather than remembered, plus a polling loop recording
+   `ceph health` every ~20 s until `HEALTH_OK`.
+
+`ceph1` was again hard-stopped (not gracefully shut down), and deliberately left down past the 600 s
+`mon_osd_down_out_interval` so that the OSD was marked `out` and recovery involved a genuine backfill —
+matching the conditions of the original test rather than producing an easier, non-comparable one.
+Confirmed before restarting: `ceph osd stat` → `3 osds: 2 up (since 11m), 2 in (since 104s)`.
+
+**Measured results.**
+
+| Measurement | Value | Basis |
+|---|---|---|
+| Outage duration (node down) | **13 min 45 s** | 23:01:55 → 23:15:40, both timestamped |
+| Time to data redundancy restored | **under 4 min 22 s** | 23:15:40 → already clear at 23:20:02 |
+| Time to full `HEALTH_OK` | **10 min 24 s** | 23:15:40 → 23:26:04, both timestamped |
+| Availability probes | **268 samples**, ~5 s apart | 23:00:07 → 23:27:14 |
+| Probe failures | **0** | `grep -c FAIL /root/avail.log` → `0` |
+
+**Every write and every read succeeded, without exception, across the entire test** — before the failure,
+throughout the 13 min 45 s outage, during recovery, and after. Availability is now measured rather than
+inferred.
+
+**The two recovery times are different things, and the distinction matters.** The polling loop waits for
+`HEALTH_OK`, but that state was gated by `1 hosts fail cephadm check` — the *orchestrator's* management-layer
+check reconnecting to the returned host. The degraded-data warning had already cleared by the first poll.
+So the cluster's **data** was fully redundant again in under 4 min 22 s, while the **orchestrator** took
+10 min 24 s to declare the cluster healthy. Quoting only the 10 min 24 s figure would overstate how long the
+cluster actually ran at reduced redundancy by a factor of roughly 2.5.
+
+This also retrospectively explains the ~11-12 minute figure from the first run, which the audit flagged as
+unmeasured: it was the same orchestrator check clearing, read off `ceph -s` counters. The original number
+was not wrong so much as measuring something other than what it appeared to measure — a good illustration
+of why "recovery time" needs defining before it is reported.
+
+**Limitation of this run, recorded rather than smoothed over.** The exact moment data redundancy was
+restored was not captured. A mangled paste of the polling loop into the Proxmox browser console (pipe
+characters did not survive the paste, leaving the shell on a continuation prompt) cost the first ~4.5
+minutes after restart, so the first successful poll at 23:20:02 already showed recovery complete. The
+figure is therefore a genuine **upper bound**, not a point measurement. To capture it exactly, the poll must
+record PG state (`ceph pg stat`, or the `pgs:` line of `ceph -s`) rather than only `ceph health`, and must
+be started *before* the node is restarted. Worth doing on the next run, since data-recovery time is one of
+the few directly comparable numbers the Replication chapter can offer once the other three systems are
+multi-node.
+
+**Combined result across both runs, stated at the strength the evidence now supports:**
+
+- **Zero data loss** under single-node failure. Proven, by MD5 on objects written both before and during
+  the failure (18-21 September run).
+- **Continuous S3 availability** through a node failure and its recovery. Proven, by 268 consecutive
+  write-and-read probes with zero failures (this run).
+- **Automatic recovery with no manual intervention** beyond restarting the VM. Proven in both runs.
+- **Data redundancy restored in under 4 min 22 s**; orchestrator reported `HEALTH_OK` after 10 min 24 s.
+  Measured, with the upper-bound caveat above.
+- **Survival of a multi-day outage** (~2 days) without data loss. Proven in the first run.
+
+### Warp benchmarking on Ceph, and a load-generator placement finding (23 September 2026)
+First real Warp measurements on Ceph, now that v1.8.0 works against it (Issue 12 resolved). Protocol
+follows the discipline used for ossperf: discarded warm-up runs, then five recorded 60 s runs, `sar`
+logging CPU/memory/disk on the measured node throughout, and Warp's `--benchdata` kept for every run so
+`warp analyze` can re-slice the raw data later. Full record in
+`results/warp-ceph-coresidency-2026-09-23.txt`.
+
+**What was not planned, and turned out to be the more important result.** The first batch was run on
+`ceph0` itself against `localhost:80`, the same arrangement used for every other measurement in this
+project. The `sar` data showed `%user` at 64.14% with the disk only 25% utilised, and the obvious
+objection was that Warp's own CPU cost was inseparable from Ceph's. Unlike on the laptop, this was
+testable: Warp was installed on `ceph2` and the identical batch re-run against `ceph0`'s gateway over the
+network.
+
+| | Client on `ceph0` (co-resident) | Client on `ceph2` (separate host) |
+|---|---|---|
+| Throughput, 5 runs | 45.45 - 47.31 MiB/s, mean **46.49** | 73.03 - 78.02 MiB/s, mean **74.86** |
+| In Mbps | ~390 | ~628 |
+| Latency, average | 88.0 ms | 53.2 ms |
+| Latency, p99 | 183.7 ms | 115.2 ms |
+| Intra-run spread | 1.8x | 2.0x |
+| Errors | 0 | 0 |
+
+**Moving the load generator off the measured node raised measured throughput by 61%, despite adding a
+network hop that was not previously there.** The two ranges do not overlap at any point across five runs
+each, so this is not a noise artefact.
+
+`sar` on `ceph0` explains it and provides an independent check:
+
+| | Batch A (client here) | Batch B (client elsewhere) |
+|---|---|---|
+| `%user` | 64.14 | 48.11 |
+| `%system` | 11.08 | 18.19 |
+| `%iowait` | 2.49 | 7.96 |
+| `%idle` | 22.26 | 25.69 |
+| `sdb` writes | 34832 kB/s | 56258 kB/s |
+| `sdb` utilisation | 25.22% | 35.90% |
+
+`%user` fell by 16 percentage points, which is the benchmark tool's own CPU cost leaving the host. Disk
+write throughput rose 61%, matching the throughput rise almost exactly — a useful internal consistency
+check that the extra throughput genuinely reached storage rather than being a measurement artefact.
+
+**Explicitly not claimed: that Ceph is CPU-bound.** In Batch B `%idle` is still 25.69% and disk
+utilisation only 35.90%, so nothing is saturated. At concurrency 4 the binding constraint is more
+plausibly the request concurrency than a hardware ceiling. A concurrency sweep is the designed follow-up.
+Note also that `ceph0` is the busiest node by construction here, serving the RGW gateway for every request
+while also running a mon, the active mgr and an OSD; `sar` describes that node, not a cluster average.
+
+**Why this matters well beyond Ceph.** *Every* measurement in this project so far has placed the load
+generator on the same host as the storage system: the three lightweight systems run in Docker on the
+laptop with Warp and ossperf also on the laptop, and Ceph was measured from `ceph0` until now. So the bias
+is present throughout, and it is **not neutral between systems**: a system consuming more CPU per request
+loses more to a co-resident client than a lightweight one does. The bias therefore runs against precisely
+the systems that do the most work per request, which is the comparison this thesis exists to make.
+
+This is a threat to validity for the Performance chapter's central comparison, and it is now demonstrated
+rather than argued — 61% on the one system where it could be tested directly. It belongs in the
+methodology question already put to Baun, and it materially strengthens the case for moving all four
+systems onto the university VMs with a dedicated load-generating node rather than benchmarking each
+system from its own host.
+
+**Consequence for existing data**: the ossperf Ceph batch
+(`results/ossperf-ceph-batch1-2026-09-17.csv`) and the Warp verification run were all produced with the
+client on `ceph0`. They remain valid records of what was run, but they understate Ceph and must not be
+placed alongside any future off-host measurement.
+
+**Separate observation, on tool choice.** ossperf measured Ceph at 58-64 Mbps upload for 1 MiB objects;
+Warp measures the same system and object size at roughly 390 Mbps co-resident and 628 Mbps off-host.
+Neither is wrong. ossperf spawns a separate AWS CLI process per file, so a large share of its elapsed time
+is process startup, Python interpreter initialisation and connection setup, while Warp holds a persistent
+client at a fixed concurrency. They measure genuinely different things, and the ~6-10x gap is the size of
+that difference. **ossperf and Warp figures can therefore never share a chart**, and the Methodology
+chapter should state which question each tool answers rather than presenting them as two estimates of one
+quantity.
+
+### Concurrency sweep on Ceph, and the discovery that the VMs have one vCPU (23 September 2026)
+Follow-up to the co-residency finding above, which left one question open: with neither CPU nor disk
+saturated at concurrency 4, what actually limits throughput? Object size held at 1 MiB, client on `ceph2`,
+only concurrency varied. Full record in `results/warp-ceph-concurrency-sweep-2026-09-23.txt`.
+
+**The curve** (exploratory pass, single run per level, shape-finding only):
+
+| Concurrency | 1 | 2 | 4 | 8 | 16 | 32 | 64 |
+|---|---|---|---|---|---|---|---|
+| Throughput (MiB/s) | 34.18 | 59.95 | 79.29 | 83.77 | 84.45 | 91.24 | 86.61 |
+| Latency avg (ms) | 29.4 | 33.3 | 50.2 | 95.3 | 186.8 | 339.3 | 711.9 |
+
+Zero errors at every level including 64. Repeated three times each around the knee:
+
+| Concurrency | Runs (MiB/s) | Mean | Latency avg |
+|---|---|---|---|
+| 4 | 78.79, 81.14, 78.28 | **79.40** | 50.4 ms |
+| 8 | 89.27, 86.09, 79.71 | **85.02** | 97.1 ms |
+| 16 | 89.38, 85.43, 88.78 | **87.86** | 179.8 ms |
+
+Going 4 to 8 buys 7.1% throughput for 93% more latency; 8 to 16 buys 3.3% for another 85%. **Saturation
+is effectively reached by concurrency 8**, and the plateau is roughly 85-88 MiB/s (about 715-740 Mbps).
+Past the knee, added concurrency buys queue time rather than throughput.
+
+*Limit on that claim*: the distributions overlap (c8 spans 79.71-89.27 while c4 reaches 81.14), so with
+three runs the levels are not cleanly separated at the extremes even though the means differ.
+
+**Internal validity check.** Little's Law (throughput x latency = concurrency) holds within 3% at every
+level measured, from c1 through c64. The instrument is measuring what it claims to.
+
+**Bottleneck investigation.** `sar` at concurrency 16 showed `%idle` still 19.49 and disk utilisation only
+34.39% with sub-2 ms waits, so nothing looked saturated. Three candidates were formed and tested by cost:
+
+1. *The network* — **eliminated**. `sar -n DEV` during a run showed `ens18` at 90529 kB/s in, 45344 kB/s
+   out. (Outbound is *half* of inbound, not double as predicted before measuring; the prediction that
+   `ceph0` fans out both replicas for every object was wrong. Probable reason, unverified: only about a
+   third of PGs have their primary OSD on `ceph0`.) `%ifutil` reads 0.00 because virtio reports no link
+   speed (`/sys/class/net/ens18/speed` = -1), so the path was measured directly with `iperf3` while Ceph
+   was idle: **8.64 Gbit/s in both directions**. Ceph was using about 8% of it. Incidentally 8609 TCP
+   retransmits in 10 s at full rate, recorded but far too little to explain a plateau at 8% utilisation.
+2. *A serialisation point inside one daemon* — tested with `sar -P ALL`, expecting one pinned core beside
+   idle ones. The output listed only `all` and `0`.
+3. *Another node being the real ceiling* — **not tested**, only `ceph0` has ever been monitored. Open.
+
+**The discovery.** The per-core test did not find a pinned core; it found there is only one core to pin.
+
+```
+ceph0:  nproc = 1,  processors in /proc/cpuinfo = 1,  RAM 7 GB usable
+ceph1:  nproc = 1
+ceph2:  nproc = 1
+```
+
+**Every Ceph measurement in this project was taken on single-core nodes**, each running a mon, an OSD and
+an RGW gateway, with the active mgr on `ceph0` as well, all sharing one core.
+
+Consequences:
+
+- **The plateau now has a plausible mechanism.** A single server at ~76% utilisation already shows sharply
+  rising queue times, which matches the measured shape exactly: throughput flat past concurrency 8,
+  latency rising linearly. **Strongly indicated, not proven** — the settling test is to add vCPUs and
+  repeat the sweep. If the plateau moves, the core count was the constraint.
+- **The co-residency result is now explained rather than merely observed.** Running Warp on `ceph0` put
+  the load generator and the entire storage stack on one core. A 61% throughput loss is the expected
+  outcome, not a surprise.
+- **Provisioning does not match what was agreed.** The specification put to Baun and to Mr Petrozziello
+  was approximately 4 cores, 8-16 GB RAM and 50-100 GB disk per VM. RAM matches at 8 GB; core count does
+  not (1 against ~4).
+- **Every Ceph performance figure recorded so far must carry the annotation "single-vCPU nodes".** They
+  are not wrong, but they characterise a severely under-provisioned deployment rather than Ceph as such,
+  and Ceph's own sizing guidance is well above one core per node.
+
+**Actions**: ask Mr Petrozziello to raise the vCPU count to the agreed spec; tell Baun, since it affects
+every Ceph number already reported to him; repeat the sweep afterwards and keep the existing curve as the
+low-core reference point, since same software, same disks, same network, different core count is itself a
+result worth reporting; and monitor `ceph1`/`ceph2` during a run to close candidate 3.
+
+**Data-hygiene note**: the `sar` log for the exploratory sweep was lost. The intended per-level command
+was not the one executed — an earlier command was re-run from shell history — and its 600-sample window
+closed at about 22:54 while the pinned runs began at 22:58:39, so the two never overlapped. Throughput and
+latency are unaffected, as those come from the Warp output files, but resource data for the sweep and for
+the pinned runs at concurrency 4 and 8 does not exist. Same class of slip as the missing `-o` flag in
+August: the command that ran was not the command intended, and it was only caught afterwards.
+
+### Raising the VMs to 4 vCPUs, and the 1-core versus 4-core comparison (23 September 2026)
+The section above proposed, explicitly as a hypothesis, that the single vCPU explained the throughput
+plateau, and named the settling test: add cores, repeat the sweep, see whether the plateau moves. This is
+that test. Full record in `results/warp-ceph-4core-sweep-2026-09-23.txt`.
+
+**Nothing else changed.** Same Ceph version, same disks, same network, same client node, same tool, same
+object size, same run length, same command. Cores raised 1 to 4 per VM in the Proxmox UI (Hardware,
+Processors, sockets left at 1), which requires the VM powered off. Done one node at a time with a graceful
+Shutdown rather than Stop, confirming `HEALTH_OK` from `ceph0` between each, and `ceph0` last since every
+cluster command is issued from it and health cannot be checked while it is down. This brings the cores to
+the specification already agreed with Baun and Mr Petrozziello (~4 cores, 8-16 GB RAM); RAM was already at
+8 GB. Afterwards: `HEALTH_OK`, 3 mons in quorum, 3 OSDs up and in, 162 pgs `active+clean`, 3 RGWs, with the
+active mgr failed over to `ceph1` as expected.
+
+**Result.**
+
+| Concurrency | 1 core | 4 cores | Gain | Latency, 1c to 4c |
+|---|---|---|---|---|
+| 1 | 34.18 MiB/s | 37.76 | 1.10x | 29.4 to 26.4 ms |
+| 2 | 59.95 | 73.62 | 1.23x | 33.3 to 27.3 ms |
+| 4 | 79.29 | 121.94 | 1.54x | 50.2 to 32.9 ms |
+| 8 | 83.77 | 175.99 | 2.10x | 95.3 to 45.4 ms |
+| 16 | 84.45 | 218.33 | 2.59x | 186.8 to 72.2 ms |
+| 32 | 91.24 | 263.97 | 2.89x | 339.3 to 119.7 ms |
+| 64 | 86.61 | **284.68** | **3.29x** | 711.9 to 222.6 ms |
+
+Zero errors at every level in both sweeps. **The hypothesis is confirmed: the single vCPU was the
+constraint.** 284.68 MiB/s is about 2388 Mbps against roughly 727 Mbps before.
+
+Three things the *shape* shows, which a single headline number would hide:
+
+1. **The gain grows with concurrency** — 1.10x at concurrency 1 rising to 3.29x at 64. That is the
+   signature of a queueing bottleneck being relieved: at concurrency 1 there is nothing to queue behind, so
+   core count barely matters, and the more requests contend the more the extra cores are worth. The whole
+   curve belongs in the thesis, not one point from it.
+2. **Latency improved most where it was worst**, 187 ms to 72 ms at concurrency 16, 712 ms to 223 ms at 64.
+3. **Four times the cores gave at most 3.29x throughput.** Sublinear, as expected, and the deficit is
+   itself informative.
+
+Little's Law holds within 2% at all seven levels of the 4-core sweep, as it did at all seven of the
+1-core sweep.
+
+**Where the limit sits now.** Per-level slicing was possible this time because each level was timestamped
+on the client while `sar` ran continuously on `ceph0`. (`sar` writes timestamps in 12-hour format with a
+separate AM/PM field, which any slicing script must account for.)
+
+| Conc. | CPU busy | idle | disk write | disk util | await | queue |
+|---|---|---|---|---|---|---|
+| 1 | 18% | 81.62 | 36.5 MB/s | 29% | 0.96 ms | 0.30 |
+| 4 | 52% | 47.65 | 111.0 | 59% | 1.16 | 1.16 |
+| 16 | 73% | 26.83 | 190.4 | 73% | 2.04 | 2.14 |
+| 32 | 80% | 20.15 | 217.3 | 77% | 2.40 | 2.54 |
+| 64 | 83% | 17.42 | 226.0 | 77% | 2.64 | 2.75 |
+
+CPU cost per unit throughput *improves* with concurrency, from 0.49 percentage points of CPU per MiB/s at
+concurrency 1 to 0.29 at 64, so batching pays. At concurrency 64 CPU is 83% busy and the disk 77% utilised,
+queue depth 2.75, service waits up from 0.96 to 2.64 ms, and disk throughput flattens between 32 and 64
+(+4%) while client throughput still rises (+7.8%).
+
+**Conclusion, at the strength the evidence supports: the 4-core plateau is not a single bottleneck.** CPU
+and disk approach saturation together, which is why gains taper rather than stop. Neither is individually
+decisive and naming one would be wrong. The network remains irrelevant, 284 MiB/s against a measured
+8.64 Gbit/s path.
+
+**Caveats, recorded rather than smoothed over:**
+
+- Single run per level. Exploratory, establishing shape, exactly as the 1-core sweep was. Citable figures
+  need repetition at the levels of interest.
+- Each level's `sar` window includes Warp's setup and cleanup either side of the measured 60 s, so the
+  resource averages **understate** the true peak during the measured period.
+- Only `ceph0` was monitored. `ceph1` and `ceph2` carry OSD work and have never been observed during a run.
+- The knee has moved to around concurrency 32 and throughput was **still rising at 64**, so this curve may
+  not have reached its plateau at all. Extending to 128 would settle it.
+
+**Consequence for every earlier Ceph number.** All of them were taken on single-vCPU nodes and understate
+the system by up to 3.3x at high concurrency. They are not discarded — they become the low-core reference
+point, and the pair of curves is a result in its own right. But no earlier Ceph figure may be presented as
+characterising Ceph without that annotation.
+
+### Object-size sweep, the cost model, and where the ceiling actually is (23 September 2026)
+With every hardware explanation for the plateau eliminated (network, gateway, node CPU and disk, and the
+shared storage backend), the remaining question was whether Ceph's cost is charged per operation or per
+byte. Concurrency held at 8, object size varied. Full record in
+`results/warp-ceph-objectsize-2026-09-23.txt`.
+
+| Size | Conc. | Throughput | Ops/s | Latency | Per connection |
+|---|---|---|---|---|---|
+| 50 KiB | 8 | 23.72 MiB/s | 485.87 | 16.4 ms | 2.97 MiB/s |
+| 1 MiB | 8 | 171.13 | 171.13 | 46.5 ms | 21.39 |
+| 16 MiB | 8 | 262.02 | 16.38 | 516.7 ms | 32.75 |
+| 100 MiB | 8 | 271.00 | 2.71 | 2951.7 ms | 33.88 |
+| 1 GiB | **2** | 254.64 | 0.25 | 8031.7 ms | 127.32 |
+
+**The cost model.** Fitting latency against object size across the concurrency-8 points gives
+
+> request latency = **15.2 ms fixed + about 31 ms per MiB** (at concurrency 8)
+
+Checked against every point rather than asserted: 50 KiB predicted 16.7 ms against 16.4 measured;
+100 MiB predicted 3145 ms against 2952 measured; throughput at 1 MiB predicted 172.0 MiB/s against 171.13
+measured; at 50 KiB predicted 23.8 against 23.72. **The model holds across a 2000-fold range of object
+size.** Refitting on the 100 MiB point gives 29.4 ms/MiB, so the slope declines slightly at large sizes
+while the fixed term stays at about 15 ms.
+
+**What it means.** There is a fixed cost of roughly 15 ms per PUT independent of size: HTTP handling,
+SigV4 verification, a bucket index update, and waiting for three replica acknowledgements. Its share of
+each request is ~93% at 50 KiB, ~33% at 1 MiB, ~3% at 16 MiB and ~0.5% at 100 MiB.
+
+**The ceiling, and what concurrency is actually for.** The aggregate ceiling is roughly 270-290 MiB/s and
+object size does not move it. What size changes is *how much concurrency is needed to reach it*:
+
+- 1 GiB objects reach 254.64 MiB/s with **2** connections
+- 100 MiB objects reach 271.00 MiB/s with **8**
+- 1 MiB objects need **64** to reach 284.71
+- 50 KiB objects cannot reach it at any concurrency tested
+
+Per-connection bandwidth says the same thing from the other direction: 127 MiB/s per connection at
+concurrency 2, but 34 MiB/s at concurrency 8. The connections share one aggregate ceiling rather than each
+getting their own.
+
+**Relation to existing literature.** The TU Munich PVLDB 2023 paper already in the source log reports small
+objects as latency-bound and large objects becoming bandwidth-bound in the 8-32 MB region. This sweep
+reproduces that independently, on a different system, with a fitted constant rather than a qualitative
+claim — the transition here sits between 1 MiB (33% overhead) and 16 MiB (3%), consistent with that range.
+For Related Work this is corroboration rather than citation.
+
+**Capacity — the first 1 GiB attempt failed.** At concurrency 8 it produced 709 errors reading
+"insufficient capacity". Eight concurrent 1 GiB uploads is 8 GiB in flight, 24 GiB after replication, on
+top of data already written and the parts of failed uploads. A 96 GiB cluster cannot sustain that shape.
+**This is a limitation of the test environment, not a Ceph defect** — Ceph refused the writes, said why,
+stayed `HEALTH_OK` and recovered without intervention. Re-run at concurrency 2, which fits. The
+concurrency difference is stated wherever the 1 GiB figure appears, and the sample is small (about 15
+objects) though variance was low at 2%.
+
+**Three operational findings worth keeping:**
+
+1. **Deleted capacity does not return immediately.** RGW garbage collection reclaims asynchronously, by
+   default hourly. 37 GiB showed as used after runs whose objects had already been deleted;
+   `radosgw-admin gc process --include-all` reclaimed 35 GiB of it at once.
+2. **Removing a bucket does not clean up aborted multipart uploads.** After
+   `radosgw-admin bucket rm --purge-objects --bypass-gc` succeeded and the bucket left `bucket list`, the
+   data pool still held 4,110 objects and 16 GiB stored (48 GiB raw). A second GC pass *after* the removal
+   cleared them. Order matters: GC before the purge does not catch them.
+3. **Multipart upload is exercised and works.** `minio-go` switches to multipart above 16 MiB, so the
+   100 MiB and 1 GiB runs demonstrate it against Ceph RGW — a row in the compatibility matrix obtained as
+   a by-product.
+
+**Open after this:** resource data per object size is not yet analysed (the `sar` log for the first three
+sizes exists and is sliceable; the 100 MiB and 1 GiB runs had no monitoring); whether 8 vCPUs beats 4 is
+untested and is the last hardware variable not yet moved; and disk capacity is 32 GB per VM against an
+agreed specification of 50-100 GB, which should be expanded only after the current curve is complete so
+the sweep describes one unchanged cluster.
+
+### Small-object write amplification in Ceph, traced to a measured cause (24 September 2026)
+
+Full record in `results/ceph-smallobject-writeamplification-2026-09-24.txt`.
+
+This began as housekeeping and turned into the strongest mechanistic finding in the Performance chapter so
+far. It is recorded in the order it actually happened, including the hypothesis that was falsified on the
+way, because the falsification is part of the evidence.
+
+**Bucket cleanup, and the GC behaviour reproduced.** Eight leftover Warp buckets were removed with
+`radosgw-admin bucket rm --purge-objects`, followed by `radosgw-admin gc process --include-all` *after* the
+removal. The cluster went from 51 GiB raw used (45 GiB free, `default.rgw.buckets.data` holding 4.10k
+objects and 16 GiB stored) to 3.4 GiB used (93 GiB free, 4 objects, 3.0 MiB stored). 48 GiB reclaimed.
+
+This is the **second** occurrence of the behaviour first recorded on 23 September, which promotes it from a
+one-off observation to a repeatable one. The previous cleanup ended at 3.1 GiB and this one began at 51 GiB,
+so the debris accumulated from runs performed after that cleanup; which specific run produced it is not
+established and is not claimed here.
+
+**Per-object-size resource data.** The `sar` log left open on 23 September was sliced using the level markers
+recorded on ceph2 (note again that `sar` writes 12-hour timestamps with a separate AM/PM field, so the
+19:03:54 marker is matched as `07:03:54 PM`):
+
+| Object size | user | sys | iowait | idle | busy | disk write | util | await | queue |
+|---|---|---|---|---|---|---|---|---|---|
+| 50 KiB | 32.73 | 20.89 | 7.84 | 38.52 | 61% | 41.1 MiB/s | 62% | 0.65 ms | 1.01 |
+| 1 MiB | 36.75 | 25.32 | 6.60 | 31.30 | 69% | 147.8 | 67% | 1.57 | 1.69 |
+| 16 MiB | 39.10 | 25.66 | 5.01 | 30.20 | 70% | 243.1 | 65% | 4.83 | 2.96 |
+
+Client-side throughput for the same three runs was 23.72, 171.13 and 262.02 MiB/s.
+
+Two things stand out. First, **CPU is nearly flat while throughput moves eleven-fold**: the CPU cost per
+MiB/s delivered is 2.57 percentage points at 50 KiB, 0.40 at 1 MiB and 0.27 at 16 MiB, a ten-fold efficiency
+difference. This corroborates the latency-fitted cost model of 23 September from an independent direction —
+the fixed per-request cost is CPU work, and small objects pay it per tiny object.
+
+Second, **disk writes do not track delivered bytes at 50 KiB**. Comparing ceph0's disk write rate against
+client throughput gives 1.73x at 50 KiB, 0.86x at 1 MiB and 0.93x at 16 MiB. Under 3x replication across
+three OSDs each OSD should write roughly 1x the client rate; the two figures slightly under 1.0 are
+explained by each `sar` window including Warp's setup and teardown, which dilutes the average. 50 KiB at
+1.73x is the outlier and is a real effect.
+
+Neither CPU nor disk was saturated at any size, so at concurrency 8 ceph0 is not the constraint. Disk
+utilisation was flat at 62-67% across all three sizes while `await` rose from 0.65 ms to 4.83 ms and queue
+depth from 1.01 to 2.96 — the same time busy, servicing much larger requests.
+
+**A hypothesis, and its falsification.** The first explanation offered for the 1.73x was BlueStore minimum
+allocation size padding. `ceph config get osd bluestore_min_alloc_size_hdd` returned **4096**. A 50 KiB
+object rounds up to 52 KiB on a 4 KiB allocation unit, which is 4% padding and nowhere near 1.73x. **The
+hypothesis is falsified**, and it is left here rather than deleted. Worth keeping separately: older Ceph
+defaulted this to 64 KiB, which would have been punishing for small objects; Tentacle ships 4 KiB, so Ceph
+is already well tuned at the allocation layer.
+
+**The actual mechanism.** `ceph config get osd bluestore_prefer_deferred_size_hdd` returned **65536**.
+Writes below 64 KiB take BlueStore's deferred path — data goes into the write-ahead log first and is written
+to the device again afterwards — while writes above it go straight to the device once. 50 KiB is below the
+threshold; 1 MiB and 16 MiB are above it, and RGW stripes large objects at 4 MiB so every stripe is above it
+too.
+
+That fits all three measurements, but fitting is not proof. It was therefore tested directly.
+
+**The controlled test.** Two uploads of equal total size and different object size, with BlueStore's
+deferred-write counters read either side. 200 files of 51,200 bytes (9.77 MiB total) against 10 files of
+1,048,576 bytes (10.00 MiB total), random content so compression cannot interfere, counters read via
+`ceph tell osd.0 perf dump bluestore`:
+
+| Point | `issued_deferred_writes` | `issued_deferred_write_bytes` |
+|---|---|---|
+| baseline | 64,693 | 1,580,662,784 |
+| after 200 x 50 KiB | 65,093 (**+400**) | 1,591,312,384 (**+10,649,600**, 10.16 MiB) |
+| after 10 x 1 MiB | 65,093 (**+0**) | 1,591,312,384 (**+0**) |
+
+Identical payload volume. The small-object batch put 10.16 MiB through the write-ahead log, slightly more
+than its own 9.77 MiB payload; the large-object batch put nothing through it at all. The +400 for 200
+objects is two deferred writes per object, and the 409,600-byte excess over payload is exactly 2,048 bytes
+per object — the deferred metadata write accompanying each data write.
+
+The counters come from `osd.0`, which lives on **ceph1**, while the `sar` amplification data came from
+**ceph0**'s disk. Two different nodes showing the same behaviour, which strengthens the result.
+
+**Why the HDD profile applies at all.** `cat /sys/block/sdb/queue/rotational` returns **1**, and
+`ceph osd tree` shows all three OSDs as `CLASS hdd`. The guest kernel reports the virtual disk as rotational,
+Ceph classes it as `hdd`, and the `hdd` tuning profile selects the 64 KiB deferred threshold. The SSD default
+for this setting is 0, meaning no deferred writes at all.
+
+The complete chain, with every link measured rather than assumed:
+
+```
+/sys/block/sdb/queue/rotational = 1
+  -> Ceph device class = hdd
+    -> bluestore_prefer_deferred_size_hdd = 65536
+      -> objects under 64 KiB written twice
+        -> 1.73x disk write amplification at 50 KiB
+```
+
+**What it means.** The small-object penalty in Ceph is not only latency. For the same delivered bytes,
+sub-64-KiB objects cost twice the physical writes, which halves effective write bandwidth and doubles device
+wear on a small-object workload. This is a tunable and a deliberate trade, not a defect: deferred writes
+exist to make small writes fast on rotational media by batching them into the log, and the cost is paid in
+write volume. For a self-hosted private cloud deployment, the practical point is that device class detection
+silently selects a tuning profile, and on virtualised storage that detection may not reflect the physical
+media.
+
+**Open, stated rather than glossed.** Whether the storage physically under the Proxmox host is rotational is
+**unknown** — virtio disks commonly report `rotational=1` regardless of the backing media, and this Proxmox
+account has VM-level rights only with no node-level view, so it cannot be said that Ceph is *misclassifying*
+the device, only that the classification follows what the guest kernel reports. Whether setting
+`bluestore_prefer_deferred_size_hdd` to 0 removes the amplification, and what that does to small-object
+latency, is untested; that is the experiment that would turn this observation into a recommendation. And the
+100 MiB and 1 GiB runs had no `sar` monitoring, so the resource table covers three of the five sizes only.
+
+### Disk expansion turned into an OSD count and placement group scaling test (25 September 2026)
+
+Full record in `results/ceph-osd-and-pg-scaling-2026-09-25.txt`.
+
+**Why this happened.** Disk expansion to the agreed 50-100 GB per VM spec was already due. A second
+32 GB disk was added to each node in Proxmox (matching bus/storage/iothread on the existing OSD disk,
+no SSD emulation, so `rotational` stays 1 and the device class stays `hdd`), intending to compare a
+3-OSD and 6-OSD cluster at concurrency 64, 1 MiB objects, three runs per point.
+
+**It did not go as planned, and that turned out to matter.** The cluster's OSD spec
+(`osdspec_affinity: all-available-devices`) claimed the new disks and built OSDs automatically before
+any deliberate step was taken - confirmed via `ceph-volume lvm list`, which showed the same cluster
+fsid on the new devices. That same check surfaced something unexamined until now: the data pool
+`default.rgw.buckets.data` had been running with **`pg_num=1`** for every Ceph benchmark ever run on
+this cluster. A placement group is Ceph's unit of write parallelism, and a single PG serialising every
+write through one primary OSD was a plausible dominant explanation for the ~280 MiB/s ceiling found on
+23 September. A two-point test became a three-point test isolating OSD count from PG count.
+
+**Results, three runs per point:**
+
+| Condition | Mean throughput | vs baseline |
+|---|---|---|
+| 3 OSD, 1 PG (baseline, confirmed before any change) | 279.79 MiB/s | - |
+| 6 OSD, 1 PG (PG forced back down, isolates OSD count) | 270.24 MiB/s | -3.4% |
+| 6 OSD, 256 PG (autoscaler default after disks added) | 304.71 MiB/s | +8.9% |
+
+**Doubling OSD count gave nothing** - if anything a small loss, no overlap between the 3-OSD and
+6-OSD/1-PG sets. Consistent with the 23 September finding that the shared storage backend sustains far
+more throughput (~3.7 GB/s measured) than the cluster ever uses, so extra OSD daemons add coordination
+cost without adding usable bandwidth - plausible given that prior measurement, but not separately
+proven here.
+
+**PG count did matter**: +12.8% between the two 6-OSD conditions, with nothing else changing. **This
+corrects the hypothesis that motivated the test.** A single-PG bottleneck as a *dominant* explanation is
+not supported; the effect is real but modest, not the order-of-magnitude change true serialisation would
+produce. The 23 September conclusion - CPU and disk approaching saturation together, with neither
+individually decisive - stands, with pg_num=1 added as a confirmed secondary factor rather than a
+replacement cause.
+
+**Resource data (ceph0 only, measurements 2 and 3 only - the 3-OSD baseline's `sar` was started on the
+wrong host and is lost, the same class of slip as the missing per-level `sar` in the first sweep).** CPU
+cost per MiB/s delivered was nearly identical at both PG counts (0.197 vs 0.206), and disk write bytes
+as a fraction of client throughput was the same ratio both times (0.511 vs 0.510). Neither run
+approached saturation (39% and 32% disk util). So on ceph0 specifically, the PG-driven gain is not
+explained by this node working harder; it most likely reflects better write parallelism spread across
+all 6 OSDs cluster-wide, which single-node data cannot directly show, since ceph1 and ceph2 were never
+monitored in this test.
+
+**State left afterward**: `default.rgw.buckets.data` restored to `pg_num=256` with autoscaling back on
+(this is what the cluster would have converged to anyway). Cluster: 6 OSDs, HEALTH_OK, 192 GiB total raw
+capacity, meeting the agreed 50-100 GB per VM specification.

@@ -1,0 +1,36 @@
+sar -u -r -d 1 60, captured on ceph0 (192.168.1.72) during the 5-run ossperf batch against Ceph RGW, 17 September 2026. Tail of output (last samples plus averages) pasted below, as read from the console.
+
+06:41:11 PM kbmemfree   kbavail   kbmemused  %memused  kbbuffers  kbcached  kbcommit   %commit  kbactive  kbinact  kbdirty
+06:41:12 PM    299816   4704756    2927264     36.44     245192   4149472   13746808   152.20   2274116  4937520     7708
+
+06:41:11 PM       DEV      tps   rkB/s    wkB/s  dkB/s  areq-sz  aqu-sz  await  %util
+06:41:12 PM       sda     7.00    0.00   104.00   0.00    14.86    0.01   1.71   0.80
+06:41:12 PM       sdb     0.00    0.00     0.00   0.00     0.00    0.00   0.00   0.00
+06:41:12 PM      dm-0     0.00    0.00     0.00   0.00     0.00    0.00   0.00   0.00
+
+06:41:12 PM       CPU    %user   %nice  %system  %iowait  %steal   %idle
+06:41:13 PM       all    87.00    0.00    13.00     0.00    0.00    0.00
+
+06:41:12 PM kbmemfree   kbavail   kbmemused  %memused  kbbuffers  kbcached  kbcommit   %commit  kbactive  kbinact  kbdirty
+06:41:13 PM    252948   4657904    2974112     37.02     245212   4149468   13820384   153.01   2268996  4975708     3152
+
+06:41:12 PM       DEV      tps   rkB/s    wkB/s  dkB/s  areq-sz  aqu-sz  await  %util
+06:41:13 PM       sda    22.00    0.00  5296.00   0.00   240.73    0.09   3.95   2.80
+06:41:13 PM       sdb    26.00    0.00    72.00   0.00     2.77    0.01   0.50   0.80
+06:41:13 PM      dm-0    31.00    0.00    72.00   0.00     2.32    0.01   0.39   0.80
+
+Average:           CPU    %user   %nice  %system  %iowait  %steal   %idle
+Average:            all    27.13    0.00     2.23     1.19    0.00   69.46
+
+Average:      kbmemfree   kbavail   kbmemused  %memused  kbbuffers  kbcached  kbcommit   %commit  kbactive  kbinact  kbdirty
+Average:          258465   4659659    2972325     37.00     245198   4145737   13725822   151.97   2270006  4924328     1896
+
+Average:           DEV      tps   rkB/s    wkB/s  dkB/s  areq-sz  aqu-sz  await  %util
+Average:            sda    24.00    0.07   577.64   0.00    24.07    0.07   3.09   1.58
+Average:            sdb     1.12    0.00    88.72   0.00    79.46    0.00   1.42   0.07
+Average:           dm-0     2.70    0.00    88.72   0.00    32.86    0.01   2.81   0.07
+
+Summary: CPU averaged 27.13% user, 2.23% system, 1.19% iowait, 69.46% idle across the batch, with one
+momentary spike to 87% user / 13% system coinciding with an operation. Memory held steady around 37% used.
+Disk writes on sda (the OSD's backing device) briefly burst to ~5.3 MB/s before settling to an average of
+577.64 kB/s. No indication of resource saturation at this workload size (5 files, 1 MiB each, 5 repetitions).

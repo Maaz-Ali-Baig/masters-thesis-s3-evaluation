@@ -1,0 +1,137 @@
+Ceph object-size sweep, the cost model, and where the ceiling actually is
+=========================================================================
+Date:     23 September 2026
+Cluster:  Ceph Tentacle 20.2.4, 3 VMs, 4 vCPUs and 8 GB RAM each, one 32 GB OSD each
+Client:   Warp v1.8.0 on ceph2, driving ceph0's RGW over the network
+Design:   Concurrency held at 8, object size varied. Only the 1 GiB point differs
+          (concurrency 2) and the reason is recorded below.
+
+WHY THIS RUN EXISTS
+-------------------
+The concurrency work established a plateau at roughly 285-293 MiB/s and then
+eliminated every hardware explanation for it in turn: the network (8.64 Gbit/s
+measured, 8% used), the gateway (three gateways performed no better than one),
+node CPU and disk (never saturated), and the shared VM storage backend (three
+VMs writing simultaneously sustained ~3.7 GB/s combined).
+
+With the hardware ruled out, the remaining question was whether Ceph's cost is
+charged per operation or per byte. Varying object size at fixed concurrency
+answers that directly. It is also the object-size matrix the Performance chapter
+required anyway.
+
+RESULTS
+-------
+Size      Conc.  Throughput    Ops/s    Latency avg   Per connection
+50 KiB      8     23.72 MiB/s  485.87      16.4 ms       2.97 MiB/s
+1 MiB       8    171.13        171.13      46.5 ms      21.39
+16 MiB      8    262.02         16.38     516.7 ms      32.75
+100 MiB     8    271.00          2.71    2951.7 ms      33.88
+1 GiB       2    254.64          0.25    8031.7 ms     127.32
+
+Zero errors at every size except the first 1 GiB attempt, which is discussed
+under "capacity" below.
+
+THE COST MODEL
+--------------
+Fitting a straight line to latency against object size across the concurrency-8
+points gives:
+
+    request latency = 15.2 ms  +  ~31 ms per MiB          (at concurrency 8)
+
+Checked against every measured point rather than asserted:
+
+    50 KiB  predicted 16.7 ms   measured 16.4 ms
+    1 MiB   predicted 46.5 ms   measured 46.5 ms  (fit point)
+    100 MiB predicted 3145 ms   measured 2952 ms
+    throughput at 1 MiB   predicted 172.0 MiB/s   measured 171.13
+    throughput at 50 KiB  predicted  23.8 MiB/s   measured  23.72
+
+The model holds across a 2000-fold range of object size. Refitting on the
+100 MiB point gives a marginal cost of 29.4 ms/MiB, so the slope declines
+slightly at large sizes; the fixed term is stable at about 15 ms.
+
+WHAT THE MODEL MEANS
+--------------------
+There is a fixed cost of roughly 15 ms per PUT that does not depend on object
+size: HTTP handling, SigV4 verification, a bucket index update, and waiting for
+three replica acknowledgements. The share of each request spent on that fixed
+cost is:
+
+    50 KiB    ~93%     latency-bound, bandwidth irrelevant
+    1 MiB     ~33%     a third of throughput lost to overhead
+    16 MiB     ~3%     essentially bandwidth-bound
+    100 MiB   ~0.5%    bandwidth-bound
+
+THE CEILING, AND WHAT CONCURRENCY IS FOR
+-----------------------------------------
+The aggregate ceiling is roughly 270-290 MiB/s. Object size does not move it.
+What object size changes is how much concurrency is needed to reach it:
+
+    1 GiB objects    reach 254.64 MiB/s with 2 connections
+    100 MiB objects  reach 271.00 MiB/s with 8 connections
+    1 MiB objects    need 64 connections to reach 284.71 MiB/s
+    50 KiB objects   cannot reach it at any concurrency tested
+
+Per-connection bandwidth makes the same point from the other side: 127 MiB/s per
+connection at concurrency 2, but 34 MiB/s per connection at concurrency 8. The
+connections are sharing one aggregate ceiling, not each getting their own.
+
+RELATION TO EXISTING LITERATURE
+-------------------------------
+The TU Munich PVLDB 2023 paper already in the source log reports that small
+objects are latency-bound while large objects become bandwidth-bound in the
+8-32 MB region. This sweep reproduces that independently, on a different system,
+with a fitted constant for the crossover rather than a qualitative claim. The
+transition here sits between 1 MiB (33% overhead) and 16 MiB (3% overhead),
+consistent with that range. Useful for Related Work: the finding is corroborated,
+not merely cited.
+
+CAPACITY — THE FIRST 1 GiB ATTEMPT FAILED, AND WHY
+---------------------------------------------------
+1 GiB at concurrency 8 produced 709 errors reading "insufficient capacity" and a
+meaningless throughput figure. Eight concurrent 1 GiB uploads means 8 GiB in
+flight, 24 GiB after three-way replication, on top of data already written and
+the parts of uploads that had failed. A 96 GiB cluster cannot sustain that shape.
+
+This is a limitation of the test environment, not a Ceph defect. Ceph refused the
+writes, reported why, stayed HEALTH_OK, and recovered without intervention.
+
+The point was re-run at concurrency 2, which fits. The concurrency difference is
+stated wherever the 1 GiB figure appears; it is not comparable to the other rows
+on equal terms, and the sample is small (about 15 objects completed), though
+variance was low at 2% of the mean.
+
+THREE OPERATIONAL FINDINGS WORTH KEEPING
+-----------------------------------------
+1. Deleted capacity does not return immediately. RGW garbage collection reclaims
+   asynchronously, by default on an hourly cycle. 37 GiB showed as used after
+   runs whose objects had already been deleted; `radosgw-admin gc process
+   --include-all` reclaimed 35 GiB of it at once.
+2. Removing a bucket does not clean up aborted multipart uploads. After
+   `radosgw-admin bucket rm --purge-objects --bypass-gc` succeeded and the bucket
+   disappeared from `bucket list`, the data pool still held 4,110 objects and
+   16 GiB stored (48 GiB raw). A second GC pass, run after the bucket removal,
+   cleared them. Order matters: GC before the purge does not catch them.
+3. Both of the above matter for capacity planning in a self-hosted deployment and
+   belong in the thesis as operational observations, not just as housekeeping.
+
+FILES
+-----
+On ceph2:  /root/warp-sz-50KiB.txt, /root/warp-sz-1MiB.txt,
+           /root/warp-sz-16MiB.txt, /root/warp-sz-100MiB.txt,
+           /root/warp-sz-1GiB.txt        (the failed concurrency-8 attempt)
+           /root/warp-sz-1GiB-c2.txt     (the usable concurrency-2 run)
+           /root/size-markers.txt, /root/warp-raw/sz-*
+On ceph0:  /root/sar-size-p1.txt  (covers the 50 KiB, 1 MiB and 16 MiB runs;
+           not yet sliced per size)
+
+OPEN
+----
+- Resource data per object size has not been analysed. The sar log for the first
+  three sizes exists and is sliceable with the level markers; the 100 MiB and
+  1 GiB runs had no monitoring.
+- Whether 8 vCPUs beats 4 is untested. 1 to 4 gave up to 3.3x, so the question is
+  live, and it is the last hardware variable not yet moved.
+- Disk capacity is 32 GB per VM against an agreed specification of 50-100 GB.
+  Expanding is justified but should wait until the current curve is complete, so
+  that the whole object-size sweep describes one unchanged cluster.

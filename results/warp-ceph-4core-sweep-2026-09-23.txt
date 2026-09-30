@@ -1,0 +1,132 @@
+Ceph concurrency sweep at 4 vCPUs, and the 1-core versus 4-core comparison
+==========================================================================
+Date:     23 September 2026 (later the same day as the 1-core sweep)
+Cluster:  Ceph Tentacle 20.2.4, 3 VMs, each raised from 1 vCPU to 4 vCPUs
+Client:   Warp v1.8.0 on ceph2, driving ceph0's RGW over the network
+Workload: PUT, 1 MiB objects, 60 s per run, single run per level (exploratory)
+
+WHY THIS RUN EXISTS
+-------------------
+The 1-core sweep (results/warp-ceph-concurrency-sweep-2026-09-23.txt) found the
+VMs had a single vCPU each, and proposed — explicitly as a hypothesis, not a
+finding — that the single core explained a throughput plateau at roughly
+85-88 MiB/s. The stated test was: add vCPUs, repeat the sweep, see whether the
+plateau moves. This is that test.
+
+Nothing else changed. Same Ceph version, same disks, same network, same client
+node, same tool, same object size, same run length, same command.
+
+HOW THE CHANGE WAS MADE
+-----------------------
+Cores raised from 1 to 4 per VM in the Proxmox UI (Hardware -> Processors;
+sockets left at 1). This requires the VM powered off, so it was done one node at
+a time, with a graceful Shutdown rather than Stop, and HEALTH_OK confirmed from
+ceph0 between each node. ceph0 was done last, because every cluster command is
+issued from it and cluster health cannot be checked while it is down.
+
+The agreed VM specification with Prof. Baun and Mr Petrozziello was ~4 cores,
+8-16 GB RAM, 50-100 GB disk. This change brings the cores to that specification;
+RAM was already at 8 GB. Mr Petrozziello has given standing permission to adjust
+these VMs' resources.
+
+After the third node returned: HEALTH_OK, 3 mons in quorum, 3 OSDs up and in,
+162 pgs active+clean, 3 RGW daemons. The active manager failed over to ceph1
+during ceph0's restart, which is normal.
+
+RESULT — 1 CORE vs 4 CORES
+---------------------------
+Concurrency   1 core (MiB/s)   4 cores (MiB/s)   Gain    Latency 1c -> 4c
+1                34.18            37.76          1.10x    29.4 ->  26.4 ms
+2                59.95            73.62          1.23x    33.3 ->  27.3 ms
+4                79.29           121.94          1.54x    50.2 ->  32.9 ms
+8                83.77           175.99          2.10x    95.3 ->  45.4 ms
+16               84.45           218.33          2.59x   186.8 ->  72.2 ms
+32               91.24           263.97          2.89x   339.3 -> 119.7 ms
+64               86.61           284.68          3.29x   711.9 -> 222.6 ms
+
+Zero errors at every level in both sweeps.
+
+THE HYPOTHESIS IS CONFIRMED. The single vCPU was the constraint. 284.68 MiB/s is
+about 2388 Mbps, against about 727 Mbps before.
+
+Three things the shape of this comparison shows:
+
+1. The gain GROWS with concurrency: 1.10x at concurrency 1, rising to 3.29x at
+   64. This is the signature of a queueing bottleneck being relieved. At
+   concurrency 1 there is nothing to queue behind, so core count barely matters;
+   the more requests contend, the more the extra cores are worth. A single
+   headline figure would hide this, so the whole curve belongs in the thesis,
+   not one number from it.
+2. Latency improved most where it was worst: 187 ms to 72 ms at concurrency 16,
+   712 ms to 223 ms at 64.
+3. Four times the cores gave at most 3.29x the throughput. Scaling is sublinear,
+   as expected, and the deficit is itself informative.
+
+INTERNAL VALIDITY CHECK
+-----------------------
+Little's Law (throughput x latency = concurrency) holds within 2% at all seven
+levels of the 4-core sweep, as it did at all seven levels of the 1-core sweep:
+  c1   37.76 x 0.0264 =  1.00      c16  218.33 x 0.0722 = 15.76
+  c2   73.62 x 0.0273 =  2.01      c32  263.97 x 0.1197 = 31.60
+  c4  121.94 x 0.0329 =  4.01      c64  284.68 x 0.2226 = 63.37
+  c8  175.99 x 0.0454 =  7.99
+
+WHERE THE LIMIT IS NOW — per-level resource data from ceph0
+------------------------------------------------------------
+Per-level slicing was possible this time because each level's start and end were
+timestamped on the client and sar ran continuously on ceph0. (Note: sar on ceph0
+records timestamps in 12-hour format with an AM/PM field, which the slicing awk
+has to account for.)
+
+Conc.   CPU user   sys    iowait  idle   busy | disk write   util   await   queue
+1         9.11     6.28   2.98   81.62   18%  |  36.5 MB/s   29%   0.96ms   0.30
+2        17.88    13.50   4.92   63.67   36%  |  69.2        47%   0.87     0.59
+4        26.22    18.77   7.33   47.65   52%  | 111.0        59%   1.16     1.16
+8        35.86    24.41   6.81   32.89   67%  | 155.4        66%   1.49     1.61
+16       39.98    26.55   6.61   26.83   73%  | 190.4        73%   2.04     2.14
+32       46.83    27.37   5.63   20.15   80%  | 217.3        77%   2.40     2.54
+64       47.94    30.19   4.42   17.42   83%  | 226.0        77%   2.64     2.75
+
+Reading:
+
+- CPU cost per unit of throughput IMPROVES with concurrency, from 0.49 percentage
+  points of CPU per MiB/s at concurrency 1 to 0.29 at 64. Batching pays.
+- At concurrency 64, CPU is 83% busy and the disk 77% utilised, with queue depth
+  2.75 and service waits up from 0.96 ms to 2.64 ms. Disk throughput flattens
+  between 32 and 64 (+4%) while client throughput still rises (+7.8%).
+- CONCLUSION, stated at the strength the evidence supports: the 4-core plateau is
+  NOT a single bottleneck. CPU and disk are approaching saturation together,
+  which is why gains taper rather than stop. Neither is individually decisive and
+  it would be wrong to name one.
+- The network remains irrelevant: 284 MiB/s is about 2.4 Gbps against a measured
+  8.64 Gbit/s path.
+
+CAVEATS
+-------
+1. Single run per level. This is an exploratory sweep establishing shape, exactly
+   as the 1-core one was. Citable figures need repetition at the levels of
+   interest, as was done around the 1-core knee.
+2. Each level's sar window includes Warp's own setup and cleanup either side of
+   the measured 60 seconds, so the resource averages UNDERSTATE the true peak
+   during the measured period.
+3. Only ceph0 was monitored. ceph1 and ceph2 carry OSD work too and have never
+   been observed during a run. Whether one of them is the real ceiling is still
+   open.
+4. The knee has moved to somewhere around concurrency 32 and throughput was still
+   rising at 64, so the 4-core curve may not have reached its plateau at all.
+   Extending to 128 would settle it.
+
+WHAT THIS MEANS FOR EVERY EARLIER CEPH NUMBER
+---------------------------------------------
+Every Ceph measurement taken before this change was on single-vCPU nodes and
+understates the system by up to 3.3x at high concurrency. Those figures are not
+discarded — they are the low-core reference point, and the pair of curves is a
+result in its own right: same software, same disks, same network, different core
+count. But no earlier Ceph figure may be presented as characterising Ceph without
+that annotation.
+
+FILES
+-----
+On ceph2:  /root/warp-s4-c{1,2,4,8,16,32,64}.txt, /root/sweep4-markers.txt,
+           /root/warp-raw/s4-c*   (Warp benchdata per level)
+On ceph0:  /root/sar-sweep-4core.txt

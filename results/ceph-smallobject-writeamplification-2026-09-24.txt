@@ -1,0 +1,182 @@
+Ceph small-object write amplification: a measured causal chain
+==============================================================
+Date:     24 September 2026 (resource data captured 23 September)
+Cluster:  Ceph Tentacle 20.2.4, 3 VMs (ceph0/hostname "debian", ceph1, ceph2),
+          4 vCPUs and 8 GB RAM each, one 32 GB OSD each, 3x replication
+OSD map:  osd.0 on ceph1, osd.1 on ceph2, osd.2 on ceph0 ("debian")
+
+WHY THIS EXISTS
+---------------
+The object-size sweep of 23 September established that small objects are
+latency-bound and fitted a cost model of 15.2 ms + ~31 ms/MiB. What it did not
+explain was where the small-object cost is actually paid inside Ceph. This work
+answers that, and the answer turned out to be physical writes, not just latency.
+
+It began as housekeeping (delete leftover benchmark buckets, slice the per-size
+sar log) and the finding fell out of the sar slice.
+
+PART 0 - BUCKET CLEANUP, AND THE GC FINDING REPRODUCED
+-------------------------------------------------------
+Nine buckets existed: thesis-test (keep) plus eight warp leftovers
+(warp-debug-bucket, warp-debug2-bucket, warp-debug3, warp-debug4, warp-debug5,
+warp-fixtest, warp-benchmark-bucket, warp-ceph-bench).
+
+Before cleanup:  51 GiB raw used, 45 GiB available, 53.46% used.
+                 default.rgw.buckets.data held 4.10k objects, 16 GiB stored.
+After `bucket rm --purge-objects` on all eight, THEN
+`radosgw-admin gc process --include-all`:
+                 3.4 GiB raw used, 93 GiB available, 3.50% used.
+                 default.rgw.buckets.data held 4 objects, 3.0 MiB stored.
+
+48 GiB reclaimed. This is the SECOND occurrence of the behaviour recorded on
+23 September, which promotes it from a one-off observation to a repeatable one:
+deleting a bucket does not release the space, and GC must be run AFTER the
+removal, not before.
+
+Note on provenance: the previous cleanup ended at 3.1 GiB and this one began at
+51 GiB, so the 48 GiB was debris accumulated by the runs that came after that
+cleanup. Which specific run produced it is not established and is not claimed.
+
+PART 1 - PER-OBJECT-SIZE RESOURCE DATA (ceph0, concurrency 8)
+--------------------------------------------------------------
+Sliced from /root/sar-size-p1.txt using the level markers on ceph2
+(19:03:54 / 19:05:20 / 19:06:31 / 19:07:36, which sar records in 12-hour form as
+07:03:54 PM onward).
+
+size       user     sys  iowait    idle   busy    wrMB/s   util%    await   queue
+50KiB     32.73   20.89    7.84   38.52    61%      41.1      62     0.65    1.01
+1MiB      36.75   25.32    6.60   31.30    69%     147.8      67     1.57    1.69
+16MiB     39.10   25.66    5.01   30.20    70%     243.1      65     4.83    2.96
+
+Client-side throughput for the same runs was 23.72, 171.13 and 262.02 MiB/s.
+
+Observation 1: CPU is nearly flat while throughput moves 11-fold.
+  CPU cost per MiB/s delivered:
+      50 KiB   2.57 percentage points of CPU per MiB/s
+      1 MiB    0.40
+      16 MiB   0.27
+  Roughly a ten-fold efficiency difference. This corroborates the latency-fitted
+  cost model from an independent direction: the fixed per-request cost is CPU
+  work, and small objects pay it per tiny object.
+
+Observation 2: disk writes do not track delivered bytes at 50 KiB.
+      50 KiB    41.1 written vs 23.72 delivered    1.73x
+      1 MiB    147.8 vs 171.13                     0.86x
+      16 MiB   243.1 vs 262.02                     0.93x
+  Under 3x replication across 3 OSDs each OSD should write about 1x the client
+  rate. The 0.86 and 0.93 sit slightly under 1.0 because each sar window includes
+  Warp setup and teardown either side of the measured period, which dilutes the
+  average. 50 KiB at 1.73x is the outlier.
+
+Observation 3: disk utilisation is flat (62-67%) across all three sizes while
+  await rises 0.65 -> 4.83 ms and queue depth 1.01 -> 2.96. Same time busy,
+  much larger requests. Neither CPU nor disk is saturated at any size, so at
+  concurrency 8 ceph0 is not the constraint.
+
+PART 2 - A HYPOTHESIS, FALSIFIED
+---------------------------------
+First hypothesis for the 1.73x: BlueStore minimum allocation size padding.
+
+    ceph config get osd bluestore_min_alloc_size_hdd  ->  4096
+
+A 50 KiB object rounds up to 52 KiB on a 4 KiB allocation unit. That is 4%
+padding, nowhere near 1.73x. THE HYPOTHESIS IS FALSIFIED and is recorded rather
+than dropped.
+
+Worth keeping in its own right: older Ceph defaulted this to 64 KiB, which would
+have been severe for small objects. Tentacle ships 4 KiB, so Ceph is already well
+tuned at the allocation layer.
+
+PART 3 - THE ACTUAL MECHANISM, AND A CONTROLLED TEST THAT PROVES IT
+--------------------------------------------------------------------
+    ceph config get osd bluestore_prefer_deferred_size_hdd  ->  65536
+
+Writes below 64 KiB take BlueStore's deferred path: the data goes into the
+write-ahead log first and is written to the device again afterwards. Writes above
+the threshold go straight to the device once.
+
+50 KiB is below the threshold. 1 MiB and 16 MiB are above it (RGW stripes large
+objects at 4 MiB, so every stripe is also above it).
+
+That fits all three measurements, but fitting is not proof, so it was tested
+directly by reading BlueStore's deferred-write counters around two uploads of
+equal total size and different object size.
+
+Design: 200 files of 51,200 bytes (9.77 MiB total) against 10 files of 1,048,576
+bytes (10.00 MiB total). Random content, so compression cannot interfere.
+Counters read from osd.0 via `ceph tell osd.0 perf dump bluestore`.
+
+    baseline            issued_deferred_writes  64,693
+                        issued_deferred_write_bytes  1,580,662,784
+
+    after 200 x 50 KiB  issued_deferred_writes  65,093    (+400)
+                        issued_deferred_write_bytes  1,591,312,384
+                                                     (+10,649,600 = 10.16 MiB)
+
+    after 10 x 1 MiB    issued_deferred_writes  65,093    (+0)
+                        issued_deferred_write_bytes  1,591,312,384  (+0)
+
+RESULT. Identical payload volume. The small-object batch put 10.16 MiB through
+the WAL, slightly more than its 9.77 MiB payload; the large-object batch put
+nothing through it at all.
+
+The +400 for 200 objects is two deferred writes per object, and the 409,600-byte
+excess over payload is exactly 2,048 bytes per object, which is the deferred
+metadata write accompanying each data write.
+
+Cross-node validity: the counters come from osd.0, which lives on ceph1, while
+the sar amplification data came from ceph0's disk. Two different nodes showing
+the same behaviour, which strengthens rather than weakens the result.
+
+PART 4 - WHY THE HDD PROFILE APPLIES AT ALL
+---------------------------------------------
+    cat /sys/block/sdb/queue/rotational   ->  1
+    ceph osd tree                          ->  all three OSDs CLASS hdd
+
+Linux reports the virtual disk as rotational, Ceph therefore classes it as hdd,
+and the hdd tuning profile selects the 64 KiB deferred threshold. The SSD default
+for this setting is 0, meaning no deferred writes at all.
+
+The complete chain, every link measured:
+
+    rotational = 1
+      -> device class hdd
+        -> bluestore_prefer_deferred_size_hdd = 65536
+          -> objects under 64 KiB written twice
+            -> 1.73x disk write amplification at 50 KiB
+
+WHAT THIS MEANS
+---------------
+The small-object penalty in Ceph is not only latency. For the same delivered
+bytes, sub-64-KiB objects cost twice the physical writes. On a small-object
+workload that halves effective write bandwidth and doubles device wear.
+
+This is a tunable, not a defect. Deferred writes exist to make small writes fast
+on rotational media by batching them into the log. The cost is paid in write
+volume, and the trade is deliberate.
+
+For a self-hosted private cloud deployment, which is this thesis's subject, the
+practical point is that device class detection silently selects a tuning profile,
+and on virtualised storage that detection may not reflect the physical media.
+
+OPEN - STATED, NOT GLOSSED
+---------------------------
+- Whether the storage physically under the Proxmox host is rotational is UNKNOWN.
+  Virtio disks commonly report rotational=1 regardless of the backing media, and
+  this Proxmox account has VM-level rights only, with no node-level view. So it
+  cannot be said that Ceph is misclassifying the device, only that the
+  classification comes from what the guest kernel reports.
+- Whether raising bluestore_prefer_deferred_size_hdd to 0 removes the
+  amplification and what it does to small-object latency is untested. That is the
+  experiment that would turn this from an observation into a recommendation.
+- The 100 MiB and 1 GiB runs had no sar monitoring, so the resource table covers
+  three of the five sizes only.
+
+FILES AND ARTEFACTS
+-------------------
+On ceph0:  /root/sar-size-p1.txt      (source of the resource table)
+           /root/pd0.json, /root/pd1.json, /root/pd2.json  (perf dumps)
+           /root/small/, /root/big/   (test payloads, safe to delete)
+On ceph2:  /root/size-markers.txt     (level boundaries)
+In-cluster: thesis-test/small/ and thesis-test/big/ still hold the test objects
+           and should be removed.

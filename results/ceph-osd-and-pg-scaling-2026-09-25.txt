@@ -1,0 +1,160 @@
+Ceph OSD count and placement group scaling, isolated
+=====================================================
+Date:     25 September 2026
+Cluster:  Ceph Tentacle 20.2.4, 3 VMs (ceph0/hostname "debian", ceph1, ceph2),
+          4 vCPUs, 8 GB RAM each. Each node given a second 32 GB disk,
+          identical bus/storage/iothread settings to the first, no SSD
+          emulation, so the guest kernel still reports rotational=1 and Ceph
+          still classes every OSD as hdd.
+Client:   Warp v1.8.0 on ceph2, driving ceph0's RGW over the network
+Workload: PUT, 1 MiB objects, concurrency 64, 60 s per run, three runs per
+          condition (this is a citable point, unlike most earlier sweeps)
+
+WHY THIS RUN EXISTS
+--------------------
+Disk expansion to the agreed 50-100 GB per VM spec was due regardless (see
+setup_notes.md, "Object-size sweep" open items). Rather than treat it as pure
+housekeeping, it was turned into a test: does adding OSDs move the ~280 MiB/s
+ceiling found on 23 September?
+
+It did not unfold as planned. Ceph's default OSD spec
+(osdspec_affinity: all-available-devices) claimed the new disks and built OSDs
+automatically the moment they were added in Proxmox, before any deliberate step
+to create them was taken. This was discovered via `ceph-volume lvm list`, which
+also surfaced that the data pool (default.rgw.buckets.data) had been running
+with pg_num=1 for every benchmark ever run on this cluster, a variable that had
+not been examined until now. What began as a two-point OSD comparison became a
+three-point test isolating OSD count from placement group count.
+
+BASELINE - CONFIRMED BEFORE ANYTHING CHANGED
+-----------------------------------------------
+3 OSDs (one per node), default.rgw.buckets.data at pg_num=1, three runs:
+
+    r1  281.70 MiB/s
+    r2  278.76
+    r3  278.90
+    mean 279.79, spread 1.05%, CV 0.48%
+
+Tighter than the single exploratory run of 284.68 MiB/s recorded on 23
+September (a 1.7% downward correction, not a contradiction - that run was
+single-sample by design).
+
+WHAT ACTUALLY HAPPENED WHEN THE DISKS WERE ADDED
+----------------------------------------------------
+`ceph osd pool autoscale-status`, taken after the disks appeared, showed
+default.rgw.buckets.data at PG_NUM 256 (autoscaler-driven, BULK=True), up from
+1. `ceph -s` confirmed 6 OSDs up and in, 449 PGs total, HEALTH_OK, rebalance
+already complete (only 4.9 MiB of data existed to move).
+
+So the rerun as originally planned would have changed three things at once:
+OSD count (3 -> 6), total cluster PGs (162 -> 449), and the data pool's own PG
+count (1 -> 256). Measuring at that point would not identify which one, if any,
+mattered.
+
+MEASUREMENT 2 - 6 OSDs, 256 PGs (both changes together)
+-----------------------------------------------------------
+    r1  307.32 MiB/s
+    r2  300.68
+    r3  306.14
+    mean 304.71
+
++8.9% over baseline. No overlap between the two sets (baseline max 281.70,
+this set's min 300.68), so the gain is real. But this was not the large jump a
+single-PG bottleneck would predict, and it conflates two variables.
+
+ISOLATION - forcing the data pool back to 1 PG on the now-6-OSD cluster
+-----------------------------------------------------------------------
+`ceph osd pool set default.rgw.buckets.data pg_autoscale_mode off`, then
+`pg_num 1`. PG merge is gradual; watched via `ceph osd pool get ... pg_num`
+until it reached 1 and `ceph -s` showed all PGs active+clean (roughly 20
+minutes, no intervention needed).
+
+MEASUREMENT 3 - 6 OSDs, 1 PG (isolates OSD count alone)
+------------------------------------------------------------
+    r1  277.15 MiB/s
+    r2  267.98
+    r3  265.59
+    mean 270.24
+
+RESULT, ALL THREE POINTS
+--------------------------
+    3 OSD, 1 PG     279.79 MiB/s   (baseline)
+    6 OSD, 1 PG     270.24 MiB/s   (-3.4%, no overlap with baseline - worse)
+    6 OSD, 256 PG   304.71 MiB/s   (+8.9% over baseline, +12.8% over 6-OSD/1-PG)
+
+CONCLUSION, STATED AT THE STRENGTH THE EVIDENCE SUPPORTS
+------------------------------------------------------------
+Doubling OSD count on the same backing storage produced no gain - if anything a
+small loss, consistent with the earlier finding (23 September) that the shared
+storage backend sustains far more throughput (~3.7 GB/s measured) than the
+cluster ever uses, so extra OSD daemons add coordination and CPU cost without
+adding usable device bandwidth. This is plausible given prior measurements but
+was not separately proven here (see gaps below).
+
+Placement group count on the data pool DID matter: raising it from 1 to 256 on
+an otherwise-identical 6-OSD cluster gave +12.8%, isolated cleanly with nothing
+else changing between measurements 2 and 3.
+
+This corrects an earlier hypothesis. Before this test it seemed plausible that a
+single PG serialising every write through one primary OSD could be a dominant
+explanation for the ~280 MiB/s plateau documented on 23 September (three
+gateways performing no better than one was cited as suggestive). THE
+HYPOTHESIS AS A DOMINANT EXPLANATION IS NOT SUPPORTED. The measured effect is
+real (+12.8%) but modest, not the order-of-magnitude change a true single-point
+serialisation bottleneck would produce. The 23 September conclusion - that CPU
+and disk approach saturation together with neither individually decisive -
+stands; pg_num=1 is now added as a third, independently confirmed, secondary
+factor, not a replacement explanation.
+
+RESOURCE DATA, ceph0 ONLY, MEASUREMENTS 2 AND 3
+------------------------------------------------
+The 3-OSD baseline's sar log was started on the wrong host (ceph2 instead of
+ceph0) and is lost; that comparison cannot be made. sar for measurements 2 and
+3 succeeded on ceph0 (device names required different field indexing once `-p`
+was added to the sar invocation; corrected before analysis):
+
+    6 OSD, 256 PG   CPU busy 59.9%   disk write 155.7 MB/s   util 39%   await 1.87 ms
+    6 OSD, 1 PG     CPU busy 55.6%   disk write 137.8 MB/s   util 32%   await 1.56 ms
+
+CPU cost per MiB/s of client throughput: 0.197 (256 PG) vs 0.206 (1 PG) -
+nearly identical, marginally more efficient at 256 PG. Disk write bytes as a
+fraction of client throughput: 0.511 vs 0.510 - essentially identical ratio at
+both PG counts, i.e. this node's per-byte write behaviour did not change with
+PG count. Neither run approaches CPU or disk saturation (39% and 32% disk
+util). CONCLUSION: on ceph0 specifically, the 12.8% PG-driven gain is not
+explained by this node working harder or more efficiently; it most likely
+reflects better write parallelism spread across all 6 OSDs cluster-wide, which
+this single-node data cannot directly demonstrate.
+
+GAPS, STATED RATHER THAN GLOSSED
+------------------------------------
+1. No resource data exists for the 3-OSD baseline (sar run on the wrong host),
+   so no CPU/disk comparison across all three OSD/PG conditions is possible,
+   only across the two 6-OSD conditions.
+2. Only ceph0 was monitored throughout. ceph1 and ceph2 also carry OSD and
+   gateway load and have never been observed during any of these three runs;
+   whether the PG-count effect looks the same on them is unknown.
+3. The "extra OSDs add coordination cost without adding device bandwidth"
+   explanation for measurement 3 being flat-to-negative is plausible given the
+   23 September storage-backend measurement, but is not itself tested here.
+4. Both OSDs per node very likely share the same underlying Proxmox storage
+   pool, so "6 OSDs" in this test is six daemons over what may be the same
+   physical capacity as before, not six independent devices. This is inferred
+   from context (VM-Disk-Pool, no visibility into host storage), not confirmed,
+   and is stated as such.
+
+STATE LEFT AFTER THIS TEST
+------------------------------
+default.rgw.buckets.data restored to pg_num=256, pg_autoscale_mode back to on,
+confirmed via `ceph osd pool autoscale-status`. Cluster otherwise unchanged:
+6 OSDs, HEALTH_OK, 192 GiB total raw capacity, which brings the deployment to
+the previously agreed 50-100 GB per VM specification.
+
+FILES
+-----
+On ceph2:  /root/warp-raw/osd3-c64-r{1,2,3}, osd6-c64-r{1,2,3},
+           osd6-1pg-c64-r{1,2,3}   (Warp benchdata)
+           /root/warp-osd3-c64-r{1,2,3}.txt, warp-osd6-c64-r{1,2,3}.txt,
+           warp-osd6-1pg-c64-r{1,2,3}.txt   (Warp console output)
+On ceph0:  /root/sar-osd6-c64.txt, /root/sar-osd6-1pg-c64.txt
+           (sar-osd3-c64.txt does not exist - started on ceph2 by mistake)

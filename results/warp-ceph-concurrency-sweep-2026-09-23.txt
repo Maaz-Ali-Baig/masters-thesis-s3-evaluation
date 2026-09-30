@@ -1,0 +1,168 @@
+Ceph concurrency sweep, bottleneck investigation, and a hardware discovery
+==========================================================================
+Date:     23 September 2026
+Cluster:  Ceph Tentacle 20.2.4, 3 VMs (ceph0/"debian" 192.168.1.72, ceph1, ceph2)
+Client:   Warp v1.8.0 on ceph2, driving ceph0's RGW over the network
+Workload: PUT, 1 MiB objects, 60 s per run. Object size held constant throughout;
+          only concurrency varies.
+
+Why the client is on ceph2: an earlier batch established that running the load
+generator on the measured node costs 61% of measured throughput. See
+results/warp-ceph-coresidency-2026-09-23.txt. All figures below are off-host.
+
+--------------------------------------------------------------------------
+1. EXPLORATORY SWEEP (single run per level, shape-finding only, not citable)
+--------------------------------------------------------------------------
+Concurrency   Throughput      Latency avg   p99
+1             34.18 MiB/s      29.4 ms       48.4 ms
+2             59.95            33.3          66.9
+4             79.29            50.2         122.1
+8             83.77            95.3         226.3
+16            84.45           186.8         365.9
+32            91.24           339.3         676.2
+64            86.61           711.9        1434.0
+
+Zero errors at every level, including 64.
+
+--------------------------------------------------------------------------
+2. PINNED MEASUREMENTS (3 runs per level, around the knee)
+--------------------------------------------------------------------------
+Concurrency   Runs (MiB/s)                Mean      Latency avg
+4             78.79, 81.14, 78.28         79.40     50.4 ms
+8             89.27, 86.09, 79.71         85.02     97.1 ms
+16            89.38, 85.43, 88.78         87.86    179.8 ms
+
+A further 3 runs at 16, taken with sar active, gave 84.30, 83.26, 85.75
+(mean 84.44, latency 197.9 ms). The slight drop is consistent with sar's own
+cost but is not claimed as such.
+
+Combined n=6 at concurrency 16: 83.26 - 89.38 MiB/s, mean 86.15, spread 7%.
+
+Shape of the curve:
+  4  -> 8   : +7.1% throughput for +93% latency
+  8  -> 16  : +3.3% throughput for +85% latency
+
+Saturation is effectively reached by concurrency 8. Past it, additional
+concurrency buys queue time rather than throughput, which is textbook queueing
+behaviour. The plateau is roughly 85-88 MiB/s (about 715-740 Mbps).
+
+LIMIT ON THIS CLAIM: the distributions overlap. Concurrency 8 spans 79.71-89.27
+while concurrency 4 reaches 81.14, so with three runs the levels are not cleanly
+separated at the extremes even though the means differ. Stating 4 and 8 as
+distinct operating points would need more repetitions.
+
+INTERNAL VALIDITY CHECK (Little's Law): throughput x latency should equal
+concurrency. It holds within 3% at every point measured:
+  c1  34.18 x 0.0294 = 1.00     c8   85.02 x 0.0971 = 8.26
+  c2  59.95 x 0.0333 = 2.00     c16  87.86 x 0.1798 = 15.80
+  c4  79.40 x 0.0504 = 4.00     c32  91.24 x 0.3393 = 30.96
+                                c64  86.61 x 0.7119 = 61.66
+This is a useful self-consistency result: the instrument is measuring what it
+claims to measure.
+
+--------------------------------------------------------------------------
+3. WHAT LIMITS THE PLATEAU - INVESTIGATION
+--------------------------------------------------------------------------
+sar on ceph0 during three runs at concurrency 16:
+  CPU:  %user 56.35  %system 19.16  %iowait 4.98  %idle 19.49
+  sdb:  60825 kB/s written, %util 34.39, await 1.75 ms, aqu-sz 0.89
+  mem:  54.32% used
+
+Neither CPU nor disk appeared saturated, so three candidate explanations were
+formed and tested in order of cost.
+
+CANDIDATE A - the network. ELIMINATED.
+  sar -n DEV on ceph0 during a concurrency-16 run:
+      ens18  rx 90529 kB/s (~88 MiB/s)   tx 45344 kB/s (~44 MiB/s)
+  Inbound matches client throughput, confirming the measurement path.
+  Note: outbound is HALF of inbound, not double as predicted before measuring.
+  The prediction assumed ceph0 fans out both replicas for every object. It does
+  not. The likely reason is that only about a third of placement groups have
+  their primary OSD on ceph0, so for most objects the gateway forwards to a
+  primary elsewhere and that node distributes the copies. NOT VERIFIED - stated
+  as an explanation, not a finding.
+
+  %ifutil reads 0.00 because the virtio interface reports no link speed
+  (/sys/class/net/ens18/speed = -1), so sar cannot compute utilisation. Measured
+  it directly instead, with Ceph idle:
+      iperf3 ceph2 -> ceph0, 10 s: 8.64 Gbits/sec sender AND receiver
+  Ceph was using roughly 0.74 Gbps of an 8.64 Gbps path, about 8%. The network
+  is comfortably not the constraint.
+  Incidental: 8609 TCP retransmits in 10 s at full rate. Cannot explain a plateau
+  at 8% utilisation, but the path is not perfectly clean and it is recorded.
+
+CANDIDATE B - a serialisation point inside a single daemon.
+  Tested with sar -P ALL during a concurrency-16 run, expecting to see one core
+  pinned while others idled. The output listed only CPU "all" and CPU "0".
+
+CANDIDATE C - another node being the real ceiling. NOT TESTED. Only ceph0 has
+  ever been monitored. Still open.
+
+--------------------------------------------------------------------------
+4. THE ACTUAL DISCOVERY - THE VMs HAVE ONE vCPU EACH
+--------------------------------------------------------------------------
+The per-core test did not find a pinned core. It found that there is only one
+core to pin.
+
+    ceph0:  nproc = 1,  /proc/cpuinfo processors = 1,  RAM 7 GB usable
+    ceph1:  nproc = 1
+    ceph2:  nproc = 1
+
+Every Ceph measurement in this project was therefore taken on single-core nodes,
+each running a monitor, an OSD, an RGW gateway, and on ceph0 the active manager
+as well, all sharing one core. sar -P ALL during the concurrency-16 run:
+    CPU all/0:  %user 59.95  %system 14.39  %iowait 2.15  %idle 23.46
+
+CONSEQUENCES:
+
+a) The plateau now has a plausible mechanism. A single server at ~76% utilisation
+   already exhibits sharply rising queue times, which matches the measured shape
+   exactly: throughput flat beyond concurrency 8 while latency rises linearly.
+   STATED AS STRONGLY INDICATED, NOT PROVEN. The test that settles it is to add
+   vCPUs in Proxmox and repeat the sweep. If the plateau moves, the core count
+   was the constraint.
+
+b) The co-residency result is now explained rather than merely observed. Running
+   Warp on ceph0 meant the load generator and the entire storage stack were
+   timesharing a single core. A 61% throughput loss is the expected outcome, not
+   a surprising one.
+
+c) The provisioning does not match what was discussed. The specification put to
+   Prof. Baun and to Mr Petrozziello was approximately 4 cores, 8-16 GB RAM and
+   50-100 GB disk per VM. RAM matches (8 GB). Core count does not (1 versus ~4).
+
+d) Every Ceph performance figure recorded so far must carry the annotation
+   "single-vCPU nodes". They are not wrong, but they characterise a severely
+   under-provisioned deployment rather than Ceph as such, and Ceph's own sizing
+   guidance is substantially above one core per node.
+
+--------------------------------------------------------------------------
+5. WHAT TO DO NEXT
+--------------------------------------------------------------------------
+1. Ask Mr Petrozziello to raise the vCPU count to the agreed specification, and
+   tell Prof. Baun, since it affects every Ceph number already reported to him.
+2. Repeat the concurrency sweep afterwards. If the plateau moves, (a) above is
+   confirmed and the comparison of the old and new curves is itself a result
+   worth reporting: the same software, same disks, same network, different core
+   count.
+3. Monitor ceph1 and ceph2 during a run as well, to close candidate C.
+4. Keep the existing numbers. They become the low-core reference point rather
+   than being discarded.
+
+--------------------------------------------------------------------------
+FILES
+--------------------------------------------------------------------------
+On ceph2:  /root/warp-sweep-c{1,2,4,8,16,32,64}.txt
+           /root/warp-pin-c{4,8,16}-r{1,2,3}.txt
+           /root/warp-c16sar-r{1,2,3}.txt, /root/warp-netcheck.txt
+           /root/warp-percore.txt, /root/pin-markers.txt
+           /root/warp-raw/   (Warp benchdata for every run)
+On ceph0:  /root/sar-c16-2026-09-23.txt, /root/sar-net-c16.txt,
+           /root/sar-percore-c16.txt
+
+LOST: the sar log for the exploratory sweep. The intended per-level sar command
+was not the one executed (an earlier command was re-run from shell history), and
+its 600-sample window closed at about 22:54 while the pinned runs began at
+22:58:39, so the two never overlapped. Throughput and latency for every run are
+unaffected, as those come from the Warp output files. Resource data for the
+sweep and for the pinned runs at concurrency 4 and 8 does not exist.

@@ -1,0 +1,94 @@
+Ceph fault tolerance rerun — measured recovery time and continuous availability
+================================================================================
+Date:        21-22 September 2026 (times are CEST, as recorded on ceph0)
+Cluster:     Ceph Tentacle 20.2.4, 3 VMs (debian/ceph0, ceph1, ceph2), one OSD per host
+Node killed: ceph1, hard stop via Proxmox (not a graceful shutdown)
+Purpose:     Repeat of the 18-21 September test to MEASURE the two things that test
+             only inferred: how long recovery actually takes, and whether S3 stayed
+             available throughout. See setup_notes.md for why the first run's numbers
+             were withdrawn.
+
+METHOD
+------
+Availability probe (running continuously on ceph0 for the whole test, writing and
+reading a small object through the local RGW every ~5 s and logging the outcome):
+
+    # /root/availlog.sh
+    export AWS_ACCESS_KEY_ID=thesiskey
+    export AWS_SECRET_ACCESS_KEY=<CEPH_TEST_SECRET_KEY>
+    E=http://localhost:80
+    echo probe > /tmp/probe.bin
+    while true; do
+      T=$(date +%H:%M:%S)
+      aws --endpoint-url $E s3 cp /tmp/probe.bin s3://thesis-test/probe.bin >/dev/null 2>&1 && W=WRITE_OK || W=WRITE_FAIL
+      aws --endpoint-url $E s3 cp s3://thesis-test/probe.bin /tmp/back.bin >/dev/null 2>&1 && R=READ_OK || R=READ_FAIL
+      echo "$T $W $R"
+      sleep 5
+    done
+
+    nohup bash /root/availlog.sh > /root/avail.log 2>&1 &
+
+Recovery poll (started after the node was restarted, exits on HEALTH_OK):
+
+    while true; do T=$(date +%H:%M:%S); H=$(cephadm shell -- ceph health 2>/dev/null); \
+      echo "$T $H" >> /root/events.log; echo "$T $H"; \
+      case "$H" in HEALTH_OK*) break;; esac; sleep 20; done
+
+TIMELINE
+--------
+23:00:07   availability probe started, cluster HEALTH_OK
+23:01:55   CEPH1_STOP        ceph1 hard-stopped via Proxmox
+~23:02:46  cluster HEALTH_WARN: 1/3 mons down (quorum debian,ceph2), 1 osd down,
+           376/1128 objects degraded (33.333%), 97 pgs active+undersized+degraded
+~23:14     OSD marked "out" by Ceph after mon_osd_down_out_interval (600 s default);
+           confirmed via `ceph osd stat` → "3 osds: 2 up (since 11m), 2 in (since 104s)"
+23:15:40   CEPH1_START       ceph1 restarted via Proxmox
+23:20:02   first recovery poll — degraded-data warning already cleared, only
+           "1 hosts fail cephadm check" remaining
+23:26:04   HEALTH_OK
+23:27:14   availability probe stopped
+
+MEASURED RESULTS
+----------------
+Outage duration (node down):          13 min 45 s   (23:01:55 → 23:15:40)
+Time to full HEALTH_OK:               10 min 24 s   (23:15:40 → 23:26:04)
+Time to data redundancy restored:     under 4 min 22 s  (23:15:40 → by 23:20:02)
+Availability probes:                  268 samples, ~5 s apart, 23:00:07 → 23:27:14
+Probe failures:                       0   (`grep -c FAIL /root/avail.log` → 0)
+
+Every write and every read succeeded, without exception, across the entire test:
+before the failure, throughout the 13 min 45 s outage, during recovery, and after.
+
+IMPORTANT DISTINCTION — two different "recovery times"
+------------------------------------------------------
+The recovery poll waits for HEALTH_OK, but HEALTH_OK is gated by `1 hosts fail
+cephadm check`, which is the orchestrator's own management-layer check reconnecting
+to the returned host. It is NOT a measure of data recovery. The degraded-data
+warning had already cleared by the first poll at 23:20:02.
+
+So the cluster's DATA was healthy again in under 4 min 22 s, while the
+ORCHESTRATOR took 10 min 24 s to declare HEALTH_OK. The Replication chapter should
+quote the data figure and explain the difference, since quoting 10 min 24 s alone
+would overstate how long the cluster was actually at reduced redundancy.
+
+This also explains the ~11-12 minute figure recorded (and later withdrawn as
+unmeasured) in the 18-21 September run: that number was the orchestrator check
+clearing, read indirectly off `ceph -s` counters, not the data recovering.
+
+KNOWN LIMITATION OF THIS RUN
+----------------------------
+The exact moment data redundancy was restored was NOT captured. A mangled paste of
+the polling loop into the Proxmox browser console cost the first ~4.5 minutes after
+restart, so the first successful poll was at 23:20:02, by which point recovery had
+already completed. The figure is therefore an upper bound (under 4 min 22 s), not a
+measurement. To capture it exactly, the poll must record PG state (`ceph pg stat` or
+the `pgs:` line of `ceph -s`) from t=0 rather than only `ceph health`, and must be
+started before the node is restarted.
+
+RAW FILES
+---------
+Full logs remain on ceph0 (no network path from the laptop to copy them off):
+  /root/avail.log    268 lines, every probe result with timestamp
+  /root/events.log   stop/start markers and every recovery poll
+Anchors captured here: first probe 23:00:07 WRITE_OK READ_OK, last probe
+23:27:14 WRITE_OK READ_OK, 0 lines matching FAIL.

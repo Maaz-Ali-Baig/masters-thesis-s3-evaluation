@@ -1,0 +1,118 @@
+Warp on Ceph — load generator placement, and why it changes the result
+======================================================================
+Date:     23 September 2026
+Cluster:  Ceph Tentacle 20.2.4, 3 VMs (ceph0/"debian" 192.168.1.72, ceph1, ceph2)
+Tool:     Warp v1.8.0 (the fixed build, see setup_notes.md Issue 12 resolved)
+Workload: PUT, 1 MiB objects, concurrency 4, 60 s per run, 5 recorded runs per batch
+          preceded by discarded warm-up runs. Raw benchdata kept on the client node
+          under /root/warp-raw/.
+
+Two batches, identical in every respect except where the load generator ran.
+
+BATCH A — client on ceph0, the measured node itself (endpoint localhost:80)
+---------------------------------------------------------------------------
+Run   Throughput      Latency avg   p50      p99      Fastest 1s   Slowest 1s
+1     45.87 MiB/s     92.6 ms       87.3ms   179.1ms  52.88        31.89
+2     47.19 MiB/s     88.2 ms       82.3ms   176.4ms  53.34        31.23
+3     46.63 MiB/s     86.9 ms       80.1ms   195.6ms  53.17        23.44
+4     47.31 MiB/s     84.7 ms       78.3ms   186.4ms  52.78        33.57
+5     45.45 MiB/s     87.6 ms       81.5ms   180.8ms  52.60        27.60
+
+Mean 46.49 MiB/s (about 390 Mbps). Range 45.45 to 47.31, spread under 4%.
+Errors: 0 in all five runs.
+
+BATCH B — client on ceph2, a different node (endpoint 192.168.1.72:80)
+-----------------------------------------------------------------------
+Run   Throughput      Latency avg   p50      p99      Fastest 1s   Slowest 1s
+1     73.47 MiB/s     54.2 ms       48.8ms   113.5ms  88.65        41.56
+2     76.05 MiB/s     52.1 ms       47.0ms   107.7ms  89.02        41.63
+3     78.02 MiB/s     50.7 ms       46.4ms    97.1ms  85.60        57.97
+4     73.03 MiB/s     54.5 ms       48.5ms   137.5ms  85.34        35.26
+5     73.75 MiB/s     54.5 ms       48.8ms   120.0ms  86.20        43.11
+
+Mean 74.86 MiB/s (about 628 Mbps). Range 73.03 to 78.02, spread about 6.7%.
+Errors: 0 in all five runs.
+
+RESULT
+------
+Moving the load generator off the measured node raised measured throughput by
+61%, despite adding a network hop that was not there before.
+
+    Batch A (co-resident):  45.45 - 47.31 MiB/s
+    Batch B (separate host): 73.03 - 78.02 MiB/s
+
+The two ranges do not overlap at any point, across five runs each. Latency fell
+in step: average 88.0 ms to 53.2 ms, p99 183.7 ms to 115.2 ms.
+
+Intra-run spread (fastest vs slowest one-second window) was 1.8x co-resident and
+2.0x remote. Stability is therefore comparable, marginally wider remotely, which
+is the expected cost of introducing a network path. Placement improved throughput
+and latency; it did not improve stability.
+
+RESOURCE DATA FROM THE MEASURED NODE (ceph0, sar, whole batch)
+--------------------------------------------------------------
+                    Batch A (client here)   Batch B (client elsewhere)
+%user                      64.14                    48.11
+%system                    11.08                    18.19
+%iowait                     2.49                     7.96
+%idle                      22.26                    25.69
+sdb write throughput   34832 kB/s               56258 kB/s
+sdb utilisation            25.22%                   35.90%
+memory used                50.33%                   48.34%
+
+Reading of these numbers:
+
+1. %user fell by 16 percentage points when the client moved off the node. That is
+   the benchmark tool's own CPU cost, and in Batch A it was being paid out of the
+   same budget as the storage system under test.
+2. Disk write throughput rose 61%, matching the 61% throughput rise almost exactly.
+   This is a useful internal consistency check: the additional measured throughput
+   genuinely reached the disk rather than being an artefact of the measurement.
+3. %system and %iowait both rose, consistent with the node now handling real network
+   traffic and substantially more disk work.
+
+WHAT THIS DOES NOT SHOW
+-----------------------
+It does NOT show that Ceph is CPU-bound. In Batch B, %idle is still 25.69% and disk
+utilisation only 35.90%, so no resource is saturated. At concurrency 4 the binding
+constraint is more plausibly the request concurrency itself than any hardware
+ceiling. Establishing where the ceiling actually is requires a concurrency sweep,
+which is the designed follow-up.
+
+Note also that ceph0 is the busiest node by construction in this test: it serves the
+RGW gateway for every client request while also running a mon, the active mgr and an
+OSD, whereas ceph1 and ceph2 only take replication traffic. The sar figures describe
+that node, not a cluster average.
+
+WHY THIS MATTERS BEYOND CEPH
+----------------------------
+Every measurement in this project so far places the load generator on the same host
+as the storage system. The three lightweight systems run in Docker on the laptop with
+Warp and ossperf also on the laptop; Ceph was measured from ceph0 until now. The bias
+this introduces is therefore present throughout, and it is not neutral:
+
+  - It understates throughput for every system measured this way.
+  - It understates it UNEVENLY. A system that consumes more CPU per request loses
+    more to a co-resident client than a lightweight one does. The bias therefore runs
+    against precisely the systems that do the most work per request, which is the
+    comparison this thesis exists to make.
+
+This is a threat to validity for the Performance chapter's central comparison, and it
+is now demonstrated rather than argued: 61% on the one system where it could be
+tested directly. It should be raised with Prof. Baun alongside the existing question
+about test environments, and it strengthens the case for putting all four systems on
+the university VMs with a dedicated load-generating node.
+
+Superseded: the ossperf Ceph figures (results/ossperf-ceph-batch1-2026-09-17.csv) and
+the earlier Warp verification run were all produced with the client on ceph0. They
+remain valid as records of what was run, but they understate Ceph and must not be
+compared against any future off-host measurement.
+
+FILES
+-----
+On ceph2:  /root/warp-remote-run1..5.txt, /root/warp-raw/remote-run*
+On ceph0:  /root/warp-run1..5.txt, /root/warp-raw/run*,
+           /root/sar-warp-ceph-2026-09-23.txt   (Batch A)
+           /root/sar-warp-remote-2026-09-23.txt (Batch B)
+No network path exists from the laptop to these VMs, so the figures above were
+transcribed through the Proxmox console. The raw benchdata files stay on the VMs.
