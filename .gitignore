@@ -34,3 +34,7 @@ aws/
 # Internal planning docs, not for the tracked repo history
 Context/
 
+
+# Probe evidence folders hold thousands of small files. The canonical runs are committed as
+# results/<run>.tar.gz archives, the extracted folders stay local.
+results/compat-*/

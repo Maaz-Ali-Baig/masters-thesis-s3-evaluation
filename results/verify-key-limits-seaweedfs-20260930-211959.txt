@@ -1,0 +1,46 @@
+verify-key-limits  system=seaweedfs  endpoint=http://localhost:8333  region=us-east-1
+date:   2026-09-30T19:19:59Z
+bucket: s3c-verify-0930211959
+object body: 17 bytes
+
+create bucket                      HTTP 200 bytes=0 type=   
+
+-- 1. key ending in slash, with a 17 byte body --
+PUT  dm/marker/ (with body)        HTTP 200 bytes=0 type=   
+GET  dm/marker/                    HTTP 200 bytes=0 type=application/x-www-form-urlencoded   
+PUT  dm/plain (control)            HTTP 200 bytes=0 type=   
+GET  dm/plain (control)            HTTP 200 bytes=17 type=text/plain; charset=utf-8   sixteen bytes ok 
+
+-- 2a. ONE path component of growing length (key = that component) --
+PUT  1 component, 100 bytes        HTTP 200 bytes=0 type=   
+PUT  1 component, 200 bytes        HTTP 200 bytes=0 type=   
+PUT  1 component, 255 bytes        HTTP 200 bytes=0 type=   
+PUT  1 component, 256 bytes        HTTP 400 bytes=782 type=application/xml   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>KeyTooLongError</Code><Message>Your key is too long.</Message><Resource>/s3c-v
+PUT  1 component, 300 bytes        HTTP 400 bytes=870 type=application/xml   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>KeyTooLongError</Code><Message>Your key is too long.</Message><Resource>/s3c-v
+PUT  1 component, 500 bytes        HTTP 400 bytes=1270 type=application/xml   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>KeyTooLongError</Code><Message>Your key is too long.</Message><Resource>/s3c-v
+PUT  1 component, 900 bytes        HTTP 400 bytes=2070 type=application/xml   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>KeyTooLongError</Code><Message>Your key is too long.</Message><Resource>/s3c-v
+PUT  1 component, 1000 bytes       HTTP 400 bytes=2270 type=application/xml   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>KeyTooLongError</Code><Message>Your key is too long.</Message><Resource>/s3c-v
+
+-- 2b. MANY short components, long total (each component 100 bytes) --
+PUT  5 x 100 byte parts, total 508 HTTP 200 bytes=0 type=   
+PUT  9 x 100 byte parts, total 912 HTTP 200 bytes=0 type=   
+PUT  10 x 100 byte parts, total 1013 HTTP 200 bytes=0 type=   
+
+-- 2c. exact TOTAL key length (components of at most 99 bytes, so a per component limit cannot interfere) --
+PUT  total key length 300          HTTP 200 bytes=0 type=   
+PUT  total key length 400          HTTP 200 bytes=0 type=   
+PUT  total key length 450          HTTP 200 bytes=0 type=   
+PUT  total key length 470          HTTP 200 bytes=0 type=   
+PUT  total key length 478          HTTP 200 bytes=0 type=   
+PUT  total key length 479          HTTP 200 bytes=0 type=   
+PUT  total key length 480          HTTP 200 bytes=0 type=   
+PUT  total key length 490          HTTP 200 bytes=0 type=   
+PUT  total key length 511          HTTP 200 bytes=0 type=   
+PUT  total key length 512          HTTP 200 bytes=0 type=   
+PUT  total key length 600          HTTP 200 bytes=0 type=   
+PUT  total key length 1000         HTTP 200 bytes=0 type=   
+PUT  total key length 1024         HTTP 200 bytes=0 type=   
+PUT  total key length 1025         HTTP 400 bytes=2320 type=application/xml   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>KeyTooLongError</Code><Message>Your key is too long.</Message><Resource>/s3c-v
+
+-- cleanup: SeaweedFS removes a bucket with its contents, other systems may need objects removed first --
+delete bucket                      HTTP 204 bytes=0 type=   

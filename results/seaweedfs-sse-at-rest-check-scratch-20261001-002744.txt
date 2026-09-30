@@ -1,0 +1,16 @@
+SSE-S3 at rest check. Scratch container sw-scratch-ssekey, image sha256:c42a5268ca13..., WEED_S3_SSE_KEY set. Bucket s3c-atrest-1001002744
+date: 2026-09-30T18:57:44Z
+
+--- S3 operations (AWS CLI in WSL, scratch credentials) ---
+bucket created
+put plain.txt (no SSE header) ok
+put sse.txt, server echoed ServerSideEncryption = AES256
+get sse.txt returns the original bytes (decrypted transparently)
+head plain.txt ServerSideEncryption = None
+
+--- search for the plaintext marker in the volume files inside the container ---
+volume files for this bucket: 7
+files containing the marker:
+/data/s3c-atrest-1001002744_11.dat
+total marker matches across all files:
+1

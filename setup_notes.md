@@ -1690,3 +1690,95 @@ monitored in this test.
 **State left afterward**: `default.rgw.buckets.data` restored to `pg_num=256` with autoscaling back on
 (this is what the cluster would have converged to anyway). Cluster: 6 OSDs, HEALTH_OK, 192 GiB total raw
 capacity, meeting the agreed 50-100 GB per VM specification.
+
+### S3 compatibility probe on SeaweedFS, RustFS and Garage, with cross verification (30 September 2026)
+
+Full record in `results/s3-compat-three-systems-2026-09-30.txt`, matrix in `results/compat-matrix-2026-09-30.tsv`.
+Canonical runs: `compat-seaweedfs-20260930-205945`, `compat-rustfs-20260930-210446`, `compat-garage-20260930-210449`,
+stored as `results/<run>.tar.gz` (about 500 small evidence files each, extract with `tar -xzf results/<run>.tar.gz -C results`).
+
+**What was built.** `scripts/s3-compat.sh` runs 22 tests (C01 to C22) against one endpoint and saves the
+command, stdout and stderr of every request, so each matrix cell traces to a raw server reply.
+`scripts/s3-compat-run.sh` runs it for SeaweedFS, RustFS or Garage with credentials passed inline from
+`~/.thesis-s3-env`, so nothing is exported and nothing needs unsetting. Verdicts are PASS, FAIL (differs from
+documented AWS S3 behaviour), UNSUPPORTED (the server answered NotImplemented) and SKIP. A FAIL means "differs
+from AWS", not "defective". AWS itself has disabled ACLs on new buckets by default since 2023, so the ACL
+tests measure legacy behaviour.
+
+**Targets.** Three single node Docker containers on the laptop. SeaweedFS `chrislusf/seaweedfs`
+`sha256:c42a5268ca13...` (Server header "SeaweedFS 30GB 4.25"), RustFS `rustfs/rustfs` `sha256:fa19210ac469...`,
+Garage `dxflrs/garage:v1.0.0` `sha256:0c7ed80d22c0...`. Clients: AWS CLI 2.36.8 and curl 8.5.0. Ceph has not been
+run through the probe yet.
+
+| Result | SeaweedFS | RustFS | Garage |
+|---|---|---|---|
+| PASS | 18 | 18 | 7 |
+| FAIL | 4 | 4 | 9 |
+| UNSUPPORTED | 0 | 0 | 6 |
+
+**How a FAIL was verified.** Five steps in order: read the raw saved reply, repeat with curl (which also
+shows the HTTP status the AWS CLI hides), read the server log for the exact moment and the source of the exact
+version if the log is silent, explain the cause with two scratch containers from the same image that differ in
+exactly one setting, and run the same check on the other systems as a control. The scripts are
+`verify-bucket-delete.sh`, `verify-sse-acl.sh`, `verify-acl-enforcement.sh`, `verify-key-limits.sh` and
+`verify-raw-http.sh`.
+
+**Two probe faults were caught this way, and one cross check was itself wrong.**
+1. The probe first reported a missing `KeyCount` for SeaweedFS. I described it as a server difference, which was
+   wrong. The AWS CLI drops `KeyCount` when it paginates automatically, and `--no-paginate` returns `KeyCount 0`.
+   That claim is withdrawn.
+2. The ACL test used one prefixed key, which hid that SeaweedFS handles flat keys. It now tests both.
+3. The first curl test of the trailing slash key was invalid: `curl -T file URL/` appends the file name when the URL
+   ends in a slash, so it uploaded to a different key. RustFS and Garage returned 404, which contradicted the CLI,
+   and that contradiction exposed it. Redone with `--data-binary`.
+
+**SeaweedFS, proven.**
+1. Deleting a non empty bucket succeeds and the data is destroyed. AWS CLI and curl agree (HTTP 204), and the
+   server log shows the volume files removed at that moment (a 112 byte `.dat` and 16 byte `.idx`, against 8 and 0
+   for the empty volumes). RustFS and Garage refuse with 409 `BucketNotEmpty` using the same script. The cause is the
+   option `-s3.allowDeleteBucketNotEmpty`, which the build's own help gives as "allow recursive deleting all entries
+   along with bucket (default true)". Two containers from the same image differing only in that flag: the default
+   deletes everything, `false` answers 409 `BucketNotEmpty` and the object survives.
+2. The SSE-S3 header returns a bare HTTP 500 and stores nothing. The same image with and without
+   `WEED_S3_SSE_KEY`, identical otherwise, gives 500 without and 200 with. With a key set, a plaintext marker was
+   found once in the volume files (the plain object) and not for the SSE object, which read back correctly. That
+   covers the volume files only, not the filer metadata store. The 4.25 source contains the message "SSE-S3
+   encryption is not configured", but I did not trace the call site and the log at `-v=4` showed nothing, so the
+   two container result is the proof.
+3. A canned ACL fails on keys with a path prefix (HTTP 500) and works on flat keys. Source cause in 4.25: for a
+   non versioned object the handler sets `updateDirectory` to the bucket directory, not the object's folder, which
+   matches the log line "not found /buckets/.../acl.txt" for the key `c19/acl.txt`.
+4. Public read is decided per bucket. An object ACL `public-read` is accepted and listed but anonymous GET stays
+   403. A bucket ACL `public-read` makes anonymous GET and LIST return 200, yet `get-bucket-acl` does not list the
+   `AllUsers` grant. A bucket policy works. In the source, anonymous requests are allowed by `isBucketPublicRead(bucket)`
+   or by the bucket policy and no object ACL is consulted. A bucket can be public without the ACL read back showing it.
+5. One path component is limited to 255 bytes (255 accepted, 256 refused with `KeyTooLongError`), while total key
+   length up to 1024 bytes is accepted and 1025 refused, equal to the AWS limit. RustFS shows the same two limits.
+6. A key ending in `/` accepts a body and reads back as 0 bytes (curl PUT 200, GET 0 bytes; RustFS and Garage
+   return all bytes).
+
+**RustFS, proven (two clients).** `list-multipart-uploads` does not list an active upload. A wrong Content-MD5
+returns HTTP 500 `InternalError` (AWS 400 `BadDigest`). ACL calls succeed and change nothing, so public read is
+never granted and the server fails closed. The 255 byte component limit and the 1024 total limit apply. The SSE-S3
+header is accepted and echoed back, but data at rest was not tested.
+
+**Garage, proven.** `NotImplemented` for tagging, versioning, bucket policy, bucket encryption, ACLs and the object
+lock configuration, which matches the Garage documentation page on S3 compatibility. Accepted and ignored, confirmed
+with curl: `If-Match` with a wrong etag, `If-Unmodified-Since` in the past, `If-None-Match: *` on PUT, two 1 MiB
+multipart parts, the SSE-S3 header (not echoed) and object lock headers on a normal bucket. The CORS preflight
+answers `*` for every origin including with no CORS configuration, while real requests follow the rules. Reading
+CORS or lifecycle configuration after deleting it returns 204 instead of 404. Total keys of 479 bytes are accepted and
+480 bytes fail with HTTP 503, with the server's own message "LMDB: MDB_BAD_VALSIZE", where AWS answers 400
+`KeyTooLongError` and a 503 is retried by clients.
+
+**Hypotheses.** Garage's limit being the LMDB 511 byte key limit minus a 32 byte prefix (the edge is measured, the
+prefix is my reading). Garage storing SSE-S3 data unencrypted (supported by its documentation and the missing echo,
+not tested on disk).
+
+**Open.** Ceph is not yet probed. Garage's expired presigned URL returning 400 and its CRC64NVME handling rest on
+the AWS CLI run only. RustFS and Garage data at rest were not checked. Everything is single node Docker on one
+laptop and describes these builds only.
+
+**Housekeeping.** The verification scripts left test buckets on Garage (four) and RustFS (three) when a system
+refused to delete a non empty bucket. They were removed and the scripts now empty the bucket first. The thesis
+buckets and containers were never touched, and all `sw-scratch-*` containers were removed.

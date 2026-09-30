@@ -1,0 +1,774 @@
+I0930 18:55:00.965056 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:00.965720 filer_grpc_server.go:28 request_id:386afa31-9ebc-40ef-8df5-9544e87ae6a0 LookupDirectoryEntry /buckets/s3c-verify-0930205500
+I0930 18:55:00.966331 filer_client.go:42 read /buckets/s3c-verify-0930205500 <nil>: filer: no entry is found in filer store
+I0930 18:55:00.966435 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:00.966926 filer_grpc_server.go:28 request_id:defa4c45-bd46-4929-8334-35cd94d890c2 LookupDirectoryEntry /buckets/s3c-verify-0930205500
+I0930 18:55:00.967391 filer_client.go:42 read /buckets/s3c-verify-0930205500 <nil>: filer: no entry is found in filer store
+I0930 18:55:00.967480 s3api_handlers.go:90 WithFilerClient: failover to 172.17.0.5:8888 failed: filer: no entry is found in filer store
+I0930 18:55:00.967556 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:00.968186 filer_grpc_server.go:28 request_id:e2efb6e6-cc48-4bb2-ae43-224f8073cc0a LookupDirectoryEntry /buckets/s3c-verify-0930205500
+I0930 18:55:00.968799 filer_client.go:42 read /buckets/s3c-verify-0930205500 <nil>: filer: no entry is found in filer store
+I0930 18:55:00.968896 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:00.969510 filer_grpc_server.go:28 request_id:83376e4c-70d2-443d-a4fc-f02bcfa88637 LookupDirectoryEntry /buckets/s3c-verify-0930205500
+I0930 18:55:00.970026 filer_client.go:42 read /buckets/s3c-verify-0930205500 <nil>: filer: no entry is found in filer store
+I0930 18:55:00.970122 s3api_handlers.go:90 WithFilerClient: failover to 172.17.0.5:8888 failed: filer: no entry is found in filer store
+I0930 18:55:00.970158 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:00.971027 filer_grpc_server.go:444 request_id:012e6e2e-484f-4ed1-a04f-a48432e3a35b CollectionList include_normal_volumes:true include_ec_volumes:true
+I0930 18:55:00.971138 grpc_client_server.go:244 Creating new gRPC connection to 172.17.0.5:19333
+I0930 18:55:00.971784 grpc_client_server.go:257 New gRPC connection established to 172.17.0.5:19333 (version 2917851528074869591)
+I0930 18:55:00.974489 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:00.974772 filer_client.go:191 exists entry /buckets/s3c-verify-0930205500: directory:"/buckets" name:"s3c-verify-0930205500"
+I0930 18:55:00.975450 filer_grpc_server.go:28 request_id:ea35993a-2b6d-4f66-b736-ddd2d152079f LookupDirectoryEntry /buckets/s3c-verify-0930205500
+I0930 18:55:00.975936 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:00.976032 filer_client.go:238 mkdir: directory:"/buckets" entry:{name:"s3c-verify-0930205500" is_directory:true attributes:{mtime:1790794500 file_mode:2147484159 crtime:1790794500}}
+I0930 18:55:00.977497 filer_grpc_server.go:162 request_id:24db91ea-4ab0-4bef-a457-04fdfbd038c9 CreateEntry /buckets/s3c-verify-0930205500
+I0930 18:55:00.977759 filer.go:282 request_id:24db91ea-4ab0-4bef-a457-04fdfbd038c9 find uncached directory: /buckets
+I0930 18:55:00.977842 filer.go:282 request_id:24db91ea-4ab0-4bef-a457-04fdfbd038c9 find uncached directory: /
+I0930 18:55:00.977862 filer.go:327 request_id:24db91ea-4ab0-4bef-a457-04fdfbd038c9 create directory: /buckets drwxrwxrwx
+I0930 18:55:00.978684 filer.go:246 request_id:24db91ea-4ab0-4bef-a457-04fdfbd038c9 InsertEntry /buckets/s3c-verify-0930205500: new entry: s3c-verify-0930205500
+I0930 18:55:00.979092 filer.go:267 request_id:24db91ea-4ab0-4bef-a457-04fdfbd038c9 CreateEntry /buckets/s3c-verify-0930205500: created
+I0930 18:55:00.979154 log_read.go:168 localMeta:s3@@: Woke up from notification after ResumeFromDiskError
+I0930 18:55:00.979787 error_handler.go:134 status 200 : 
+I0930 18:55:00.979335 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:54:53.010641412 +0000 UTC -2 false} offset -2. Read bytes 263 batchIndex 2
+I0930 18:55:00.980281 log_read.go:293 localMeta:s3@@ sent messages ts[{Time:2026-09-30 18:54:53.010641412 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:00.979036217 +0000 UTC Offset:2 IsOffsetBased:false}] size 2
+I0930 18:55:00.980408 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:00.979036217 +0000 UTC 2 false} offset 2. Read bytes 0 batchIndex 2
+I0930 18:55:00.980447 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:00.981193 log_read.go:168 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification after ResumeFromDiskError
+I0930 18:55:00.981349 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:53:52.999273566 +0000 UTC -2 false} offset -2. Read bytes 263 batchIndex 2
+I0930 18:55:00.981731 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:00.979036217 +0000 UTC Offset:2 IsOffsetBased:false}] size 2
+I0930 18:55:00.981812 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:00.979036217 +0000 UTC 2 false} offset 2. Read bytes 0 batchIndex 2
+I0930 18:55:00.981855 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:00.982988 bucket_metadata.go:103 build bucket metadata,entry={"name":"s3c-verify-0930205500","is_directory":true,"attributes":{"mtime":1790794500,"file_mode":2147484159,"crtime":1790794500,"inode":2105370848582963200,"ctime":1790794500}}
+I0930 18:55:00.983080 auth_credentials_subscribe.go:190 updated bucketMetadata /buckets/s3c-verify-0930205500
+I0930 18:55:00.983094 auth_credentials_subscribe.go:214 updateBucketConfigCacheFromEntry: called for bucket s3c-verify-0930205500, ExtObjectLockEnabledKey=
+I0930 18:55:00.983268 engine.go:90 Deleted bucket policy for s3c-verify-0930205500
+I0930 18:55:00.983324 auth_credentials_subscribe.go:231 updateBucketConfigCacheFromEntry: updating cache for bucket s3c-verify-0930205500, ObjectLockConfig=<nil>
+I0930 18:55:01.017293 s3api_object_handlers_put.go:89 PutObjectHandler bucket=s3c-verify-0930205500 object=flat.txt size=31
+I0930 18:55:01.017551 s3api_object_handlers_put.go:220 PutObjectHandler: bucket=s3c-verify-0930205500, object=flat.txt, versioningState='', versioningEnabled=false, versioningConfigured=false
+I0930 18:55:01.017793 s3api_object_handlers_put.go:411 putToFiler: no explicit encryption detected, checking for bucket default encryption
+I0930 18:55:01.017949 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.018824 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:19333 (version 2917851528074869591)
+I0930 18:55:01.019806 master_grpc_server_assign.go:127 assign count:1 collection:"s3c-verify-0930205500" expected_data_size:31 {"collection":"s3c-verify-0930205500","replication":{},"ttl":{"Count":0,"Unit":0},"version":3}: failed to find writable volumes for collection:s3c-verify-0930205500 replication:000 ttl: error: No writable volumes
+I0930 18:55:01.019878 master_grpc_server_volume.go:153 volume grow &{Option:{"collection":"s3c-verify-0930205500","replication":{},"ttl":{"Count":0,"Unit":0},"version":3} Count:0 Force:false Reason:grpc assign}
+I0930 18:55:01.020046 master_grpc_server_volume.go:37 starting automatic volume grow
+[raft]18:55:01.020495 [172.17.0.5:9333.19333 Term:0] server.command.process
+I0930 18:55:01.020348 node.go:299 Reserved 1 capacity for diskType  on node 172.17.0.5:8080: -1-1790794501020120427-3268256991907253013
+I0930 18:55:01.020424 volume_growth.go:355 Successfully reserved capacity on 1 servers for volume creation
+[raft]18:55:01.020743 setCommitIndex.set.result index: 5, entries index: 4
+[raft]18:55:01.020816 [172.17.0.5:9333.19333 Term:0] commit index  5
+I0930 18:55:01.020686 cluster_commands.go:46 max volume id 0 ==> 1
+I0930 18:55:01.020847 grpc_client_server.go:244 Creating new gRPC connection to 172.17.0.5:18080
+I0930 18:55:01.021274 grpc_client_server.go:257 New gRPC connection established to 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.022518 store.go:297 In dir /tmp (disk ID 0) adds volume:1 collection:s3c-verify-0930205500 replicaPlacement:000 ttl:
+I0930 18:55:01.024467 volume_info.go:20 maybeLoadVolumeInfo checks /tmp/s3c-verify-0930205500_1.vif
+I0930 18:55:01.024963 volume_loading.go:181 open to write file /tmp/s3c-verify-0930205500_1.idx
+I0930 18:55:01.025293 volume_loading.go:192 checking volume data integrity for volume 1
+I0930 18:55:01.025388 volume_loading.go:215 loading memory index /tmp/s3c-verify-0930205500_1.idx to memory
+I0930 18:55:01.025427 needle_map_memory.go:56 max file key: 0 count: 0 deleted: 0 for file: /tmp/s3c-verify-0930205500_1.idx
+I0930 18:55:01.033981 store.go:302 add volume 1 on disk ID 0
+I0930 18:55:01.034097 volume_grpc_admin.go:116 assign volume volume_id:1 collection:"s3c-verify-0930205500" replication:"000" version:3
+I0930 18:55:01.034368 volume_grpc_client_to_master.go:256 volume server 172.17.0.5:8080 adds volume 1
+I0930 18:55:01.034654 volume_growth.go:376 Created Volume 1 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.034712 master_grpc_server.go:168 master received heartbeat ip:"172.17.0.5" port:8080 new_volumes:{id:1 collection:"s3c-verify-0930205500" version:3}
+I0930 18:55:01.035478 volume_layout.go:715 Volume 1 becomes writable
+I0930 18:55:01.035662 volume_growth.go:389 Registered Volume 1 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.035933 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.036001 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.036015 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.036456 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 1
+I0930 18:55:01.036567 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 1
+I0930 18:55:01.036457 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 1
+I0930 18:55:01.037451 node.go:308 Released capacity reservation on node 172.17.0.5:8080: -1-1790794501020120427-3268256991907253013
+I0930 18:55:01.037540 vid_map.go:195 + volume id 1: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.037598 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.037553 vid_map.go:195 + volume id 1: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.037666 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.037714 node.go:299 Reserved 1 capacity for diskType  on node 172.17.0.5:8080: -1-1790794501037695183-7721449640478108070
+I0930 18:55:01.037860 volume_growth.go:355 Successfully reserved capacity on 1 servers for volume creation
+[raft]18:55:01.037890 [172.17.0.5:9333.19333 Term:0] server.command.process
+I0930 18:55:01.037451 vid_map.go:195 + volume id 1: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.038029 cluster_commands.go:46 max volume id 1 ==> 2
+I0930 18:55:01.038044 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.038135 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+[raft]18:55:01.038040 setCommitIndex.set.result index: 6, entries index: 5
+[raft]18:55:01.038104 [172.17.0.5:9333.19333 Term:0] commit index  6
+I0930 18:55:01.038790 store.go:297 In dir /tmp (disk ID 0) adds volume:2 collection:s3c-verify-0930205500 replicaPlacement:000 ttl:
+I0930 18:55:01.038876 volume_info.go:20 maybeLoadVolumeInfo checks /tmp/s3c-verify-0930205500_2.vif
+I0930 18:55:01.039334 volume_loading.go:181 open to write file /tmp/s3c-verify-0930205500_2.idx
+I0930 18:55:01.039511 volume_loading.go:192 checking volume data integrity for volume 2
+I0930 18:55:01.039557 volume_loading.go:215 loading memory index /tmp/s3c-verify-0930205500_2.idx to memory
+I0930 18:55:01.039658 needle_map_memory.go:56 max file key: 0 count: 0 deleted: 0 for file: /tmp/s3c-verify-0930205500_2.idx
+I0930 18:55:01.045643 store.go:302 add volume 2 on disk ID 0
+I0930 18:55:01.045741 volume_grpc_admin.go:116 assign volume volume_id:2 collection:"s3c-verify-0930205500" replication:"000" version:3
+I0930 18:55:01.045910 volume_grpc_client_to_master.go:256 volume server 172.17.0.5:8080 adds volume 2
+I0930 18:55:01.046314 master_grpc_server.go:168 master received heartbeat ip:"172.17.0.5" port:8080 new_volumes:{id:2 collection:"s3c-verify-0930205500" version:3}
+I0930 18:55:01.046472 volume_layout.go:715 Volume 2 becomes writable
+I0930 18:55:01.046497 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.046506 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.046513 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.046331 volume_growth.go:376 Created Volume 2 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.046660 volume_growth.go:389 Registered Volume 2 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.046683 node.go:308 Released capacity reservation on node 172.17.0.5:8080: -1-1790794501037695183-7721449640478108070
+[raft]18:55:01.046768 [172.17.0.5:9333.19333 Term:0] server.command.process
+I0930 18:55:01.046720 node.go:299 Reserved 1 capacity for diskType  on node 172.17.0.5:8080: -1-1790794501046709481-1664078132422970640
+I0930 18:55:01.046747 volume_growth.go:355 Successfully reserved capacity on 1 servers for volume creation
+[raft]18:55:01.046940 setCommitIndex.set.result index: 7, entries index: 6
+[raft]18:55:01.046954 [172.17.0.5:9333.19333 Term:0] commit index  7
+I0930 18:55:01.046888 cluster_commands.go:46 max volume id 2 ==> 3
+I0930 18:55:01.046980 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.047054 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 2
+I0930 18:55:01.047076 vid_map.go:195 + volume id 2: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.047106 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.046922 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 2
+I0930 18:55:01.047127 vid_map.go:195 + volume id 2: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.047142 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.047221 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 2
+I0930 18:55:01.047242 vid_map.go:195 + volume id 2: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.047267 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.047529 store.go:297 In dir /tmp (disk ID 0) adds volume:3 collection:s3c-verify-0930205500 replicaPlacement:000 ttl:
+I0930 18:55:01.047699 volume_info.go:20 maybeLoadVolumeInfo checks /tmp/s3c-verify-0930205500_3.vif
+I0930 18:55:01.048300 volume_loading.go:181 open to write file /tmp/s3c-verify-0930205500_3.idx
+I0930 18:55:01.048650 volume_loading.go:192 checking volume data integrity for volume 3
+I0930 18:55:01.048713 volume_loading.go:215 loading memory index /tmp/s3c-verify-0930205500_3.idx to memory
+I0930 18:55:01.048779 needle_map_memory.go:56 max file key: 0 count: 0 deleted: 0 for file: /tmp/s3c-verify-0930205500_3.idx
+I0930 18:55:01.055609 store.go:302 add volume 3 on disk ID 0
+I0930 18:55:01.055719 volume_grpc_admin.go:116 assign volume volume_id:3 collection:"s3c-verify-0930205500" replication:"000" version:3
+I0930 18:55:01.055885 volume_grpc_client_to_master.go:256 volume server 172.17.0.5:8080 adds volume 3
+I0930 18:55:01.056460 master_grpc_server.go:168 master received heartbeat ip:"172.17.0.5" port:8080 new_volumes:{id:3 collection:"s3c-verify-0930205500" version:3}
+I0930 18:55:01.056572 volume_growth.go:376 Created Volume 3 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.056571 volume_layout.go:715 Volume 3 becomes writable
+I0930 18:55:01.056611 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.056622 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.056631 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.056687 volume_growth.go:389 Registered Volume 3 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.056706 node.go:308 Released capacity reservation on node 172.17.0.5:8080: -1-1790794501046709481-1664078132422970640
+I0930 18:55:01.056744 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 3
+I0930 18:55:01.056758 node.go:299 Reserved 1 capacity for diskType  on node 172.17.0.5:8080: -1-1790794501056745642-7335496455078893088
+I0930 18:55:01.056771 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 3
+I0930 18:55:01.056825 vid_map.go:195 + volume id 3: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.056862 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.056764 vid_map.go:195 + volume id 3: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+[raft]18:55:01.056915 [172.17.0.5:9333.19333 Term:0] server.command.process
+I0930 18:55:01.056887 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.056776 volume_growth.go:355 Successfully reserved capacity on 1 servers for volume creation
+[raft]18:55:01.057143 setCommitIndex.set.result index: 8, entries index: 7
+[raft]18:55:01.057157 [172.17.0.5:9333.19333 Term:0] commit index  8
+I0930 18:55:01.057098 cluster_commands.go:46 max volume id 3 ==> 4
+I0930 18:55:01.057151 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 3
+I0930 18:55:01.057171 vid_map.go:195 + volume id 3: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.057183 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.057198 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.057428 store.go:297 In dir /tmp (disk ID 0) adds volume:4 collection:s3c-verify-0930205500 replicaPlacement:000 ttl:
+I0930 18:55:01.057459 volume_info.go:20 maybeLoadVolumeInfo checks /tmp/s3c-verify-0930205500_4.vif
+I0930 18:55:01.057727 volume_loading.go:181 open to write file /tmp/s3c-verify-0930205500_4.idx
+I0930 18:55:01.058822 volume_loading.go:192 checking volume data integrity for volume 4
+I0930 18:55:01.058945 volume_loading.go:215 loading memory index /tmp/s3c-verify-0930205500_4.idx to memory
+I0930 18:55:01.059028 needle_map_memory.go:56 max file key: 0 count: 0 deleted: 0 for file: /tmp/s3c-verify-0930205500_4.idx
+I0930 18:55:01.065488 store.go:302 add volume 4 on disk ID 0
+I0930 18:55:01.065559 volume_grpc_admin.go:116 assign volume volume_id:4 collection:"s3c-verify-0930205500" replication:"000" version:3
+I0930 18:55:01.065728 volume_grpc_client_to_master.go:256 volume server 172.17.0.5:8080 adds volume 4
+I0930 18:55:01.066087 volume_growth.go:376 Created Volume 4 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.066198 volume_layout.go:715 Volume 4 becomes writable
+I0930 18:55:01.066223 volume_growth.go:389 Registered Volume 4 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.066240 node.go:308 Released capacity reservation on node 172.17.0.5:8080: -1-1790794501056745642-7335496455078893088
+I0930 18:55:01.066280 node.go:299 Reserved 1 capacity for diskType  on node 172.17.0.5:8080: -1-1790794501066269616-8218608498716998474
+I0930 18:55:01.066336 volume_growth.go:355 Successfully reserved capacity on 1 servers for volume creation
+I0930 18:55:01.066157 master_grpc_server.go:168 master received heartbeat ip:"172.17.0.5" port:8080 new_volumes:{id:4 collection:"s3c-verify-0930205500" version:3}
+[raft]18:55:01.066423 [172.17.0.5:9333.19333 Term:0] server.command.process
+[raft]18:55:01.066597 setCommitIndex.set.result index: 9, entries index: 8
+I0930 18:55:01.066465 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.066483 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.066492 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.066585 cluster_commands.go:46 max volume id 4 ==> 5
+I0930 18:55:01.066630 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+[raft]18:55:01.066607 [172.17.0.5:9333.19333 Term:0] commit index  9
+I0930 18:55:01.066762 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 4
+I0930 18:55:01.066789 vid_map.go:195 + volume id 4: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.066818 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 4
+I0930 18:55:01.066841 vid_map.go:195 + volume id 4: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.066866 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.066820 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.066893 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 4
+I0930 18:55:01.066913 vid_map.go:195 + volume id 4: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.066938 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.067017 store.go:297 In dir /tmp (disk ID 0) adds volume:5 collection:s3c-verify-0930205500 replicaPlacement:000 ttl:
+I0930 18:55:01.067104 volume_info.go:20 maybeLoadVolumeInfo checks /tmp/s3c-verify-0930205500_5.vif
+I0930 18:55:01.067622 volume_loading.go:181 open to write file /tmp/s3c-verify-0930205500_5.idx
+I0930 18:55:01.067815 volume_loading.go:192 checking volume data integrity for volume 5
+I0930 18:55:01.067851 volume_loading.go:215 loading memory index /tmp/s3c-verify-0930205500_5.idx to memory
+I0930 18:55:01.067905 needle_map_memory.go:56 max file key: 0 count: 0 deleted: 0 for file: /tmp/s3c-verify-0930205500_5.idx
+I0930 18:55:01.073867 store.go:302 add volume 5 on disk ID 0
+I0930 18:55:01.073970 volume_grpc_admin.go:116 assign volume volume_id:5 collection:"s3c-verify-0930205500" replication:"000" version:3
+I0930 18:55:01.074144 volume_grpc_client_to_master.go:256 volume server 172.17.0.5:8080 adds volume 5
+I0930 18:55:01.074519 master_grpc_server.go:168 master received heartbeat ip:"172.17.0.5" port:8080 new_volumes:{id:5 collection:"s3c-verify-0930205500" version:3}
+I0930 18:55:01.074598 volume_growth.go:376 Created Volume 5 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.074629 volume_layout.go:715 Volume 5 becomes writable
+I0930 18:55:01.074723 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.074739 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.074746 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.074879 volume_growth.go:389 Registered Volume 5 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.074973 node.go:308 Released capacity reservation on node 172.17.0.5:8080: -1-1790794501066269616-8218608498716998474
+I0930 18:55:01.075032 node.go:299 Reserved 1 capacity for diskType  on node 172.17.0.5:8080: -1-1790794501075018781-4293694925612138621
+I0930 18:55:01.075051 volume_growth.go:355 Successfully reserved capacity on 1 servers for volume creation
+I0930 18:55:01.075202 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 5
+I0930 18:55:01.075236 vid_map.go:195 + volume id 5: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.075269 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.075211 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 5
+I0930 18:55:01.075295 vid_map.go:195 + volume id 5: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.075314 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.075277 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 5
+I0930 18:55:01.075330 vid_map.go:195 + volume id 5: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.075344 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.075373 cluster_commands.go:46 max volume id 5 ==> 6
+[raft]18:55:01.075252 [172.17.0.5:9333.19333 Term:0] server.command.process
+[raft]18:55:01.075385 setCommitIndex.set.result index: 10, entries index: 9
+[raft]18:55:01.075396 [172.17.0.5:9333.19333 Term:0] commit index  10
+I0930 18:55:01.075420 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.076040 store.go:297 In dir /tmp (disk ID 0) adds volume:6 collection:s3c-verify-0930205500 replicaPlacement:000 ttl:
+I0930 18:55:01.076138 volume_info.go:20 maybeLoadVolumeInfo checks /tmp/s3c-verify-0930205500_6.vif
+I0930 18:55:01.076426 volume_loading.go:181 open to write file /tmp/s3c-verify-0930205500_6.idx
+I0930 18:55:01.076885 volume_loading.go:192 checking volume data integrity for volume 6
+I0930 18:55:01.076984 volume_loading.go:215 loading memory index /tmp/s3c-verify-0930205500_6.idx to memory
+I0930 18:55:01.077055 needle_map_memory.go:56 max file key: 0 count: 0 deleted: 0 for file: /tmp/s3c-verify-0930205500_6.idx
+I0930 18:55:01.083534 store.go:302 add volume 6 on disk ID 0
+I0930 18:55:01.083650 volume_grpc_admin.go:116 assign volume volume_id:6 collection:"s3c-verify-0930205500" replication:"000" version:3
+I0930 18:55:01.083814 volume_grpc_client_to_master.go:256 volume server 172.17.0.5:8080 adds volume 6
+I0930 18:55:01.084240 master_grpc_server.go:168 master received heartbeat ip:"172.17.0.5" port:8080 new_volumes:{id:6 collection:"s3c-verify-0930205500" version:3}
+I0930 18:55:01.084359 volume_layout.go:715 Volume 6 becomes writable
+I0930 18:55:01.084393 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.084412 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.084421 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.084465 volume_growth.go:376 Created Volume 6 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.084514 volume_growth.go:389 Registered Volume 6 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.084538 node.go:308 Released capacity reservation on node 172.17.0.5:8080: -1-1790794501075018781-4293694925612138621
+I0930 18:55:01.084578 node.go:299 Reserved 1 capacity for diskType  on node 172.17.0.5:8080: -1-1790794501084567160-779913990752638639
+[raft]18:55:01.084686 [172.17.0.5:9333.19333 Term:0] server.command.process
+I0930 18:55:01.084650 volume_growth.go:355 Successfully reserved capacity on 1 servers for volume creation
+[raft]18:55:01.084829 setCommitIndex.set.result index: 11, entries index: 10
+[raft]18:55:01.084840 [172.17.0.5:9333.19333 Term:0] commit index  11
+I0930 18:55:01.084809 cluster_commands.go:46 max volume id 6 ==> 7
+I0930 18:55:01.084866 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.084886 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 6
+I0930 18:55:01.084922 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 6
+I0930 18:55:01.084941 vid_map.go:195 + volume id 6: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.084968 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.084915 vid_map.go:195 + volume id 6: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.084983 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 6
+I0930 18:55:01.084990 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.085001 vid_map.go:195 + volume id 6: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.085026 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.085424 store.go:297 In dir /tmp (disk ID 0) adds volume:7 collection:s3c-verify-0930205500 replicaPlacement:000 ttl:
+I0930 18:55:01.085565 volume_info.go:20 maybeLoadVolumeInfo checks /tmp/s3c-verify-0930205500_7.vif
+I0930 18:55:01.086313 volume_loading.go:181 open to write file /tmp/s3c-verify-0930205500_7.idx
+I0930 18:55:01.086629 volume_loading.go:192 checking volume data integrity for volume 7
+I0930 18:55:01.086672 volume_loading.go:215 loading memory index /tmp/s3c-verify-0930205500_7.idx to memory
+I0930 18:55:01.086709 needle_map_memory.go:56 max file key: 0 count: 0 deleted: 0 for file: /tmp/s3c-verify-0930205500_7.idx
+I0930 18:55:01.092668 store.go:302 add volume 7 on disk ID 0
+I0930 18:55:01.092757 volume_grpc_admin.go:116 assign volume volume_id:7 collection:"s3c-verify-0930205500" replication:"000" version:3
+I0930 18:55:01.092935 volume_grpc_client_to_master.go:256 volume server 172.17.0.5:8080 adds volume 7
+I0930 18:55:01.093250 volume_growth.go:376 Created Volume 7 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.093375 volume_layout.go:715 Volume 7 becomes writable
+I0930 18:55:01.093401 volume_growth.go:389 Registered Volume 7 on topo:DefaultDataCenter:DefaultRack:172.17.0.5:8080
+I0930 18:55:01.093418 node.go:308 Released capacity reservation on node 172.17.0.5:8080: -1-1790794501084567160-779913990752638639
+I0930 18:55:01.093437 master_grpc_server_volume.go:40 finished automatic volume grow, cost  73.328063ms
+I0930 18:55:01.093509 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093523 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093530 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093536 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093542 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093547 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093553 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093558 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093563 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093572 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093610 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093270 master_grpc_server.go:168 master received heartbeat ip:"172.17.0.5" port:8080 new_volumes:{id:7 collection:"s3c-verify-0930205500" version:3}
+I0930 18:55:01.093674 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093688 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093695 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093620 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093736 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093748 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093755 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093761 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093766 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093778 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093784 master_grpc_server.go:406 send message to .filer@172.17.0.5:8888.18888
+I0930 18:55:01.093790 master_grpc_server.go:406 send message to .s3@172.17.0.5:18333
+I0930 18:55:01.093795 master_grpc_server.go:406 send message to .master@172.17.0.5:9333.19333
+I0930 18:55:01.093983 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 1
+I0930 18:55:01.094056 vid_map.go:195 + volume id 1: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094086 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094225 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 2
+I0930 18:55:01.094292 vid_map.go:195 + volume id 2: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094349 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.093987 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 1
+I0930 18:55:01.094416 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 3
+I0930 18:55:01.094428 vid_map.go:195 + volume id 3: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094427 vid_map.go:195 + volume id 1: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094446 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094457 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094465 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 4
+I0930 18:55:01.094473 vid_map.go:195 + volume id 4: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094486 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094490 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 2
+I0930 18:55:01.094500 vid_map.go:195 + volume id 2: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094504 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 7
+I0930 18:55:01.094517 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094516 vid_map.go:195 + volume id 7: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094536 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 3
+I0930 18:55:01.094537 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094545 vid_map.go:195 + volume id 3: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094019 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 1
+I0930 18:55:01.094560 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094582 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 4
+I0930 18:55:01.094576 vid_map.go:195 + volume id 1: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094590 vid_map.go:195 + volume id 4: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094603 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094604 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094620 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 7
+I0930 18:55:01.094628 vid_map.go:195 + volume id 7: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094637 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 2
+I0930 18:55:01.094646 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094647 vid_map.go:195 + volume id 2: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094665 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 5
+I0930 18:55:01.094685 vid_map.go:195 + volume id 5: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094699 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094665 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094741 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 6
+I0930 18:55:01.094753 vid_map.go:195 + volume id 6: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094767 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 3
+I0930 18:55:01.094779 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094781 vid_map.go:195 + volume id 3: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094798 masterclient.go:367 .s3: 172.17.0.5:8080 masterClient adds volume 7
+I0930 18:55:01.094802 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094806 vid_map.go:195 + volume id 7: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094820 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 4
+I0930 18:55:01.094839 vid_map.go:195 + volume id 4: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094851 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094867 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 7
+I0930 18:55:01.094878 vid_map.go:195 + volume id 7: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094896 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094911 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 5
+I0930 18:55:01.094918 vid_map.go:195 + volume id 5: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094930 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094943 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 6
+I0930 18:55:01.094951 vid_map.go:195 + volume id 6: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094964 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094977 masterclient.go:367 .master: 172.17.0.5:8080 masterClient adds volume 7
+I0930 18:55:01.094985 vid_map.go:195 + volume id 7: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.094997 masterclient.go:382 updateVidMap(DefaultDataCenter) .master: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094820 masterclient.go:382 updateVidMap(DefaultDataCenter) .s3: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.094561 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 5
+I0930 18:55:01.095231 vid_map.go:195 + volume id 5: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.095263 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.095293 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 6
+I0930 18:55:01.095386 vid_map.go:195 + volume id 6: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.095455 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.095486 masterclient.go:367 .filer: 172.17.0.5:8080 masterClient adds volume 7
+I0930 18:55:01.095497 vid_map.go:195 + volume id 7: {Url:172.17.0.5:8080 PublicUrl:172.17.0.5:8080 DataCenter:DefaultDataCenter GrpcPort:18080}
+I0930 18:55:01.095512 masterclient.go:382 updateVidMap(DefaultDataCenter) .filer: 172.17.0.5:8080 volume add: 1, del: 0, add ec: 0 del ec: 0
+I0930 18:55:01.225198 s3api_object_handlers_put.go:548 putToFiler: Chunked upload SUCCESS - path=/buckets/s3c-verify-0930205500/flat.txt, chunks=1, size=31
+I0930 18:55:01.225310 s3api_object_handlers_put.go:554   PUT Chunk[0]: fid=1,01179f5b00, offset=0, size=31
+I0930 18:55:01.225350 s3api_object_handlers_put.go:666 putToFiler: Calculated ETag=fbe78870fb1c4ee32690891d75f28946 for 1 chunks
+I0930 18:55:01.225367 s3api_object_handlers_put.go:1136 setObjectOwnerFromRequest: using bucket owner admin (BucketOwnerEnforced)
+I0930 18:55:01.225602 s3api_object_handlers_put.go:794 putToFiler: About to create entry - dir=/buckets/s3c-verify-0930205500, name=flat.txt, chunks=1, extended keys=2
+I0930 18:55:01.225720 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979
+I0930 18:55:01.225787 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.225816 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.226703 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979 renewToken= secondsToLock=5 isMoved=false
+I0930 18:55:01.227198 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 2026-09-30 18:55:06.226810338 +0000 UTC  s3api-1463850979
+I0930 18:55:01.227329 lock_manager.go:119 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt no lock owner s3api-1463850979
+I0930 18:55:01.227354 lock_manager.go:125 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt new token f00e8dc0-f1c4-416e-b48f-92527ade1a1c owner s3api-1463850979 generation 1
+I0930 18:55:01.227382 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt lockOwner= renewToken=f00e8dc0-f1c4-416e-b48f-92527ade1a1c movedTo= err=<nil>
+I0930 18:55:01.227400 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 5  s3api-1463850979, isMoved=false 
+I0930 18:55:01.227416 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt renewToken=f00e8dc0-f1c4-416e-b48f-92527ade1a1c lockOwner= error= movedTo=
+I0930 18:55:01.228000 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt err=<nil>
+I0930 18:55:01.228069 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.228104 lock_client.go:197 LOCK: Successfully acquired key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979
+I0930 18:55:01.228114 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979
+I0930 18:55:01.228120 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.228134 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.228550 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979 renewToken=f00e8dc0-f1c4-416e-b48f-92527ade1a1c secondsToLock=15 isMoved=false
+I0930 18:55:01.228618 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 2026-09-30 18:55:16.228602492 +0000 UTC f00e8dc0-f1c4-416e-b48f-92527ade1a1c s3api-1463850979
+I0930 18:55:01.228647 lock_manager.go:104 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt old token f00e8dc0-f1c4-416e-b48f-92527ade1a1c owner s3api-1463850979 => 0df3484b-64e0-43d4-8a43-f84140238a1d owner s3api-1463850979
+I0930 18:55:01.228658 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt lockOwner=s3api-1463850979 renewToken=0df3484b-64e0-43d4-8a43-f84140238a1d movedTo= err=<nil>
+I0930 18:55:01.228666 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 15 f00e8dc0-f1c4-416e-b48f-92527ade1a1c s3api-1463850979, isMoved=false 
+I0930 18:55:01.228675 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt renewToken=0df3484b-64e0-43d4-8a43-f84140238a1d lockOwner=s3api-1463850979 error= movedTo=
+I0930 18:55:01.229033 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt err=<nil>
+I0930 18:55:01.229165 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.229177 lock_client.go:280 LOCK: Owner changed from  to s3api-1463850979 for key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.229195 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.229209 s3api_object_handlers_put.go:811 putToFiler: Calling CreateEntry for /buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.229882 filer_grpc_server.go:162 request_id:0ed113a6-45e6-4529-980d-70630d051bc6 CreateEntry /buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.230018 filer.go:282 request_id:0ed113a6-45e6-4529-980d-70630d051bc6 find uncached directory: /buckets/s3c-verify-0930205500
+I0930 18:55:01.230054 filer.go:246 request_id:0ed113a6-45e6-4529-980d-70630d051bc6 InsertEntry /buckets/s3c-verify-0930205500/flat.txt: new entry: flat.txt
+I0930 18:55:01.230290 filer.go:267 request_id:0ed113a6-45e6-4529-980d-70630d051bc6 CreateEntry /buckets/s3c-verify-0930205500/flat.txt: created
+I0930 18:55:01.230470 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.230523 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:00.979036217 +0000 UTC 2 false} offset 2. Read bytes 380 batchIndex 3
+I0930 18:55:01.230652 log_read.go:293 localMeta:s3@@ sent messages ts[{Time:2026-09-30 18:54:53.010641412 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.230186758 +0000 UTC Offset:3 IsOffsetBased:false}] size 1
+I0930 18:55:01.230764 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.230186758 +0000 UTC 3 false} offset 3. Read bytes 0 batchIndex 3
+I0930 18:55:01.230553 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.230843 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:00.979036217 +0000 UTC 2 false} offset 2. Read bytes 380 batchIndex 3
+I0930 18:55:01.230969 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.230186758 +0000 UTC Offset:3 IsOffsetBased:false}] size 1
+I0930 18:55:01.230995 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.230186758 +0000 UTC 3 false} offset 3. Read bytes 0 batchIndex 3
+I0930 18:55:01.231103 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.231970 lock_manager.go:155 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt unlocked with 0df3484b-64e0-43d4-8a43-f84140238a1d
+I0930 18:55:01.232631 s3api_object_handlers_put.go:848 putToFiler: CreateEntry SUCCESS for /buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.232732 s3api_object_handlers_put.go:850 putToFiler: Metadata saved SUCCESS - path=/buckets/s3c-verify-0930205500/flat.txt, etag(hex)=fbe78870fb1c4ee32690891d75f28946, size=31, partNumber=1
+I0930 18:55:01.232809 error_handler.go:134 status 200 : 
+I0930 18:55:01.261733 s3api_object_handlers_put.go:89 PutObjectHandler bucket=s3c-verify-0930205500 object=dir/nested.txt size=31
+I0930 18:55:01.261816 s3api_object_handlers_put.go:220 PutObjectHandler: bucket=s3c-verify-0930205500, object=dir/nested.txt, versioningState='', versioningEnabled=false, versioningConfigured=false
+I0930 18:55:01.261981 s3api_object_handlers_put.go:411 putToFiler: no explicit encryption detected, checking for bucket default encryption
+I0930 18:55:01.262106 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.262899 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:19333 (version 2917851528074869591)
+I0930 18:55:01.268639 s3api_object_handlers_put.go:548 putToFiler: Chunked upload SUCCESS - path=/buckets/s3c-verify-0930205500/dir/nested.txt, chunks=1, size=31
+I0930 18:55:01.268742 s3api_object_handlers_put.go:554   PUT Chunk[0]: fid=5,02eeb1680e, offset=0, size=31
+I0930 18:55:01.268779 s3api_object_handlers_put.go:666 putToFiler: Calculated ETag=fbe78870fb1c4ee32690891d75f28946 for 1 chunks
+I0930 18:55:01.268827 s3api_object_handlers_put.go:1136 setObjectOwnerFromRequest: using bucket owner admin (BucketOwnerEnforced)
+I0930 18:55:01.268870 s3api_object_handlers_put.go:794 putToFiler: About to create entry - dir=/buckets/s3c-verify-0930205500/dir, name=nested.txt, chunks=1, extended keys=2
+I0930 18:55:01.268898 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979
+I0930 18:55:01.268912 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.268935 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.269675 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979 renewToken= secondsToLock=5 isMoved=false
+I0930 18:55:01.269765 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 2026-09-30 18:55:06.269741785 +0000 UTC  s3api-1463850979
+I0930 18:55:01.269797 lock_manager.go:119 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt no lock owner s3api-1463850979
+I0930 18:55:01.269816 lock_manager.go:125 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt new token 2ef6508d-e25c-44d3-b005-bec7200fecd9 owner s3api-1463850979 generation 2
+I0930 18:55:01.269836 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt lockOwner= renewToken=2ef6508d-e25c-44d3-b005-bec7200fecd9 movedTo= err=<nil>
+I0930 18:55:01.269848 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 5  s3api-1463850979, isMoved=false 
+I0930 18:55:01.269861 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt renewToken=2ef6508d-e25c-44d3-b005-bec7200fecd9 lockOwner= error= movedTo=
+I0930 18:55:01.270329 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt err=<nil>
+I0930 18:55:01.270390 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.270403 lock_client.go:197 LOCK: Successfully acquired key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979
+I0930 18:55:01.270411 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979
+I0930 18:55:01.270416 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.270432 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.270894 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979 renewToken=2ef6508d-e25c-44d3-b005-bec7200fecd9 secondsToLock=15 isMoved=false
+I0930 18:55:01.270960 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 2026-09-30 18:55:16.270945426 +0000 UTC 2ef6508d-e25c-44d3-b005-bec7200fecd9 s3api-1463850979
+I0930 18:55:01.270987 lock_manager.go:104 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt old token 2ef6508d-e25c-44d3-b005-bec7200fecd9 owner s3api-1463850979 => 588cb6f4-6812-4efd-a728-f1be23df3273 owner s3api-1463850979
+I0930 18:55:01.271048 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt lockOwner=s3api-1463850979 renewToken=588cb6f4-6812-4efd-a728-f1be23df3273 movedTo= err=<nil>
+I0930 18:55:01.271062 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 15 2ef6508d-e25c-44d3-b005-bec7200fecd9 s3api-1463850979, isMoved=false 
+I0930 18:55:01.271071 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt renewToken=588cb6f4-6812-4efd-a728-f1be23df3273 lockOwner=s3api-1463850979 error= movedTo=
+I0930 18:55:01.271409 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt err=<nil>
+I0930 18:55:01.271470 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.271486 lock_client.go:280 LOCK: Owner changed from  to s3api-1463850979 for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.271510 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.271525 s3api_object_handlers_put.go:811 putToFiler: Calling CreateEntry for /buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.272015 filer_grpc_server.go:162 request_id:d78b714f-93bb-4544-8a38-a1db679f4d0d CreateEntry /buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.272129 filer.go:282 request_id:d78b714f-93bb-4544-8a38-a1db679f4d0d find uncached directory: /buckets/s3c-verify-0930205500/dir
+I0930 18:55:01.272149 filer.go:282 request_id:d78b714f-93bb-4544-8a38-a1db679f4d0d find uncached directory: /buckets/s3c-verify-0930205500
+I0930 18:55:01.272174 filer.go:327 request_id:d78b714f-93bb-4544-8a38-a1db679f4d0d create directory: /buckets/s3c-verify-0930205500/dir drwxrwx--x
+I0930 18:55:01.272374 filer.go:246 request_id:d78b714f-93bb-4544-8a38-a1db679f4d0d InsertEntry /buckets/s3c-verify-0930205500/dir/nested.txt: new entry: nested.txt
+I0930 18:55:01.272462 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.272505 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.230186758 +0000 UTC 3 false} offset 3. Read bytes 204 batchIndex 4
+I0930 18:55:01.272593 filer.go:267 request_id:d78b714f-93bb-4544-8a38-a1db679f4d0d CreateEntry /buckets/s3c-verify-0930205500/dir/nested.txt: created
+I0930 18:55:01.272606 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.27227882 +0000 UTC Offset:4 IsOffsetBased:false}] size 1
+I0930 18:55:01.272708 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.272738 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.27227882 +0000 UTC 4 false} offset 4. Read bytes 394 batchIndex 5
+I0930 18:55:01.272851 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.272539935 +0000 UTC Offset:5 IsOffsetBased:false}] size 1
+I0930 18:55:01.272876 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.272539935 +0000 UTC 5 false} offset 5. Read bytes 0 batchIndex 5
+I0930 18:55:01.272904 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.272978 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.273175 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.230186758 +0000 UTC 3 false} offset 3. Read bytes 598 batchIndex 5
+I0930 18:55:01.273249 log_read.go:293 localMeta:s3@@ sent messages ts[{Time:2026-09-30 18:54:53.010641412 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.272539935 +0000 UTC Offset:5 IsOffsetBased:false}] size 2
+I0930 18:55:01.273318 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.272539935 +0000 UTC 5 false} offset 5. Read bytes 0 batchIndex 5
+I0930 18:55:01.273353 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.273627 lock_manager.go:155 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt unlocked with 588cb6f4-6812-4efd-a728-f1be23df3273
+I0930 18:55:01.274130 s3api_object_handlers_put.go:848 putToFiler: CreateEntry SUCCESS for /buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.274208 s3api_object_handlers_put.go:850 putToFiler: Metadata saved SUCCESS - path=/buckets/s3c-verify-0930205500/dir/nested.txt, etag(hex)=fbe78870fb1c4ee32690891d75f28946, size=31, partNumber=1
+I0930 18:55:01.274247 error_handler.go:134 status 200 : 
+I0930 18:55:01.304248 s3api_object_handlers_acl.go:167 PutObjectAclHandler s3c-verify-0930205500 flat.txt
+I0930 18:55:01.304386 auth_credentials.go:1360 v4 auth type
+I0930 18:55:01.304656 auth_credentials.go:1145 Looking up access key: scra*** (len=7, total keys registered: 0)
+I0930 18:55:01.304726 auth_credentials.go:1168 Could not find access key scra*** (len=7). Available keys: 0, Auth enabled: false
+I0930 18:55:01.304743 auth_credentials.go:1173 Registered access keys:
+W0930 18:55:01.304756 auth_signature_v4.go:254 InvalidAccessKeyId: attempted key 'scratch' not found. Available keys: 0, Auth enabled: false
+I0930 18:55:01.304794 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.305607 filer_grpc_server.go:28 request_id:58d341c4-00f3-4208-8b35-4e5337de8616 LookupDirectoryEntry /buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.306326 auth_credentials.go:1360 v4 auth type
+I0930 18:55:01.306667 auth_credentials.go:1145 Looking up access key: scra*** (len=7, total keys registered: 0)
+I0930 18:55:01.306846 auth_credentials.go:1168 Could not find access key scra*** (len=7). Available keys: 0, Auth enabled: false
+I0930 18:55:01.306866 auth_credentials.go:1173 Registered access keys:
+W0930 18:55:01.306879 auth_signature_v4.go:254 InvalidAccessKeyId: attempted key 'scratch' not found. Available keys: 0, Auth enabled: false
+I0930 18:55:01.306945 s3api_object_handlers_acl.go:260 PutObjectAclHandler: Access denied - user  is not owner of object s3c-verify-0930205500/flat.txt (owner: admin)
+I0930 18:55:01.307928 error_handler.go:134 status 403 application/xml: <?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>AccessDenied</Code><Message>Access Denied.</Message><Resource>/s3c-verify-0930205500/flat.txt</Resource><RequestId>18DA2E1C63F47CF8471C3EF7</RequestId><Key>flat.txt</Key><BucketName>s3c-verify-0930205500</BucketName></Error>
+I0930 18:55:01.335678 s3api_object_handlers_acl.go:167 PutObjectAclHandler s3c-verify-0930205500 dir/nested.txt
+I0930 18:55:01.335788 auth_credentials.go:1360 v4 auth type
+I0930 18:55:01.335838 auth_credentials.go:1145 Looking up access key: scra*** (len=7, total keys registered: 0)
+I0930 18:55:01.335850 auth_credentials.go:1168 Could not find access key scra*** (len=7). Available keys: 0, Auth enabled: false
+I0930 18:55:01.335861 auth_credentials.go:1173 Registered access keys:
+W0930 18:55:01.335872 auth_signature_v4.go:254 InvalidAccessKeyId: attempted key 'scratch' not found. Available keys: 0, Auth enabled: false
+I0930 18:55:01.335909 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.336628 filer_grpc_server.go:28 request_id:7ba0fd46-f235-4ee2-ba58-60e82042b8a6 LookupDirectoryEntry /buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.337421 auth_credentials.go:1360 v4 auth type
+I0930 18:55:01.337487 auth_credentials.go:1145 Looking up access key: scra*** (len=7, total keys registered: 0)
+I0930 18:55:01.337505 auth_credentials.go:1168 Could not find access key scra*** (len=7). Available keys: 0, Auth enabled: false
+I0930 18:55:01.337515 auth_credentials.go:1173 Registered access keys:
+W0930 18:55:01.337526 auth_signature_v4.go:254 InvalidAccessKeyId: attempted key 'scratch' not found. Available keys: 0, Auth enabled: false
+I0930 18:55:01.337545 s3api_object_handlers_acl.go:260 PutObjectAclHandler: Access denied - user  is not owner of object s3c-verify-0930205500/dir/nested.txt (owner: admin)
+I0930 18:55:01.337629 error_handler.go:134 status 403 application/xml: <?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>AccessDenied</Code><Message>Access Denied.</Message><Resource>/s3c-verify-0930205500/dir/nested.txt</Resource><RequestId>18DA2E1C65D4628BAE68FDC1</RequestId><Key>dir/nested.txt</Key><BucketName>s3c-verify-0930205500</BucketName></Error>
+I0930 18:55:01.366599 s3api_object_handlers_acl.go:20 GetObjectAclHandler s3c-verify-0930205500 flat.txt
+I0930 18:55:01.366716 auth_credentials.go:1360 v4 auth type
+I0930 18:55:01.366760 auth_credentials.go:1145 Looking up access key: scra*** (len=7, total keys registered: 0)
+I0930 18:55:01.366775 auth_credentials.go:1168 Could not find access key scra*** (len=7). Available keys: 0, Auth enabled: false
+I0930 18:55:01.366790 auth_credentials.go:1173 Registered access keys:
+W0930 18:55:01.366800 auth_signature_v4.go:254 InvalidAccessKeyId: attempted key 'scratch' not found. Available keys: 0, Auth enabled: false
+I0930 18:55:01.366835 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.367511 filer_grpc_server.go:28 request_id:fa670ecb-d550-44ac-a69b-9bc1be603494 LookupDirectoryEntry /buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.368361 error_handler.go:134 status 200 application/xml: <?xml version="1.0" encoding="UTF-8"?>
+<AccessControlPolicy><Owner><ID>admin</ID><DisplayName>admin</DisplayName></Owner><AccessControlList><Grant><Grantee xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CanonicalUser"><Type>CanonicalUser</Type><ID>admin</ID><DisplayName>admin</DisplayName></Grantee><Permission>FULL_CONTROL</Permission></Grant></AccessControlList></AccessControlPolicy>
+I0930 18:55:01.394786 s3api_object_handlers_put.go:89 PutObjectHandler bucket=s3c-verify-0930205500 object=flat-sse.txt size=31
+I0930 18:55:01.394869 s3api_object_handlers_put.go:220 PutObjectHandler: bucket=s3c-verify-0930205500, object=flat-sse.txt, versioningState='', versioningEnabled=false, versioningConfigured=false
+I0930 18:55:01.395307 s3_sse_s3.go:55 SSE-S3 detection: method=PUT, header="AES256", expected="AES256", result=true, copySource=""
+I0930 18:55:01.395373 s3api_put_handlers.go:196 handleSSES3Encryption: SSE-S3 request detected, processing encryption
+I0930 18:55:01.395455 s3api_put_handlers.go:167 handleSSES3SinglePartEncryption: generating new key for single-part upload
+I0930 18:55:01.395721 error_handler.go:134 status 500 application/xml: <?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>InternalError</Code><Message>We encountered an internal error, please try again.</Message><Resource>/s3c-verify-0930205500/flat-sse.txt</Resource><RequestId>18DA2E1C695A8115A72165B4</RequestId><Key>flat-sse.txt</Key><BucketName>s3c-verify-0930205500</BucketName></Error>
+I0930 18:55:01.426140 s3api_object_handlers_put.go:89 PutObjectHandler bucket=s3c-verify-0930205500 object=dir/nested-sse.txt size=31
+I0930 18:55:01.426254 s3api_object_handlers_put.go:220 PutObjectHandler: bucket=s3c-verify-0930205500, object=dir/nested-sse.txt, versioningState='', versioningEnabled=false, versioningConfigured=false
+I0930 18:55:01.426491 s3_sse_s3.go:55 SSE-S3 detection: method=PUT, header="AES256", expected="AES256", result=true, copySource=""
+I0930 18:55:01.426561 s3api_put_handlers.go:196 handleSSES3Encryption: SSE-S3 request detected, processing encryption
+I0930 18:55:01.426577 s3api_put_handlers.go:167 handleSSES3SinglePartEncryption: generating new key for single-part upload
+I0930 18:55:01.426729 error_handler.go:134 status 500 application/xml: <?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>InternalError</Code><Message>We encountered an internal error, please try again.</Message><Resource>/s3c-verify-0930205500/dir/nested-sse.txt</Resource><RequestId>18DA2E1C6B38A0C404E2A65E</RequestId><Key>dir/nested-sse.txt</Key><BucketName>s3c-verify-0930205500</BucketName></Error>
+I0930 18:55:01.458769 s3api_bucket_handlers.go:666 AuthWithPublicRead: bucket=s3c-verify-0930205500, object=flat-sse.txt, authType=7, isAnonymous=false
+I0930 18:55:01.458918 s3api_object_handlers.go:2111 HeadObjectHandler s3c-verify-0930205500 flat-sse.txt
+I0930 18:55:01.458956 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.459508 filer_grpc_server.go:28 request_id:634b646f-3924-46e2-a9e2-45a9925ed3dc LookupDirectoryEntry /buckets/s3c-verify-0930205500/flat-sse.txt
+I0930 18:55:01.460022 filer_client.go:42 read /buckets/s3c-verify-0930205500/flat-sse.txt <nil>: filer: no entry is found in filer store
+I0930 18:55:01.460108 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.460602 filer_grpc_server.go:28 request_id:e83ce617-1a83-47d3-a021-6920f301c8ea LookupDirectoryEntry /buckets/s3c-verify-0930205500/flat-sse.txt
+I0930 18:55:01.460968 filer_client.go:42 read /buckets/s3c-verify-0930205500/flat-sse.txt <nil>: filer: no entry is found in filer store
+I0930 18:55:01.461042 s3api_handlers.go:90 WithFilerClient: failover to 172.17.0.5:8888 failed: filer: no entry is found in filer store
+I0930 18:55:01.461315 error_handler.go:134 status 404 application/xml: <?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Resource>/s3c-verify-0930205500/flat-sse.txt</Resource><RequestId>18DA2E1C6D2861DEC766EBEE</RequestId><Key>flat-sse.txt</Key><BucketName>s3c-verify-0930205500</BucketName></Error>
+I0930 18:55:01.494238 s3api_object_handlers_delete.go:183 DeleteObjectHandler s3c-verify-0930205500 flat.txt
+I0930 18:55:01.494324 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979
+I0930 18:55:01.494335 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.494352 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.495022 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979 renewToken= secondsToLock=5 isMoved=false
+I0930 18:55:01.495062 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 2026-09-30 18:55:06.495044888 +0000 UTC  s3api-1463850979
+I0930 18:55:01.495083 lock_manager.go:119 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt no lock owner s3api-1463850979
+I0930 18:55:01.495097 lock_manager.go:125 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt new token 14f440c1-26e8-4fb6-80e9-d4d566704a6e owner s3api-1463850979 generation 3
+I0930 18:55:01.495108 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt lockOwner= renewToken=14f440c1-26e8-4fb6-80e9-d4d566704a6e movedTo= err=<nil>
+I0930 18:55:01.495116 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 5  s3api-1463850979, isMoved=false 
+I0930 18:55:01.495125 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt renewToken=14f440c1-26e8-4fb6-80e9-d4d566704a6e lockOwner= error= movedTo=
+I0930 18:55:01.495670 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt err=<nil>
+I0930 18:55:01.495701 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.495709 lock_client.go:197 LOCK: Successfully acquired key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979
+I0930 18:55:01.495718 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979
+I0930 18:55:01.495726 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.495744 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.496209 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt owner=s3api-1463850979 renewToken=14f440c1-26e8-4fb6-80e9-d4d566704a6e secondsToLock=15 isMoved=false
+I0930 18:55:01.496272 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 2026-09-30 18:55:16.496253349 +0000 UTC 14f440c1-26e8-4fb6-80e9-d4d566704a6e s3api-1463850979
+I0930 18:55:01.496308 lock_manager.go:104 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt old token 14f440c1-26e8-4fb6-80e9-d4d566704a6e owner s3api-1463850979 => f6639fdc-033d-4db2-939f-41180fa737d6 owner s3api-1463850979
+I0930 18:55:01.496328 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt lockOwner=s3api-1463850979 renewToken=f6639fdc-033d-4db2-939f-41180fa737d6 movedTo= err=<nil>
+I0930 18:55:01.496342 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/flat.txt 15 14f440c1-26e8-4fb6-80e9-d4d566704a6e s3api-1463850979, isMoved=false 
+I0930 18:55:01.496357 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt renewToken=f6639fdc-033d-4db2-939f-41180fa737d6 lockOwner=s3api-1463850979 error= movedTo=
+I0930 18:55:01.496720 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt err=<nil>
+I0930 18:55:01.496792 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.496809 lock_client.go:280 LOCK: Owner changed from  to s3api-1463850979 for key=s3.object.write:/buckets/s3c-verify-0930205500/flat.txt
+I0930 18:55:01.496837 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.496977 filer_util.go:87 delete entry /buckets/s3c-verify-0930205500/flat.txt: directory:"/buckets/s3c-verify-0930205500" name:"flat.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.497747 filer_grpc_server.go:376 request_id:9b192618-232d-47da-b044-cf7de45869d3 DeleteEntry directory:"/buckets/s3c-verify-0930205500" name:"flat.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.498023 filer_delete_entry.go:142 request_id:9b192618-232d-47da-b044-cf7de45869d3 deleting entry /buckets/s3c-verify-0930205500/flat.txt, delete chunks: true
+I0930 18:55:01.498737 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.498954 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.272539935 +0000 UTC 5 false} offset 5. Read bytes 362 batchIndex 6
+I0930 18:55:01.498995 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.499061 log_read.go:293 localMeta:s3@@ sent messages ts[{Time:2026-09-30 18:54:53.010641412 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.498324695 +0000 UTC Offset:6 IsOffsetBased:false}] size 1
+I0930 18:55:01.499073 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.272539935 +0000 UTC 5 false} offset 5. Read bytes 362 batchIndex 6
+I0930 18:55:01.499091 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.498324695 +0000 UTC 6 false} offset 6. Read bytes 0 batchIndex 6
+I0930 18:55:01.499180 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.498324695 +0000 UTC Offset:6 IsOffsetBased:false}] size 1
+I0930 18:55:01.499220 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.498324695 +0000 UTC 6 false} offset 6. Read bytes 0 batchIndex 6
+I0930 18:55:01.499379 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.499791 lock_manager.go:155 key s3.object.write:/buckets/s3c-verify-0930205500/flat.txt unlocked with f6639fdc-033d-4db2-939f-41180fa737d6
+I0930 18:55:01.531750 s3api_object_handlers_delete.go:183 DeleteObjectHandler s3c-verify-0930205500 dir/nested.txt
+I0930 18:55:01.531860 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979
+I0930 18:55:01.531875 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.531900 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.532597 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979 renewToken= secondsToLock=5 isMoved=false
+I0930 18:55:01.532725 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 2026-09-30 18:55:06.532706128 +0000 UTC  s3api-1463850979
+I0930 18:55:01.532751 lock_manager.go:119 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt no lock owner s3api-1463850979
+I0930 18:55:01.532765 lock_manager.go:125 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt new token 0332d7b4-43c8-4f48-8d7f-2371161efe3d owner s3api-1463850979 generation 4
+I0930 18:55:01.532777 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt lockOwner= renewToken=0332d7b4-43c8-4f48-8d7f-2371161efe3d movedTo= err=<nil>
+I0930 18:55:01.532786 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 5  s3api-1463850979, isMoved=false 
+I0930 18:55:01.532796 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt renewToken=0332d7b4-43c8-4f48-8d7f-2371161efe3d lockOwner= error= movedTo=
+I0930 18:55:01.533364 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt err=<nil>
+I0930 18:55:01.533429 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.533442 lock_client.go:197 LOCK: Successfully acquired key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979
+I0930 18:55:01.533449 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979
+I0930 18:55:01.533455 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.533468 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.534051 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt owner=s3api-1463850979 renewToken=0332d7b4-43c8-4f48-8d7f-2371161efe3d secondsToLock=15 isMoved=false
+I0930 18:55:01.534143 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 2026-09-30 18:55:16.534121974 +0000 UTC 0332d7b4-43c8-4f48-8d7f-2371161efe3d s3api-1463850979
+I0930 18:55:01.534186 lock_manager.go:104 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt old token 0332d7b4-43c8-4f48-8d7f-2371161efe3d owner s3api-1463850979 => 3efcdfd2-9386-4cc4-97ba-ac76b54dc429 owner s3api-1463850979
+I0930 18:55:01.534206 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt lockOwner=s3api-1463850979 renewToken=3efcdfd2-9386-4cc4-97ba-ac76b54dc429 movedTo= err=<nil>
+I0930 18:55:01.534219 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt 15 0332d7b4-43c8-4f48-8d7f-2371161efe3d s3api-1463850979, isMoved=false 
+I0930 18:55:01.534235 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt renewToken=3efcdfd2-9386-4cc4-97ba-ac76b54dc429 lockOwner=s3api-1463850979 error= movedTo=
+I0930 18:55:01.534855 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt err=<nil>
+I0930 18:55:01.534997 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.535019 lock_client.go:280 LOCK: Owner changed from  to s3api-1463850979 for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt
+I0930 18:55:01.535092 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.535132 filer_util.go:87 delete entry /buckets/s3c-verify-0930205500/dir/nested.txt: directory:"/buckets/s3c-verify-0930205500/dir" name:"nested.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.536104 filer_grpc_server.go:376 request_id:128119e9-c269-4ea3-b549-95defe1b9dfc DeleteEntry directory:"/buckets/s3c-verify-0930205500/dir" name:"nested.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.536319 filer_delete_entry.go:142 request_id:128119e9-c269-4ea3-b549-95defe1b9dfc deleting entry /buckets/s3c-verify-0930205500/dir/nested.txt, delete chunks: true
+I0930 18:55:01.536699 empty_folder_cleaner.go:145 EmptyFolderCleaner: delete event in /buckets/s3c-verify-0930205500/dir/nested.txt (isDir=false)
+I0930 18:55:01.536866 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.536942 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.498324695 +0000 UTC 6 false} offset 6. Read bytes 372 batchIndex 7
+I0930 18:55:01.537112 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.53646257 +0000 UTC Offset:7 IsOffsetBased:false}] size 1
+I0930 18:55:01.537146 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.53646257 +0000 UTC 7 false} offset 7. Read bytes 0 batchIndex 7
+I0930 18:55:01.537297 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.537408 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.498324695 +0000 UTC 6 false} offset 6. Read bytes 372 batchIndex 7
+I0930 18:55:01.537491 log_read.go:293 localMeta:s3@@ sent messages ts[{Time:2026-09-30 18:54:53.010641412 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.53646257 +0000 UTC Offset:7 IsOffsetBased:false}] size 1
+I0930 18:55:01.537518 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.53646257 +0000 UTC 7 false} offset 7. Read bytes 0 batchIndex 7
+I0930 18:55:01.536776 empty_folder_cleaner.go:166 EmptyFolderCleaner: queued /buckets/s3c-verify-0930205500/dir for cleanup (triggered by nested.txt)
+I0930 18:55:01.537642 empty_folder_cleaner.go:145 EmptyFolderCleaner: delete event in /buckets/s3c-verify-0930205500/dir/nested.txt (isDir=false)
+I0930 18:55:01.538094 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.538898 lock_manager.go:155 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested.txt unlocked with 3efcdfd2-9386-4cc4-97ba-ac76b54dc429
+I0930 18:55:01.576090 s3api_object_handlers_delete.go:183 DeleteObjectHandler s3c-verify-0930205500 flat-sse.txt
+I0930 18:55:01.576205 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt owner=s3api-1463850979
+I0930 18:55:01.576220 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.576245 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.576897 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt owner=s3api-1463850979 renewToken= secondsToLock=5 isMoved=false
+I0930 18:55:01.576990 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt 2026-09-30 18:55:06.576966249 +0000 UTC  s3api-1463850979
+I0930 18:55:01.577026 lock_manager.go:119 key s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt no lock owner s3api-1463850979
+I0930 18:55:01.577133 lock_manager.go:125 key s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt new token 6c9293ed-1414-4231-b116-2ec2d3b9f11e owner s3api-1463850979 generation 5
+I0930 18:55:01.577166 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt lockOwner= renewToken=6c9293ed-1414-4231-b116-2ec2d3b9f11e movedTo= err=<nil>
+I0930 18:55:01.577184 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt 5  s3api-1463850979, isMoved=false 
+I0930 18:55:01.577200 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt renewToken=6c9293ed-1414-4231-b116-2ec2d3b9f11e lockOwner= error= movedTo=
+I0930 18:55:01.577665 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt err=<nil>
+I0930 18:55:01.577745 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt
+I0930 18:55:01.577764 lock_client.go:197 LOCK: Successfully acquired key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt owner=s3api-1463850979
+I0930 18:55:01.577775 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt owner=s3api-1463850979
+I0930 18:55:01.577784 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.577804 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.578305 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt owner=s3api-1463850979 renewToken=6c9293ed-1414-4231-b116-2ec2d3b9f11e secondsToLock=15 isMoved=false
+I0930 18:55:01.578393 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt 2026-09-30 18:55:16.578372455 +0000 UTC 6c9293ed-1414-4231-b116-2ec2d3b9f11e s3api-1463850979
+I0930 18:55:01.578432 lock_manager.go:104 key s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt old token 6c9293ed-1414-4231-b116-2ec2d3b9f11e owner s3api-1463850979 => c84f0b1f-7047-4ebe-9d1c-b78ff09e50e0 owner s3api-1463850979
+I0930 18:55:01.578468 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt lockOwner=s3api-1463850979 renewToken=c84f0b1f-7047-4ebe-9d1c-b78ff09e50e0 movedTo= err=<nil>
+I0930 18:55:01.578484 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt 15 6c9293ed-1414-4231-b116-2ec2d3b9f11e s3api-1463850979, isMoved=false 
+I0930 18:55:01.578499 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt renewToken=c84f0b1f-7047-4ebe-9d1c-b78ff09e50e0 lockOwner=s3api-1463850979 error= movedTo=
+I0930 18:55:01.578955 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt err=<nil>
+I0930 18:55:01.579032 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt
+I0930 18:55:01.579051 lock_client.go:280 LOCK: Owner changed from  to s3api-1463850979 for key=s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt
+I0930 18:55:01.579083 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.579103 filer_util.go:87 delete entry /buckets/s3c-verify-0930205500/flat-sse.txt: directory:"/buckets/s3c-verify-0930205500" name:"flat-sse.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.579774 filer_grpc_server.go:376 request_id:ac8313b7-5aed-425c-b9a5-7edd281345c8 DeleteEntry directory:"/buckets/s3c-verify-0930205500" name:"flat-sse.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.580389 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.580781 lock_manager.go:155 key s3.object.write:/buckets/s3c-verify-0930205500/flat-sse.txt unlocked with c84f0b1f-7047-4ebe-9d1c-b78ff09e50e0
+I0930 18:55:01.616487 s3api_object_handlers_delete.go:183 DeleteObjectHandler s3c-verify-0930205500 dir/nested-sse.txt
+I0930 18:55:01.616604 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt owner=s3api-1463850979
+I0930 18:55:01.616619 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.616656 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.617467 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt owner=s3api-1463850979 renewToken= secondsToLock=5 isMoved=false
+I0930 18:55:01.617603 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt 2026-09-30 18:55:06.617571663 +0000 UTC  s3api-1463850979
+I0930 18:55:01.617638 lock_manager.go:119 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt no lock owner s3api-1463850979
+I0930 18:55:01.617658 lock_manager.go:125 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt new token 2a082a47-8b49-4899-a088-3a3e49a2a58a owner s3api-1463850979 generation 6
+I0930 18:55:01.617677 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt lockOwner= renewToken=2a082a47-8b49-4899-a088-3a3e49a2a58a movedTo= err=<nil>
+I0930 18:55:01.617690 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt 5  s3api-1463850979, isMoved=false 
+I0930 18:55:01.617704 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt renewToken=2a082a47-8b49-4899-a088-3a3e49a2a58a lockOwner= error= movedTo=
+I0930 18:55:01.618374 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt err=<nil>
+I0930 18:55:01.618492 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt
+I0930 18:55:01.618521 lock_client.go:197 LOCK: Successfully acquired key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt owner=s3api-1463850979
+I0930 18:55:01.618544 lock_client.go:179 LOCK: AttemptToLock key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt owner=s3api-1463850979
+I0930 18:55:01.618554 lock_client.go:241 LOCK: doLock calling DistributedLock - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt filer=172.17.0.5:8888 owner=s3api-1463850979
+I0930 18:55:01.618595 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.619818 filer_grpc_server_dlm.go:19 FILER LOCK: Received DistributedLock request - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt owner=s3api-1463850979 renewToken=2a082a47-8b49-4899-a088-3a3e49a2a58a secondsToLock=15 isMoved=false
+I0930 18:55:01.619933 lock_manager.go:78 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt 2026-09-30 18:55:16.619906032 +0000 UTC 2a082a47-8b49-4899-a088-3a3e49a2a58a s3api-1463850979
+I0930 18:55:01.619979 lock_manager.go:104 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt old token 2a082a47-8b49-4899-a088-3a3e49a2a58a owner s3api-1463850979 => d5b4e5b5-950b-411d-9f9d-141b70a1165c owner s3api-1463850979
+I0930 18:55:01.620045 filer_grpc_server_dlm.go:29 FILER LOCK: LockWithTimeout result - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt lockOwner=s3api-1463850979 renewToken=d5b4e5b5-950b-411d-9f9d-141b70a1165c movedTo= err=<nil>
+I0930 18:55:01.620060 filer_grpc_server_dlm.go:31 lock s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt 15 2a082a47-8b49-4899-a088-3a3e49a2a58a s3api-1463850979, isMoved=false 
+I0930 18:55:01.620075 filer_grpc_server_dlm.go:65 FILER LOCK: Returning response - name=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt renewToken=d5b4e5b5-950b-411d-9f9d-141b70a1165c lockOwner=s3api-1463850979 error= movedTo=
+I0930 18:55:01.620758 lock_client.go:255 LOCK: DistributedLock response - key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt err=<nil>
+I0930 18:55:01.620845 lock_client.go:262 LOCK: Got renewToken for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt
+I0930 18:55:01.620865 lock_client.go:280 LOCK: Owner changed from  to s3api-1463850979 for key=s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt
+I0930 18:55:01.620904 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.620928 filer_util.go:87 delete entry /buckets/s3c-verify-0930205500/dir/nested-sse.txt: directory:"/buckets/s3c-verify-0930205500/dir" name:"nested-sse.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.621646 filer_grpc_server.go:376 request_id:667c2eb7-fda4-414e-80c6-f5a30c1bbaf0 DeleteEntry directory:"/buckets/s3c-verify-0930205500/dir" name:"nested-sse.txt" is_delete_data:true ignore_recursive_error:true
+I0930 18:55:01.622412 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.623109 lock_manager.go:155 key s3.object.write:/buckets/s3c-verify-0930205500/dir/nested-sse.txt unlocked with d5b4e5b5-950b-411d-9f9d-141b70a1165c
+I0930 18:55:01.656806 s3api_bucket_handlers.go:327 DeleteBucketHandler s3c-verify-0930205500
+I0930 18:55:01.656906 auth_credentials.go:1360 v4 auth type
+I0930 18:55:01.656948 auth_credentials.go:1145 Looking up access key: scra*** (len=7, total keys registered: 0)
+I0930 18:55:01.656963 auth_credentials.go:1168 Could not find access key scra*** (len=7). Available keys: 0, Auth enabled: false
+I0930 18:55:01.656976 auth_credentials.go:1173 Registered access keys:
+W0930 18:55:01.657009 auth_signature_v4.go:254 InvalidAccessKeyId: attempted key 'scratch' not found. Available keys: 0, Auth enabled: false
+I0930 18:55:01.657039 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.657054 filer_util.go:87 delete entry /buckets/s3c-verify-0930205500: directory:"/buckets" name:"s3c-verify-0930205500" is_recursive:true ignore_recursive_error:true
+I0930 18:55:01.657916 filer_grpc_server.go:376 request_id:4f62863b-525f-46e5-ab89-931c987905d7 DeleteEntry directory:"/buckets" name:"s3c-verify-0930205500" is_recursive:true ignore_recursive_error:true
+I0930 18:55:01.658133 filer_delete_entry.go:128 request_id:4f62863b-525f-46e5-ab89-931c987905d7 deleting directory /buckets/s3c-verify-0930205500/dir delete chunks: false
+I0930 18:55:01.658306 filer_delete_entry.go:128 request_id:4f62863b-525f-46e5-ab89-931c987905d7 deleting directory /buckets/s3c-verify-0930205500 delete chunks: false
+I0930 18:55:01.658418 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.658461 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.53646257 +0000 UTC 7 false} offset 7. Read bytes 171 batchIndex 8
+I0930 18:55:01.658550 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.658569 log_read.go:293 localMeta:s3@@ sent messages ts[{Time:2026-09-30 18:54:53.010641412 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.658187421 +0000 UTC Offset:8 IsOffsetBased:false}] size 1
+I0930 18:55:01.658602 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.658187421 +0000 UTC 8 false} offset 8. Read bytes 0 batchIndex 8
+I0930 18:55:01.658596 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.53646257 +0000 UTC 7 false} offset 7. Read bytes 171 batchIndex 8
+I0930 18:55:01.658693 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.658187421 +0000 UTC Offset:8 IsOffsetBased:false}] size 1
+I0930 18:55:01.658787 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.658187421 +0000 UTC 8 false} offset 8. Read bytes 133 batchIndex 9
+I0930 18:55:01.658698 filer_delete_entry.go:142 request_id:4f62863b-525f-46e5-ab89-931c987905d7 deleting entry /buckets/s3c-verify-0930205500, delete chunks: false
+I0930 18:55:01.659027 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:19333 (version 2917851528074869591)
+I0930 18:55:01.658731 log_read.go:218 localMeta:s3@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.659303 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.658187421 +0000 UTC 8 false} offset 8. Read bytes 133 batchIndex 9
+I0930 18:55:01.659369 log_read.go:293 localMeta:s3@@ sent messages ts[{Time:2026-09-30 18:54:53.010641412 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.658652005 +0000 UTC Offset:9 IsOffsetBased:false}] size 1
+I0930 18:55:01.659395 log_read.go:200 localMeta:s3@@ ReadFromBuffer at {2026-09-30 18:55:01.658652005 +0000 UTC 9 false} offset 9. Read bytes 0 batchIndex 9
+I0930 18:55:01.658841 log_read.go:293 localMeta:filer:172.17.0.5:8888.18888@@ sent messages ts[{Time:2026-09-30 18:53:52.999273566 +0000 UTC Offset:-2 IsOffsetBased:false},{Time:2026-09-30 18:55:01.658652005 +0000 UTC Offset:9 IsOffsetBased:false}] size 1
+I0930 18:55:01.659433 log_read.go:200 localMeta:filer:172.17.0.5:8888.18888@@ ReadFromBuffer at {2026-09-30 18:55:01.658652005 +0000 UTC 9 false} offset 9. Read bytes 0 batchIndex 9
+I0930 18:55:01.659497 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.659511 log_read.go:218 localMeta:filer:172.17.0.5:8888.18888@@: Woke up from notification (LoopProcessLogData)
+I0930 18:55:01.659519 auth_credentials_subscribe.go:197 remove bucketMetadata /buckets/s3c-verify-0930205500
+I0930 18:55:01.659534 auth_credentials_subscribe.go:246 invalidateBucketConfigCache: removed bucket s3c-verify-0930205500 from cache
+I0930 18:55:01.672195 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_3.dat (size=8)
+I0930 18:55:01.672349 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_3.idx (size=0)
+I0930 18:55:01.679638 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_4.dat (size=8)
+I0930 18:55:01.679773 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_4.idx (size=0)
+I0930 18:55:01.698450 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_5.dat (size=112)
+I0930 18:55:01.698637 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_5.idx (size=16)
+I0930 18:55:01.708638 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_6.dat (size=8)
+I0930 18:55:01.708760 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_6.idx (size=0)
+I0930 18:55:01.715282 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_7.dat (size=8)
+I0930 18:55:01.715394 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_7.idx (size=0)
+I0930 18:55:01.731998 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_1.dat (size=112)
+I0930 18:55:01.732281 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_1.idx (size=16)
+I0930 18:55:01.743221 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_2.dat (size=8)
+I0930 18:55:01.743373 volume_write.go:114 removed volume file /tmp/s3c-verify-0930205500_2.idx (size=0)
+I0930 18:55:01.743964 metrics.go:815 delete collection metrics, s3c-verify-0930205500: 1
+I0930 18:55:01.744045 volume_grpc_admin.go:82 delete collection collection:"s3c-verify-0930205500"
+I0930 18:55:01.744850 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.746037 metrics.go:815 delete collection metrics, s3c-verify-0930205500: 0
+I0930 18:55:01.746213 volume_grpc_admin.go:82 delete collection collection:"s3c-verify-0930205500"
+I0930 18:55:01.747243 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.747900 metrics.go:815 delete collection metrics, s3c-verify-0930205500: 0
+I0930 18:55:01.747972 volume_grpc_admin.go:82 delete collection collection:"s3c-verify-0930205500"
+I0930 18:55:01.748448 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.749286 metrics.go:815 delete collection metrics, s3c-verify-0930205500: 0
+I0930 18:55:01.749408 volume_grpc_admin.go:82 delete collection collection:"s3c-verify-0930205500"
+I0930 18:55:01.749908 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.750653 metrics.go:815 delete collection metrics, s3c-verify-0930205500: 0
+I0930 18:55:01.750733 volume_grpc_admin.go:82 delete collection collection:"s3c-verify-0930205500"
+I0930 18:55:01.751371 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.752000 metrics.go:815 delete collection metrics, s3c-verify-0930205500: 0
+I0930 18:55:01.752080 volume_grpc_admin.go:82 delete collection collection:"s3c-verify-0930205500"
+I0930 18:55:01.752734 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:01.753608 metrics.go:815 delete collection metrics, s3c-verify-0930205500: 0
+I0930 18:55:01.753707 volume_grpc_admin.go:82 delete collection collection:"s3c-verify-0930205500"
+I0930 18:55:01.754903 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.755018 s3api_bucket_handlers.go:388 delete collection: collection:"s3c-verify-0930205500"
+I0930 18:55:01.755437 filer_grpc_server.go:466 request_id:ea89e9a2-d5d8-4cd5-8ccc-efdccddc4895 DeleteCollection collection:"s3c-verify-0930205500"
+I0930 18:55:01.755533 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:19333 (version 2917851528074869591)
+I0930 18:55:01.757275 auth_credentials_subscribe.go:246 invalidateBucketConfigCache: removed bucket s3c-verify-0930205500 from cache
+I0930 18:55:01.757384 metrics.go:803 delete bucket metrics, s3c-verify-0930205500: 11
+I0930 18:55:01.757458 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18888 (version 1985153056003996831)
+I0930 18:55:01.757480 filer_client.go:140 read directory: directory:"/etc/iam/identities" limit:100001
+I0930 18:55:01.758346 filer_grpc_server.go:46 ListEntries directory:"/etc/iam/identities" limit:100001
+I0930 18:55:01.759314 error_handler.go:134 status 204 : 
+I0930 18:55:01.910770 log_read.go:222 localMeta:s3@@: Notification timeout (LoopProcessLogData), rechecking state
+I0930 18:55:01.910908 log_read.go:222 localMeta:filer:172.17.0.5:8888.18888@@: Notification timeout (LoopProcessLogData), rechecking state
+I0930 18:55:02.161876 log_read.go:222 localMeta:filer:172.17.0.5:8888.18888@@: Notification timeout (LoopProcessLogData), rechecking state
+I0930 18:55:02.162007 log_read.go:222 localMeta:s3@@: Notification timeout (LoopProcessLogData), rechecking state
+I0930 18:55:02.245835 grpc_client_server.go:240 gRPC cache hit for 172.17.0.5:18080 (version 9009801287248388469)
+I0930 18:55:02.248032 filer_deletion.go:383 failed to delete 2/2 files (0 retryable, 2 permanent): 1,01179f5b00: volume 1 not found on 172.17.0.5:8080 (permanent); 5,02eeb1680e: volume 5 not found on 172.17.0.5:8080 (permanent)
+I0930 18:55:02.413013 log_read.go:222 localMeta:filer:172.17.0.5:8888.18888@@: Notification timeout (LoopProcessLogData), rechecking state
+I0930 18:55:02.413270 log_read.go:222 localMeta:s3@@: Notification timeout (LoopProcessLogData), rechecking state

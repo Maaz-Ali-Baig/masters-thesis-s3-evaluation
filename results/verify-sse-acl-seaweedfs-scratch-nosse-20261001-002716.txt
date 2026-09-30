@@ -1,0 +1,23 @@
+verify-sse-acl  system=seaweedfs  endpoint=http://localhost:18337  region=us-east-1
+date:   2026-09-30T18:57:13Z
+bucket: s3c-verify-0930205713
+
+1  create bucket                       HTTP 200   
+2  put flat.txt (no slash)             HTTP 200   
+3  put dir/nested.txt (with slash)     HTTP 200   
+
+-- ACL: same call, key without and with a path prefix --
+4  acl public-read on flat.txt         HTTP 200   
+5  acl public-read on dir/nested.txt   HTTP 500   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>InternalError</Code><Message>We encountered an internal error, please try again.</Message><Resource>/s3c-verify-0930205713/dir/nested.txt</Resource><RequestId>18DA2E3B4901BB6EF0E7070A</RequestId><Key>dir/nested.txt</Key><BucketName>s3c-verify-0930205713</BucketName></Error>
+6  read acl of flat.txt                HTTP 200   <?xml version="1.0" encoding="UTF-8"?> <AccessControlPolicy><Owner><ID>admin</ID><DisplayName>admin</DisplayName></Owner><AccessControlList><Grant><Grantee xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CanonicalUser"><Type>CanonicalUser</Type><ID>admin</ID><DisplayName>admin</DisplayName></Grantee><Permission>FULL_CONTROL</Permission></Grant><Grant><Grantee xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CanonicalUser"><Type>Group</Type><URI>http://acs.amazonaws.com/groups/global/AllUsers</URI></Grantee><Permission>READ</Permission></Grant></AccessControlList></AccessControlPolicy>
+
+-- SSE-S3 header: same call, key without and with a path prefix --
+7  put sse flat-sse.txt                HTTP 500   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>InternalError</Code><Message>We encountered an internal error, please try again.</Message><Resource>/s3c-verify-0930205713/flat-sse.txt</Resource><RequestId>18DA2E3B4C6A8EADCD180BA4</RequestId><Key>flat-sse.txt</Key><BucketName>s3c-verify-0930205713</BucketName></Error>
+8  put sse dir/nested-sse.txt          HTTP 500   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>InternalError</Code><Message>We encountered an internal error, please try again.</Message><Resource>/s3c-verify-0930205713/dir/nested-sse.txt</Resource><RequestId>18DA2E3B4DEB21039571A469</RequestId><Key>dir/nested-sse.txt</Key><BucketName>s3c-verify-0930205713</BucketName></Error>
+9  head flat-sse.txt                   HTTP 404   HTTP/1.1 404 Not Found  Accept-Ranges: bytes  Content-Length: 300  Content-Type: application/xml  Server: SeaweedFS 30GB 4.25  Vary: Origin  X-Amz-Request-Id: 18DA2E3B4F605F7DCBA507DB  Date: Wed, 30 Sep 2026 18:57:14 GMT    
+
+cleanup delete flat.txt                HTTP 204   
+cleanup delete dir/nested.txt          HTTP 204   
+cleanup delete flat-sse.txt            HTTP 204   
+cleanup delete dir/nested-sse.txt      HTTP 204   
+cleanup delete bucket                  HTTP 204   

@@ -1,0 +1,74 @@
+I0930 18:45:42.532643 master_grpc_server_volume.go:153 volume grow &{Option:{"collection":"s3c-verify-0930204542","replication":{},"ttl":{"Count":0,"Unit":0},"version":3} Count:0 Force:false Reason:grpc assign}
+I0930 18:45:42.533628 store.go:297 In dir /data (disk ID 0) adds volume:190 collection:s3c-verify-0930204542 replicaPlacement:000 ttl:
+I0930 18:45:42.540170 store.go:302 add volume 190 on disk ID 0
+I0930 18:45:42.540340 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 190
+I0930 18:45:42.540538 volume_growth.go:376 Created Volume 190 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.540601 volume_growth.go:389 Registered Volume 190 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.540940 store.go:297 In dir /data (disk ID 0) adds volume:191 collection:s3c-verify-0930204542 replicaPlacement:000 ttl:
+I0930 18:45:42.547092 store.go:302 add volume 191 on disk ID 0
+I0930 18:45:42.547253 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 191
+I0930 18:45:42.547496 volume_growth.go:376 Created Volume 191 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.547549 volume_growth.go:389 Registered Volume 191 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.547900 store.go:297 In dir /data (disk ID 0) adds volume:192 collection:s3c-verify-0930204542 replicaPlacement:000 ttl:
+I0930 18:45:42.554422 store.go:302 add volume 192 on disk ID 0
+I0930 18:45:42.554599 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 192
+I0930 18:45:42.554787 volume_growth.go:376 Created Volume 192 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.554855 volume_growth.go:389 Registered Volume 192 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.555377 store.go:297 In dir /data (disk ID 0) adds volume:193 collection:s3c-verify-0930204542 replicaPlacement:000 ttl:
+I0930 18:45:42.561304 store.go:302 add volume 193 on disk ID 0
+I0930 18:45:42.561429 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 193
+I0930 18:45:42.561625 volume_growth.go:376 Created Volume 193 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.561687 volume_growth.go:389 Registered Volume 193 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.562059 store.go:297 In dir /data (disk ID 0) adds volume:194 collection:s3c-verify-0930204542 replicaPlacement:000 ttl:
+I0930 18:45:42.568206 store.go:302 add volume 194 on disk ID 0
+I0930 18:45:42.568413 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 194
+I0930 18:45:42.568563 volume_growth.go:376 Created Volume 194 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.568607 volume_growth.go:389 Registered Volume 194 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.568971 store.go:297 In dir /data (disk ID 0) adds volume:195 collection:s3c-verify-0930204542 replicaPlacement:000 ttl:
+I0930 18:45:42.576510 store.go:302 add volume 195 on disk ID 0
+I0930 18:45:42.576657 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 195
+I0930 18:45:42.576911 volume_growth.go:376 Created Volume 195 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.576969 volume_growth.go:389 Registered Volume 195 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.577404 store.go:297 In dir /data (disk ID 0) adds volume:196 collection:s3c-verify-0930204542 replicaPlacement:000 ttl:
+I0930 18:45:42.582216 store.go:302 add volume 196 on disk ID 0
+I0930 18:45:42.582374 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 196
+I0930 18:45:42.582537 volume_growth.go:376 Created Volume 196 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.582633 volume_growth.go:389 Registered Volume 196 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 18:45:42.814392 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_196.dat (size=8)
+I0930 18:45:42.814473 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_196.idx (size=0)
+I0930 18:45:42.823416 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_190.dat (size=8)
+I0930 18:45:42.823588 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_190.idx (size=0)
+I0930 18:45:42.830147 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_193.dat (size=8)
+I0930 18:45:42.830338 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_193.idx (size=0)
+I0930 18:45:42.836649 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_191.dat (size=8)
+I0930 18:45:42.836781 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_191.idx (size=0)
+I0930 18:45:42.848022 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_194.dat (size=112)
+I0930 18:45:42.848154 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_194.idx (size=16)
+I0930 18:45:42.854847 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_192.dat (size=8)
+I0930 18:45:42.855091 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_192.idx (size=0)
+I0930 18:45:42.862916 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_195.dat (size=8)
+I0930 18:45:42.863030 volume_write.go:114 removed volume file /data/s3c-verify-0930204542_195.idx (size=0)
+I0930 18:45:42.863412 metrics.go:815 delete collection metrics, s3c-verify-0930204542: 1
+I0930 18:45:42.864145 metrics.go:815 delete collection metrics, s3c-verify-0930204542: 0
+I0930 18:45:42.864737 metrics.go:815 delete collection metrics, s3c-verify-0930204542: 0
+I0930 18:45:42.865356 metrics.go:815 delete collection metrics, s3c-verify-0930204542: 0
+I0930 18:45:42.865853 metrics.go:815 delete collection metrics, s3c-verify-0930204542: 0
+I0930 18:45:42.866310 metrics.go:815 delete collection metrics, s3c-verify-0930204542: 0
+I0930 18:45:42.866874 metrics.go:815 delete collection metrics, s3c-verify-0930204542: 0
+I0930 18:45:42.868686 metrics.go:803 delete bucket metrics, s3c-verify-0930204542: 6
+I0930 18:45:42.957813 s3api_object_handlers_delete.go:183 DeleteObjectHandler s3c-verify-0930204542 sentinel.txt
+I0930 18:45:42.990710 metrics.go:803 delete bucket metrics, s3c-verify-0930204542: 9
+I0930 18:45:43.907492 data_node.go:86 Deleting volume id: 193
+I0930 18:45:43.907556 data_node.go:86 Deleting volume id: 190
+I0930 18:45:43.907565 data_node.go:86 Deleting volume id: 194
+I0930 18:45:43.907569 data_node.go:86 Deleting volume id: 192
+I0930 18:45:43.907572 data_node.go:86 Deleting volume id: 195
+I0930 18:45:43.907576 data_node.go:86 Deleting volume id: 191
+I0930 18:45:43.907580 data_node.go:86 Deleting volume id: 196
+I0930 18:45:43.907595 topology.go:492 removing volume info: Id:193, Size:0, ReplicaPlacement:000, Collection:s3c-verify-0930204542, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:1790793942 from 172.17.0.3:8080
+I0930 18:45:43.907627 topology.go:492 removing volume info: Id:190, Size:0, ReplicaPlacement:000, Collection:s3c-verify-0930204542, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:0 from 172.17.0.3:8080
+I0930 18:45:43.907644 topology.go:492 removing volume info: Id:194, Size:0, ReplicaPlacement:000, Collection:s3c-verify-0930204542, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:0 from 172.17.0.3:8080
+I0930 18:45:43.907652 topology.go:492 removing volume info: Id:192, Size:0, ReplicaPlacement:000, Collection:s3c-verify-0930204542, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:0 from 172.17.0.3:8080
+I0930 18:45:43.907660 topology.go:492 removing volume info: Id:195, Size:0, ReplicaPlacement:000, Collection:s3c-verify-0930204542, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:1790793942 from 172.17.0.3:8080
+I0930 18:45:43.907667 topology.go:492 removing volume info: Id:191, Size:0, ReplicaPlacement:000, Collection:s3c-verify-0930204542, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:1790793942 from 172.17.0.3:8080
+I0930 18:45:43.907674 topology.go:492 removing volume info: Id:196, Size:0, ReplicaPlacement:000, Collection:s3c-verify-0930204542, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:1790793942 from 172.17.0.3:8080

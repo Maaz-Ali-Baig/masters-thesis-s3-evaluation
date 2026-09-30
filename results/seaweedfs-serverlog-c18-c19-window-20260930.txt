@@ -1,0 +1,89 @@
+I0930 17:42:02.193010 empty_folder_cleaner.go:314 EmptyFolderCleaner: deleting empty folder /buckets/s3c-seaweedfs-0930193742-main/.uploads/9c677823bad483e28a5e2f5c28d92488549a749c_6c9b71d656bc4493ab81b173d702be3f (triggered by 0001_c82b93fa-cf8f-4e30-9518-f64eb5f29290.part)
+I0930 17:42:02.193227 empty_folder_cleaner.go:314 EmptyFolderCleaner: deleting empty folder /buckets/s3c-seaweedfs-0930193742-main/.uploads/02f04c8d8712faf79bb0bc5217784563708c37ef_8d5cf1fb50c84e99900d56f0f4a1c726 (triggered by 0002_e2e8a08f-e8e4-40b4-9454-dbb2c354551a.part)
+I0930 17:42:02.193329 empty_folder_cleaner.go:314 EmptyFolderCleaner: deleting empty folder /buckets/s3c-seaweedfs-0930193742-main/.uploads (triggered by 02f04c8d8712faf79bb0bc5217784563708c37ef_8d5cf1fb50c84e99900d56f0f4a1c726)
+I0930 17:42:09.362744 master_grpc_server_volume.go:153 volume grow &{Option:{"collection":"s3c-seaweedfs-0930193742-lock","replication":{},"ttl":{"Count":0,"Unit":0},"version":3} Count:0 Force:false Reason:grpc assign}
+I0930 17:42:09.363424 store.go:297 In dir /data (disk ID 0) adds volume:169 collection:s3c-seaweedfs-0930193742-lock replicaPlacement:000 ttl:
+I0930 17:42:09.369242 store.go:302 add volume 169 on disk ID 0
+I0930 17:42:09.369406 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 169
+I0930 17:42:09.369741 volume_growth.go:376 Created Volume 169 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.369803 volume_growth.go:389 Registered Volume 169 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.370359 store.go:297 In dir /data (disk ID 0) adds volume:170 collection:s3c-seaweedfs-0930193742-lock replicaPlacement:000 ttl:
+I0930 17:42:09.375212 store.go:302 add volume 170 on disk ID 0
+I0930 17:42:09.375353 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 170
+I0930 17:42:09.375685 volume_growth.go:376 Created Volume 170 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.375755 volume_growth.go:389 Registered Volume 170 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.376179 store.go:297 In dir /data (disk ID 0) adds volume:171 collection:s3c-seaweedfs-0930193742-lock replicaPlacement:000 ttl:
+I0930 17:42:09.381308 store.go:302 add volume 171 on disk ID 0
+I0930 17:42:09.381485 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 171
+I0930 17:42:09.381825 volume_growth.go:376 Created Volume 171 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.381896 volume_growth.go:389 Registered Volume 171 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.382360 store.go:297 In dir /data (disk ID 0) adds volume:172 collection:s3c-seaweedfs-0930193742-lock replicaPlacement:000 ttl:
+I0930 17:42:09.387706 store.go:302 add volume 172 on disk ID 0
+I0930 17:42:09.387878 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 172
+I0930 17:42:09.388262 volume_growth.go:376 Created Volume 172 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.388335 volume_growth.go:389 Registered Volume 172 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.388831 store.go:297 In dir /data (disk ID 0) adds volume:173 collection:s3c-seaweedfs-0930193742-lock replicaPlacement:000 ttl:
+I0930 17:42:09.393432 store.go:302 add volume 173 on disk ID 0
+I0930 17:42:09.393575 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 173
+I0930 17:42:09.393919 volume_growth.go:376 Created Volume 173 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.393986 volume_growth.go:389 Registered Volume 173 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.394531 store.go:297 In dir /data (disk ID 0) adds volume:174 collection:s3c-seaweedfs-0930193742-lock replicaPlacement:000 ttl:
+I0930 17:42:09.399584 store.go:302 add volume 174 on disk ID 0
+I0930 17:42:09.399722 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 174
+I0930 17:42:09.400082 volume_growth.go:376 Created Volume 174 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.400179 volume_growth.go:389 Registered Volume 174 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.400553 store.go:297 In dir /data (disk ID 0) adds volume:175 collection:s3c-seaweedfs-0930193742-lock replicaPlacement:000 ttl:
+I0930 17:42:09.405319 store.go:302 add volume 175 on disk ID 0
+I0930 17:42:09.405501 volume_grpc_client_to_master.go:256 volume server 172.17.0.3:8080 adds volume 175
+I0930 17:42:09.405859 volume_growth.go:376 Created Volume 175 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:09.405958 volume_growth.go:389 Registered Volume 175 on topo:DefaultDataCenter:DefaultRack:172.17.0.3:8080
+I0930 17:42:13.391010 s3api_object_handlers_delete.go:183 DeleteObjectHandler s3c-seaweedfs-0930193742-lock c17/locked.txt
+I0930 17:42:15.201632 s3api_object_handlers_delete.go:183 DeleteObjectHandler s3c-seaweedfs-0930193742-lock c17/locked.txt
+E0930 17:42:33.949308 s3api_object_handlers_acl.go:355 PutObjectAclHandler: failed to update entry: all filers failed, last error: rpc error: code = Unknown desc = not found /buckets/s3c-seaweedfs-0930193742-main/acl.txt: filer: no entry is found in filer store
+E0930 17:42:34.909879 s3api_object_handlers_acl.go:355 PutObjectAclHandler: failed to update entry: all filers failed, last error: rpc error: code = Unknown desc = not found /buckets/s3c-seaweedfs-0930193742-main/acl.txt: filer: no entry is found in filer store
+E0930 17:42:36.364932 s3api_object_handlers_acl.go:355 PutObjectAclHandler: failed to update entry: all filers failed, last error: rpc error: code = Unknown desc = not found /buckets/s3c-seaweedfs-0930193742-main/acl.txt: filer: no entry is found in filer store
+W0930 17:43:10.737831 s3api_object_handlers_put.go:679 putToFiler: checksum mismatch for X-Amz-Checksum-Sha256: expected AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=, got Sdrk2IxZ3Aq7uqeP1nLbHdTUX6vh8WRIrBQX/GkNye8=
+W0930 17:43:13.008201 s3api_object_handlers_put.go:543 putToFiler: Checksum verification failed, attempting to cleanup 1 orphaned chunks
+I0930 17:43:35.506031 s3api_object_handlers_put.go:166 PutObjectHandler: explicit directory marker s3c-seaweedfs-0930193742-main/c21/dir-marker/ (contentType="", len=16)
+E0930 17:43:36.867082 s3api_object_handlers.go:462 serveDirectoryContent: failed to write response: http: wrote more than the declared Content-Length
+E0930 17:43:38.883902 s3api_object_handlers_put.go:813 putToFiler: CreateEntry returned error: CreateEntry /buckets/s3c-seaweedfs-0930193742-main/c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: entry name too long
+E0930 17:43:38.884883 s3api_object_handlers_put.go:813 putToFiler: CreateEntry returned error: CreateEntry /buckets/s3c-seaweedfs-0930193742-main/c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: entry name too long
+E0930 17:43:38.885867 s3api_object_handlers_put.go:837 putToFiler: failed to create entry for /buckets/s3c-seaweedfs-0930193742-main/c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: all filers failed, last error: CreateEntry /buckets/s3c-seaweedfs-0930193742-main/c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: entry name too long
+W0930 17:43:38.885955 s3api_object_handlers_put.go:842 putToFiler: finalization failed, attempting to cleanup 1 orphaned chunks
+I0930 17:43:51.463578 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_159.dat (size=4194712)
+I0930 17:43:51.463783 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_159.idx (size=112)
+I0930 17:43:51.465380 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_157.dat (size=424)
+I0930 17:43:51.465488 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_157.idx (size=96)
+I0930 17:43:51.470990 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_156.dat (size=8389256)
+I0930 17:43:51.471138 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_156.idx (size=176)
+I0930 17:43:51.472426 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_161.dat (size=8)
+I0930 17:43:51.472527 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_161.idx (size=0)
+I0930 17:43:51.475035 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_155.dat (size=4194744)
+I0930 17:43:51.475144 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_155.idx (size=128)
+I0930 17:43:51.478303 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_158.dat (size=6291824)
+I0930 17:43:51.478492 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_158.idx (size=80)
+I0930 17:43:51.480882 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_160.dat (size=2097808)
+I0930 17:43:51.481035 volume_write.go:114 removed volume file /data/s3c-seaweedfs-0930193742-main_160.idx (size=144)
+I0930 17:43:51.481370 metrics.go:815 delete collection metrics, s3c-seaweedfs-0930193742-main: 9
+I0930 17:43:51.482175 metrics.go:815 delete collection metrics, s3c-seaweedfs-0930193742-main: 0
+I0930 17:43:51.482958 metrics.go:815 delete collection metrics, s3c-seaweedfs-0930193742-main: 0
+I0930 17:43:51.483778 metrics.go:815 delete collection metrics, s3c-seaweedfs-0930193742-main: 0
+I0930 17:43:51.484465 metrics.go:815 delete collection metrics, s3c-seaweedfs-0930193742-main: 0
+I0930 17:43:51.485127 metrics.go:815 delete collection metrics, s3c-seaweedfs-0930193742-main: 0
+I0930 17:43:51.485781 metrics.go:815 delete collection metrics, s3c-seaweedfs-0930193742-main: 0
+I0930 17:43:51.487666 metrics.go:803 delete bucket metrics, s3c-seaweedfs-0930193742-main: 33
+E0930 17:43:53.243491 s3api_bucket_handlers.go:159 put invalid bucket name: Bad_Name_s3c-seaweedfs-0930193742 bucket name can only contain lower case characters, numbers, dots, and hyphens
+I0930 17:43:56.143270 data_node.go:86 Deleting volume id: 160
+I0930 17:43:56.143362 data_node.go:86 Deleting volume id: 156
+I0930 17:43:56.143376 data_node.go:86 Deleting volume id: 157
+I0930 17:43:56.143392 data_node.go:86 Deleting volume id: 155
+I0930 17:43:56.143399 data_node.go:86 Deleting volume id: 158
+I0930 17:43:56.143408 data_node.go:86 Deleting volume id: 159
+I0930 17:43:56.143414 data_node.go:86 Deleting volume id: 161
+I0930 17:43:56.143451 topology.go:492 removing volume info: Id:160, Size:2097808, ReplicaPlacement:000, Collection:s3c-seaweedfs-0930193742-main, Version:3, Ttl:, FileCount:8, DeleteCount:1, DeletedByteCount:53, ReadOnly:false, ModifiedAtSecond:1790790199 from 172.17.0.3:8080
+I0930 17:43:56.143487 topology.go:492 removing volume info: Id:156, Size:8389256, ReplicaPlacement:000, Collection:s3c-seaweedfs-0930193742-main, Version:3, Ttl:, FileCount:8, DeleteCount:3, DeletedByteCount:6291533, ReadOnly:false, ModifiedAtSecond:1790790218 from 172.17.0.3:8080
+I0930 17:43:56.143510 topology.go:492 removing volume info: Id:157, Size:424, ReplicaPlacement:000, Collection:s3c-seaweedfs-0930193742-main, Version:3, Ttl:, FileCount:4, DeleteCount:2, DeletedByteCount:106, ReadOnly:false, ModifiedAtSecond:1790789950 from 172.17.0.3:8080
+I0930 17:43:56.143526 topology.go:492 removing volume info: Id:155, Size:4194744, ReplicaPlacement:000, Collection:s3c-seaweedfs-0930193742-main, Version:3, Ttl:, FileCount:6, DeleteCount:2, DeletedByteCount:2097176, ReadOnly:false, ModifiedAtSecond:1790790211 from 172.17.0.3:8080
+I0930 17:43:56.143543 topology.go:492 removing volume info: Id:158, Size:6291824, ReplicaPlacement:000, Collection:s3c-seaweedfs-0930193742-main, Version:3, Ttl:, FileCount:5, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:1790790207 from 172.17.0.3:8080
+I0930 17:43:56.143558 topology.go:492 removing volume info: Id:159, Size:4194712, ReplicaPlacement:000, Collection:s3c-seaweedfs-0930193742-main, Version:3, Ttl:, FileCount:6, DeleteCount:1, DeletedByteCount:1048588, ReadOnly:false, ModifiedAtSecond:1790790203 from 172.17.0.3:8080
+I0930 17:43:56.143572 topology.go:492 removing volume info: Id:161, Size:8, ReplicaPlacement:000, Collection:s3c-seaweedfs-0930193742-main, Version:3, Ttl:, FileCount:0, DeleteCount:0, DeletedByteCount:0, ReadOnly:false, ModifiedAtSecond:1790789866 from 172.17.0.3:8080

@@ -1,0 +1,27 @@
+verify-acl-enforcement  system=seaweedfs  endpoint=http://localhost:8333  region=us-east-1
+date:   2026-09-30T19:08:03Z
+bucket: s3c-verify-0930210803
+
+create bucket                                        ok   {     "Location": "/s3c-verify-0930210803" } 
+put obj.txt                                          ok   {     "ETag": "\"b216000c27f9ba7553429274316956de\"",     "ChecksumCRC64NVME": "k2yx9YmffE
+A0 anonymous GET, before any ACL                     anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>AccessDenied</Code><Message>Access Denied.</Message><Resou
+
+-- case 1: object ACL public-read --
+put-object-acl public-read                           ok   
+get-object-acl grantee URIs                          ok   None	FULL_CONTROL http://acs.amazonaws.com/groups/global/AllUsers	READ 
+A1 anonymous GET after object ACL                    anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>AccessDenied</Code><Message>Access Denied.</Message><Resou
+
+-- case 2: bucket ACL public-read --
+put-bucket-acl public-read                           ok   
+get-bucket-acl grantee URIs                          ok   None	FULL_CONTROL 
+A2 anonymous GET of object after bucket ACL          anonymous HTTP 200   acl enforcement sentinel 
+A3 anonymous LIST after bucket ACL                   anonymous HTTP 200   <?xml version="1.0" encoding="UTF-8"?> <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name
+
+-- case 3: back to private, then a bucket policy (reference, passed in C14) --
+put-bucket-acl private                               ok   
+put-object-acl private                               ok   
+A4 anonymous GET after both set private              anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>AccessDenied</Code><Message>Access Denied.</Message><Resou
+put-bucket-policy (anonymous GetObject)              ok   
+A5 anonymous GET after bucket policy                 anonymous HTTP 200   acl enforcement sentinel 
+
+cleanup delete bucket                                ok   

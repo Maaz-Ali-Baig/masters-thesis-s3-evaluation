@@ -1,0 +1,27 @@
+verify-acl-enforcement  system=rustfs  endpoint=http://localhost:9000  region=us-east-1
+date:   2026-09-30T19:23:16Z
+bucket: s3c-verify-0930212316
+
+create bucket                                        ok   
+put obj.txt                                          ok   {     "ETag": "\"b216000c27f9ba7553429274316956de\"",     "ChecksumCRC64NVME": "k2yx9YmffE
+A0 anonymous GET, before any ACL                     anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>
+
+-- case 1: object ACL public-read --
+put-object-acl public-read                           ok   
+get-object-acl grantee URIs                          ok   None	FULL_CONTROL 
+A1 anonymous GET after object ACL                    anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>
+
+-- case 2: bucket ACL public-read --
+put-bucket-acl public-read                           ok   
+get-bucket-acl grantee URIs                          ok   None	FULL_CONTROL 
+A2 anonymous GET of object after bucket ACL          anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>
+A3 anonymous LIST after bucket ACL                   anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>
+
+-- case 3: back to private, then a bucket policy (reference, passed in C14) --
+put-bucket-acl private                               ok   
+put-object-acl private                               ok   
+A4 anonymous GET after both set private              anonymous HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>
+put-bucket-policy (anonymous GetObject)              ok   
+A5 anonymous GET after bucket policy                 anonymous HTTP 200   acl enforcement sentinel 
+
+cleanup delete bucket                                ok   

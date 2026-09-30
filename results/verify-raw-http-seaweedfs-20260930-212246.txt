@@ -1,0 +1,63 @@
+verify-raw-http  system=seaweedfs  endpoint=http://localhost:8333  region=us-east-1
+date:   2026-09-30T19:22:46Z
+bucket: s3c-verify-0930212246
+
+create bucket                                              HTTP 200   
+put obj.txt                                                HTTP 200   
+head obj.txt                                               HTTP 200   HTTP/1.1 200 OK  Accept-Ranges: bytes  Content-Length: 20  Content-Type: application/x-www-form-urlencoded  Etag: "9708e0aed2819a433b9704af4967ffbb"  
+  etag seen                                                "9708e0aed2819a433b9704af4967ffbb"
+
+-- conditional requests (AWS: 304, 412, 412, 412) --
+GET If-None-Match: <etag>            (AWS 304)             HTTP 304   HTTP/1.1 200 OK  Accept-Ranges: bytes  Content-Length: 20  Content-Type: application/x-www-form-urlencoded  Etag: "9708e0aed2819a433b9704af4967ffbb"  
+GET If-Match: wrong etag             (AWS 412)             HTTP 412   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>PreconditionFailed</Code><Message>At least one of the pre-conditions you specified did not hold</M
+GET If-Unmodified-Since: year 2000   (AWS 412)             HTTP 412   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>PreconditionFailed</Code><Message>At least one of the pre-conditions you specified did not hold</M
+PUT If-None-Match: * on existing key (AWS 412)             HTTP 412   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>PreconditionFailed</Code><Message>At least one of the pre-conditions you specified did not hold</M
+
+-- SSE-S3 header, and is it echoed back (AWS: 200 and x-amz-server-side-encryption: AES256) --
+PUT with x-amz-server-side-encryption: AES256              HTTP 500   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>InternalError</Code><Message>We encountered an internal error, please try again.</Message><Resourc
+  PUT reply header x-amz-server-side-encryption            []
+HEAD that object                                           HTTP 404   HTTP/1.1 404 Not Found  Accept-Ranges: bytes  Content-Length: 290  Content-Type: application/xml  Server: SeaweedFS 30GB 4.25  Vary: Origin  X-Amz-Req
+  HEAD reply header x-amz-server-side-encryption           []
+
+-- object lock headers on a normal bucket (AWS: 400 InvalidRequest, lock needs a lock enabled bucket) --
+PUT with x-amz-object-lock-mode GOVERNANCE                 HTTP 400   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>InvalidRequest</Code><Message>Invalid Request</Message><Resource>/s3c-verify-0930212246/lock.txt</
+HEAD that object                                           HTTP 404   HTTP/1.1 404 Not Found  Accept-Ranges: bytes  Content-Length: 292  Content-Type: application/xml  Server: SeaweedFS 30GB 4.25  Vary: Origin  X-Amz-Req
+  HEAD reply header x-amz-object-lock-mode                 []
+
+-- integrity and naming (AWS: 400 BadDigest, 400 InvalidBucketName) --
+PUT with wrong Content-MD5                                 HTTP 400   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>BadDigest</Code><Message>The Content-Md5 you specified did not match what we received.</Message><R
+create bucket named Bad_Name_x                             HTTP 400   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><Resource>/Bad_Name_x
+
+-- multipart (AWS: upload listed, then EntityTooSmall for two 1 MiB parts) --
+POST ?uploads (initiate)                                   HTTP 200   <?xml version="1.0" encoding="UTF-8"?> <InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>s3c-verify-0930212246</B
+  upload id                                                dbf391f404ae2a42e62c78d45c74e508a2691280_96df61d7d9e54f7eb01673662ecfa844
+GET ?uploads (is it listed)                                HTTP 200   <?xml version="1.0" encoding="UTF-8"?> <ListMultipartUploadsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>s3c-verify-0930212246</Buck
+  upload id occurrences in the listing                     1  (0 means the upload is missing)
+PUT part 1 (1 MiB)                                         HTTP 200   
+PUT part 2 (1 MiB)                                         HTTP 200   
+POST complete, two 1 MiB parts (AWS 400 EntityTooSmall)    HTTP 400   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>EntityTooSmall</Code><Message>Your proposed upload is smaller than the minimum allowed object size
+DELETE ?uploadId (abort, cleanup)                          HTTP 204   
+
+-- CORS: a bucket with NO configuration, then one with a rule for https://example.org only --
+create bucket without CORS                                 HTTP 200   
+OPTIONS preflight, no CORS configured                      HTTP 200   
+  allow-origin header returned                             [https://example.org]
+PUT ?cors (rule for example.org)                           HTTP 200   
+OPTIONS preflight, origin example.org (allowed)            HTTP 200   
+  allow-origin header returned                             [https://example.org]
+OPTIONS preflight, origin evil.example (not listed)        HTTP 403   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>AccessDenied</Code><Message>Access Denied.</Message><Resource>/s3c-verify-0930212246/obj.txt</Reso
+  allow-origin header returned                             []
+GET object with Origin: https://example.org                HTTP 200   raw http check body 
+  allow-origin header on the real GET                      [https://example.org]
+GET object with Origin: https://evil.example (not listed)  HTTP 200   raw http check body 
+  allow-origin header on that real GET                     []
+DELETE ?cors                                               HTTP 204   
+GET ?cors after delete (AWS 404 NoSuchCORSConfiguration)   HTTP 404   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>NoSuchCORSConfiguration</Code><Message>The CORS configuration does not exist</Message><Resource>/s
+
+-- lifecycle after delete (AWS 404 NoSuchLifecycleConfiguration) --
+PUT ?lifecycle                                             HTTP 200   
+DELETE ?lifecycle                                          HTTP 204   
+GET ?lifecycle after delete                                HTTP 404   <?xml version="1.0" encoding="UTF-8"?> <Error><Code>NoSuchLifecycleConfiguration</Code><Message>The lifecycle configuration does not exist</Message><R
+
+cleanup delete bucket                                      HTTP 204   
+cleanup delete bucket (no cors)                            HTTP 204   

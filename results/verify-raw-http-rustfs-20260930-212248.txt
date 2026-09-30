@@ -1,0 +1,63 @@
+verify-raw-http  system=rustfs  endpoint=http://localhost:9000  region=us-east-1
+date:   2026-09-30T19:22:48Z
+bucket: s3c-verify-0930212248
+
+create bucket                                              HTTP 200   
+put obj.txt                                                HTTP 200   
+head obj.txt                                               HTTP 200   HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 20  content-type: application/x-www-form-urlencoded  etag: "9708e0aed2819a433b9704af4967ffbb"  
+  etag seen                                                "9708e0aed2819a433b9704af4967ffbb"
+
+-- conditional requests (AWS: 304, 412, 412, 412) --
+GET If-None-Match: <etag>            (AWS 304)             HTTP 304   HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 20  content-type: application/x-www-form-urlencoded  etag: "9708e0aed2819a433b9704af4967ffbb"  
+GET If-Match: wrong etag             (AWS 412)             HTTP 412   <?xml version="1.0" encoding="UTF-8"?><Error><Code>PreconditionFailed</Code></Error>
+GET If-Unmodified-Since: year 2000   (AWS 412)             HTTP 412   <?xml version="1.0" encoding="UTF-8"?><Error><Code>PreconditionFailed</Code></Error>
+PUT If-None-Match: * on existing key (AWS 412)             HTTP 412   <?xml version="1.0" encoding="UTF-8"?><Error><Code>PreconditionFailed</Code><Message>At least one of the pre-conditions you specified did not hold</Me
+
+-- SSE-S3 header, and is it echoed back (AWS: 200 and x-amz-server-side-encryption: AES256) --
+PUT with x-amz-server-side-encryption: AES256              HTTP 200   
+  PUT reply header x-amz-server-side-encryption            [AES256]
+HEAD that object                                           HTTP 200   HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 20  content-type: application/x-www-form-urlencoded  etag: "9708e0aed2819a433b9704af4967ffbb"  
+  HEAD reply header x-amz-server-side-encryption           [AES256]
+
+-- object lock headers on a normal bucket (AWS: 400 InvalidRequest, lock needs a lock enabled bucket) --
+PUT with x-amz-object-lock-mode GOVERNANCE                 HTTP 400   <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bucket is missing ObjectLockConfiguration</Message></Error>
+HEAD that object                                           HTTP 404   HTTP/1.1 404 Not Found  content-type: application/xml  x-request-id: 9e0b9039-b20b-4780-82b8-0b3231d1c9a4  date: Wed, 30 Sep 2026 19:22:48 GMT    
+  HEAD reply header x-amz-object-lock-mode                 []
+
+-- integrity and naming (AWS: 400 BadDigest, 400 InvalidBucketName) --
+PUT with wrong Content-MD5                                 HTTP 500   <?xml version="1.0" encoding="UTF-8"?><Error><Code>InternalError</Code><Message>Io error: Checksum mismatch</Message></Error>
+create bucket named Bad_Name_x                             HTTP 400   <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidBucketName</Code></Error>
+
+-- multipart (AWS: upload listed, then EntityTooSmall for two 1 MiB parts) --
+POST ?uploads (initiate)                                   HTTP 200   <?xml version="1.0" encoding="UTF-8"?><InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>s3c-verify-0930212248</Bu
+  upload id                                                ZDVmNjI3YmYtOGZiMC00OGYyLWJmZTctMDI4OTQwYTZiYTQ0LmYyZDZkNTVkLTY5MDYtNDVlMC05MjA0LTczYjNjNDU4OTkzNHgxNzkwNzk2MTY4OTk0NzY3NjYy
+GET ?uploads (is it listed)                                HTTP 200   <?xml version="1.0" encoding="UTF-8"?><ListMultipartUploadsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>s3c-verify-0930212248</Bucke
+  upload id occurrences in the listing                     0  (0 means the upload is missing)
+PUT part 1 (1 MiB)                                         HTTP 200   
+PUT part 2 (1 MiB)                                         HTTP 200   
+POST complete, two 1 MiB parts (AWS 400 EntityTooSmall)    HTTP 400   <?xml version="1.0" encoding="UTF-8"?><Error><Code>EntityTooSmall</Code><Message>Your proposed upload is smaller than the minimum allowed object size.
+DELETE ?uploadId (abort, cleanup)                          HTTP 204   
+
+-- CORS: a bucket with NO configuration, then one with a rule for https://example.org only --
+create bucket without CORS                                 HTTP 200   
+OPTIONS preflight, no CORS configured                      HTTP 200   
+  allow-origin header returned                             []
+PUT ?cors (rule for example.org)                           HTTP 200   
+OPTIONS preflight, origin example.org (allowed)            HTTP 200   
+  allow-origin header returned                             [https://example.org]
+OPTIONS preflight, origin evil.example (not listed)        HTTP 403   
+  allow-origin header returned                             []
+GET object with Origin: https://example.org                HTTP 200   raw http check body 
+  allow-origin header on the real GET                      [https://example.org]
+GET object with Origin: https://evil.example (not listed)  HTTP 200   raw http check body 
+  allow-origin header on that real GET                     []
+DELETE ?cors                                               HTTP 204   
+GET ?cors after delete (AWS 404 NoSuchCORSConfiguration)   HTTP 404   <?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchCORSConfiguration</Code><Message>The CORS configuration does not exist</Message></Error>
+
+-- lifecycle after delete (AWS 404 NoSuchLifecycleConfiguration) --
+PUT ?lifecycle                                             HTTP 200   
+DELETE ?lifecycle                                          HTTP 204   
+GET ?lifecycle after delete                                HTTP 404   <?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchLifecycleConfiguration</Code></Error>
+
+cleanup delete bucket                                      HTTP 204   
+cleanup delete bucket (no cors)                            HTTP 204   

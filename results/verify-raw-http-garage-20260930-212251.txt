@@ -1,0 +1,63 @@
+verify-raw-http  system=garage  endpoint=http://localhost:3900  region=garage
+date:   2026-09-30T19:22:51Z
+bucket: s3c-verify-0930212251
+
+create bucket                                              HTTP 200   
+put obj.txt                                                HTTP 200   
+head obj.txt                                               HTTP 200   HTTP/1.1 200 OK  last-modified: Wed, 30 Sep 2026 19:22:51 GMT  accept-ranges: bytes  etag: "9708e0aed2819a433b9704af4967ffbb"  content-type: applicati
+  etag seen                                                "9708e0aed2819a433b9704af4967ffbb"
+
+-- conditional requests (AWS: 304, 412, 412, 412) --
+GET If-None-Match: <etag>            (AWS 304)             HTTP 304   HTTP/1.1 200 OK  last-modified: Wed, 30 Sep 2026 19:22:51 GMT  accept-ranges: bytes  etag: "9708e0aed2819a433b9704af4967ffbb"  content-type: applicati
+GET If-Match: wrong etag             (AWS 412)             HTTP 200   raw http check body 
+GET If-Unmodified-Since: year 2000   (AWS 412)             HTTP 200   raw http check body 
+PUT If-None-Match: * on existing key (AWS 412)             HTTP 200   
+
+-- SSE-S3 header, and is it echoed back (AWS: 200 and x-amz-server-side-encryption: AES256) --
+PUT with x-amz-server-side-encryption: AES256              HTTP 200   
+  PUT reply header x-amz-server-side-encryption            []
+HEAD that object                                           HTTP 200   HTTP/1.1 200 OK  last-modified: Wed, 30 Sep 2026 19:22:51 GMT  accept-ranges: bytes  etag: "9708e0aed2819a433b9704af4967ffbb"  content-type: applicati
+  HEAD reply header x-amz-server-side-encryption           []
+
+-- object lock headers on a normal bucket (AWS: 400 InvalidRequest, lock needs a lock enabled bucket) --
+PUT with x-amz-object-lock-mode GOVERNANCE                 HTTP 200   
+HEAD that object                                           HTTP 200   HTTP/1.1 200 OK  last-modified: Wed, 30 Sep 2026 19:22:51 GMT  accept-ranges: bytes  etag: "9708e0aed2819a433b9704af4967ffbb"  content-type: applicati
+  HEAD reply header x-amz-object-lock-mode                 []
+
+-- integrity and naming (AWS: 400 BadDigest, 400 InvalidBucketName) --
+PUT with wrong Content-MD5                                 HTTP 400   <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidDigest</Code><Message>Invalid digest: MD5 checksum verification failed (from content-md5)</M
+create bucket named Bad_Name_x                             HTTP 400   <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Bad_Name_x: Invalid bucket name. See AWS documentation f
+
+-- multipart (AWS: upload listed, then EntityTooSmall for two 1 MiB parts) --
+POST ?uploads (initiate)                                   HTTP 200   <?xml version="1.0" encoding="UTF-8"?><InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>s3c-verify-0930212251</Bu
+  upload id                                                cb7ec03fd58233033611744ca04c79e10c38f3b565fadaf836379a327ad1b579
+GET ?uploads (is it listed)                                HTTP 200   <?xml version="1.0" encoding="UTF-8"?><ListMultipartUploadsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>s3c-verify-0930212251</Bucke
+  upload id occurrences in the listing                     1  (0 means the upload is missing)
+PUT part 1 (1 MiB)                                         HTTP 200   
+PUT part 2 (1 MiB)                                         HTTP 200   
+POST complete, two 1 MiB parts (AWS 400 EntityTooSmall)    HTTP 200   <?xml version="1.0" encoding="UTF-8"?><CompleteMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>s3c-verify-0930212251</Bu
+DELETE ?uploadId (abort, cleanup)                          HTTP 404   <?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchUpload</Code><Message>Upload not found</Message><Resource>/s3c-verify-0930212251/mp.bin</Reso
+
+-- CORS: a bucket with NO configuration, then one with a rule for https://example.org only --
+create bucket without CORS                                 HTTP 200   
+OPTIONS preflight, no CORS configured                      HTTP 200   
+  allow-origin header returned                             [*]
+PUT ?cors (rule for example.org)                           HTTP 200   
+OPTIONS preflight, origin example.org (allowed)            HTTP 200   
+  allow-origin header returned                             [*]
+OPTIONS preflight, origin evil.example (not listed)        HTTP 200   
+  allow-origin header returned                             [*]
+GET object with Origin: https://example.org                HTTP 200   raw http check body 
+  allow-origin header on the real GET                      [https://example.org]
+GET object with Origin: https://evil.example (not listed)  HTTP 200   raw http check body 
+  allow-origin header on that real GET                     []
+DELETE ?cors                                               HTTP 204   
+GET ?cors after delete (AWS 404 NoSuchCORSConfiguration)   HTTP 204   
+
+-- lifecycle after delete (AWS 404 NoSuchLifecycleConfiguration) --
+PUT ?lifecycle                                             HTTP 200   
+DELETE ?lifecycle                                          HTTP 204   
+GET ?lifecycle after delete                                HTTP 204   
+
+cleanup delete bucket                                      HTTP 204   
+cleanup delete bucket (no cors)                            HTTP 204   
