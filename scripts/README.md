@@ -143,7 +143,10 @@ a different client confirms or contradicts them. Each takes `sw`, `rf` or `ga` a
 ./scripts/verify-key-limits.sh sw         # trailing slash key, path component length, exact total key length
 ./scripts/verify-sse-acl.sh sw            # SSE-S3 header and canned ACL on flat and prefixed keys
 ./scripts/verify-raw-http.sh sw           # conditional requests, multipart, SSE and lock headers, CORS, lifecycle
+./scripts/verify-checksum-header.sh sw    # correct and wrong x-amz-checksum-sha256 and sha1 headers on a PUT
 ```
+
+`verify-checksum-header.sh` also runs against any endpoint, with the probe's variables: `S3C_NAME=ceph S3C_ENDPOINT=http://localhost:80 S3C_KEY=... S3C_SECRET=... S3C_REGION=us-east-1 bash verify-checksum-header.sh`. It sets a signed `Content-Type` on every PUT, because Ceph RGW 20.2.4 answers 403 to the unsigned one curl adds.
 
 Run the same script on all three systems and compare, because the other two act as controls that show the test
 can detect the behaviour AWS documents. Only statuses, headers and short body excerpts are printed. The reading
