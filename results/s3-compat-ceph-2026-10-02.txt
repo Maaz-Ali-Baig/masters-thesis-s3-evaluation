@@ -1,0 +1,180 @@
+S3 API compatibility, Ceph RGW, with cross verification
+=======================================================
+Date:      30 September and 2 October 2026
+Probe:     scripts/s3-compat.sh, 22 tests (C01 to C22), commit 29e3f00 (with the fix for the AWS CLI
+           crash described below). On ceph0 it was fetched from the public repository, 960 lines.
+Clients:   AWS CLI 2.36.8 (probe), installed on ceph0 with the official installer into
+           /opt/aws-cli-new, the same version as the laptop runs. The Debian package on the VM is
+           2.9.19 and was not used. curl signing its own requests (cross check).
+Target:    Ceph Tentacle 20.2.4, three VMs, RGW daemon rgw.s3test.debian.ghnhoi on ceph0, endpoint
+           http://localhost:80 from ceph0 itself. The VM subnet is not reachable from the laptop.
+Canonical run: ceph-20261002-072634 on ceph0, 20 pass, 2 fail. Packed on ceph0 as
+           /root/compat-ceph-20261002-072634.tar.gz, 21210 bytes, 584 entries, sha256
+           33066ead1076d35061187c8eb4a72b6c9e64b1f0d2c1d83aefca3939fbdaad50. The secret key is in
+           none of the files (checked with grep -F on ceph0). The archive itself is only on ceph0. A text copy of
+           all 559 files is in results/compat-ceph-20261002-072634-evidence.txt, checked block by block
+           with sha256 against the same text on ceph0.
+Matrix:    results/compat-matrix-four-systems-2026-10-02.tsv (the three laptop columns are
+           unchanged from results/compat-matrix-2026-09-30.tsv)
+
+HOW COMMANDS REACHED THE VM
+---------------------------
+Commands were sent to ceph0 through a Claude Code session running on ceph0 and controlled
+from the laptop, each prompt saying "run exactly this command and print the raw output". Only the
+raw command output shown by that session was used. Its own explanatory text was not used as
+evidence. Scripts sent to the VM were checked by sha256 after the transfer
+(verify-checksum-header.sh: a37b36dbe35272f3f8223ef662ec06e86128a2fd894ff165544f1d1adba4920a).
+
+RESULT
+------
+Test  What                                                        SeaweedFS  RustFS  Garage  Ceph
+C01   Bucket create, head, list, delete                           PASS       PASS    PASS    PASS
+C02   PUT, HEAD, GET object with content integrity                PASS       PASS    PASS    PASS
+C03   Content-Type, user metadata and cache headers round trip    PASS       PASS    PASS    PASS
+C04   Range GET: bounded, suffix, open ended, unsatisfiable       PASS       PASS    PASS    PASS
+C05   Server-side CopyObject with content integrity               PASS       PASS    PASS    PASS
+C06   Listing: v2 prefix and delimiter, pagination, start-after,  PASS       PASS    PASS    PASS
+C07   DeleteObject, DeleteObjects, delete of a missing key        PASS       PASS    PASS    PASS
+C08   Multipart upload: complete, list, abort, minimum part size  PASS       FAIL    FAIL    PASS
+C09   Object tagging: put, get, header form, delete               PASS       PASS    UNSUPPORTED PASS
+C10   Versioning: versions, delete marker, restore                PASS       PASS    UNSUPPORTED PASS
+C11   Conditional GET: If-Match, If-None-Match, date conditions   PASS       PASS    FAIL    PASS
+C12   Conditional PUT with If-None-Match: * (create only if abse  PASS       PASS    FAIL    PASS
+C13   Presigned GET URL: works, expires, rejects a tampered sign  PASS       PASS    FAIL    PASS
+C14   Bucket policy: roundtrip and enforcement for anonymous rea  PASS       PASS    UNSUPPORTED PASS
+C15   CORS: configuration roundtrip and preflight behaviour       PASS       PASS    FAIL    PASS
+C16   Lifecycle configuration roundtrip (enforcement not tested)  PASS       PASS    FAIL    PASS
+C17   Object lock (GOVERNANCE): retention enforced, bypass works  PASS       PASS    UNSUPPORTED PASS
+C18   SSE-S3 header and bucket default encryption (API only, at-  FAIL       PASS    UNSUPPORTED FAIL
+C19   ACLs: read, canned public-read, enforcement, revert to pri  FAIL       FAIL    UNSUPPORTED PASS
+C20   Integrity checksums: default CLI upload, algorithms, bad v  PASS       FAIL    FAIL    FAIL
+C21   Awkward object keys: symbols, depth, folder marker, compon  FAIL       FAIL    FAIL    PASS
+C22   Error code fidelity against documented AWS S3 codes         FAIL       PASS    FAIL    PASS
+
+Totals: SeaweedFS 18 pass / 4 fail, RustFS 18 / 4, Garage 7 pass / 9 fail / 6 not implemented,
+Ceph 20 pass / 2 fail. As before, FAIL means "differs from documented AWS S3", not "defective".
+
+CEPH, PROVEN
+------------
+1. Twenty of 22 tests pass on the canonical run (all except C18 and C20). Raw evidence of every
+   request is in the archive named above (command, stdout, stderr per request). The checks that
+   other systems fail and Ceph passes: multipart with minimum part size (C08), conditional GET and
+   PUT (C11, C12), CORS and lifecycle round trip (C15, C16), ACLs including enforcement for
+   anonymous reads on flat and prefixed keys (C19), awkward keys (spaces, unicode, symbols, percent signs, deep
+   paths, a trailing slash, path components of 255 and 256 bytes, a 917 byte key in 10 parts) (C21), and the documented error codes (C22).
+
+2. C20, Ceph accepts a wrong integrity checksum sent as a header. Sub-check from the probe:
+       wrong_sha256_refused:FAIL(rc=0 rc0)
+   The command, with a SHA256 value of 32 zero bytes that cannot match the body, returned
+   success and an ETag with no error:
+       aws s3api put-object --bucket <b> --key c20/badsha.bin --body <1 MiB> --checksum-sha256 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+   The same result with a second client. curl signing its own requests, a 27 byte body, four
+   uploads (results/verify-checksum-header-ceph-20261002-073542.txt, sha256 ea8ceee8d24b8fcbec00b0cb604adf7f5bc898bd388ce34c1f6deb5652b8e9f6):
+       put, correct sha256   HTTP 200        put, WRONG sha256   HTTP 200
+       put, correct sha1     HTTP 200        put, WRONG sha1     HTTP 200
+   The object stored under the wrong sha256 exists, and its body is identical to what was sent.
+   A HEAD with x-amz-checksum-mode: ENABLED returned no x-amz-checksum header for any of the four
+   objects, not even for the correct values.
+   Controls, the same script on the three laptop systems (results/verify-checksum-header-*-
+   20261002-0733*.txt): all three answer the wrong values with HTTP 400 (BadDigest on SeaweedFS
+   and RustFS, InvalidDigest on Garage), store nothing (HEAD and GET 404 afterwards), and answer
+   the correct values with 200 and an x-amz-checksum header. The test therefore can detect the
+   behaviour AWS documents, and Ceph 20.2.4 does not show it for header form checksums.
+
+3. Why the first curl check on Ceph failed, one thing changed. The first version of the script
+   got HTTP 403 AccessDenied on all four uploads, including the two with a correct checksum
+   (results/verify-checksum-header-ceph-20261002-073300-unsigned-content-type.txt, sha256
+   30eb1da44cdf78bff21ac4ca0b8558508b95da7d627e77aa99c104dc74afb4b1). Creating the bucket and
+   the deletes with the same signing worked. The only change in the second version is an explicit
+   -H "Content-Type: application/octet-stream" on the PUTs, so that the header is part of the
+   signature. Then all four uploads got 200. curl adds a Content-Type header of its own when it
+   sends a body. Reading: that header is not part of curl's signature, which the effect of the
+   explicit header supports. So Ceph RGW 20.2.4 refuses an upload that carries an unsigned
+   Content-Type header. This is the same behaviour as the earlier Warp finding in
+   setup_notes.md (Ceph answered 403 AccessDenied to every upload with an unsigned Content-Type,
+   SeaweedFS, RustFS and Garage accepted it). The three laptop systems also accepted the first
+   version of this curl script, which had no explicit Content-Type.
+
+4. C18, Ceph refuses the SSE-S3 header. The header sent was --server-side-encryption AES256 on a
+   put-object. The raw reply is HTTP 400 with Code InvalidArgument and an empty Message. AWS
+   accepts this request, so the FAIL stands. The cause is established in
+   results/ceph-sse-s3-vault-check-2026-10-02.txt: rgw_crypt_sse_s3_backend is "vault" on this
+   cluster, no Vault token file is configured, and the RGW log at the two request times reads
+       ERROR: Vault token file not set in rgw_crypt_vault_token_file
+   The source at tag v20.2.4 raises exactly this message in load_token_from_file
+   (rgw_kms.cc line 213) on the path SSE-S3 takes. In this deployment SSE-S3 is unavailable
+   because no Vault key service is configured, and RGW refuses the header and stores nothing
+   (the read back in the probe got NoSuchKey). This differs from Garage, which accepts the same header without an
+   error although its documentation says SSE is not implemented (whether Garage then stores the
+   data unencrypted was not tested on disk, see the record for the three systems). bucket_default_roundtrip
+   passed on Ceph: the bucket encryption configuration is stored and returned.
+
+5. The AWS CLI 2.36.8 crashes on Ceph error replies, and this invalidated the first Ceph run.
+   Full evidence in results/aws-cli-crash-on-ceph-error-replies-2026-10-02.txt. Ceph error
+   replies carry an empty <Message>. The CLI then raises "argument of type 'NoneType' is not a
+   container or iterable" in awscli/customizations/s3errormsg.py (line 55) before it prints the
+   error code. A controlled test with two local servers that differ only in the <Message> text
+   reproduces both outcomes. The first Ceph run (30 September 2026, run ceph-20260930-233048)
+   ended 11 pass, 11 fail. After the probe was changed to read the code from the raw reply, nine
+   of those FAILs are PASS (C04, C07, C08, C10, C11, C12, C15, C16, C22). C18 and C20 failed in
+   both runs, C20 for a reason that is not the crash (the request succeeded, rc=0). The first
+   run is not used for any claim. The patched probe gives the same verdict on all 22 tests on
+   SeaweedFS, RustFS and Garage as the committed matrix.
+
+HYPOTHESES, NOT PROVEN
+----------------------
+H1. Ceph 20.2.4 does not process the x-amz-checksum-sha256 and x-amz-checksum-sha1 request
+    headers at all, neither verifying nor storing them. Seen: wrong values accepted, and no
+    checksum header on a HEAD with x-amz-checksum-mode ENABLED even for correct values. Not
+    separated: HEAD against GET (the probe's get-object returned checksums for uploads made with
+    --checksum-algorithm, where the CLI computes the checksum itself, which may be a different
+    request form), and the Ceph source
+    was not read for this. Settling tests: the same uploads read back with a GET and checksum
+    mode, and the checksum handling in the source at v20.2.4.
+
+OPEN, NOT TESTED
+----------------
+O1. Whether Ceph detects a corrupted body when the checksum is sent in the other form, as a
+    trailer of an aws-chunked upload, which some clients use. Only the header form was tested
+    with a wrong value. Which form the AWS CLI 2.36.8 puts on the wire was not checked.
+O2. SSE-S3 once a Vault is configured, and what the data looks like on disk. Not done: no Vault
+    exists in this deployment, so encryption at rest for Ceph still needs a way to be tested.
+    Belongs to the security chapter.
+O3. The evidence archive of the canonical run (.tar.gz) is on ceph0 only. All 559 files are in
+    the repository as text, results/compat-ceph-20261002-072634-evidence.txt, with every block
+    verified by sha256 against ceph0. A binary copy of the archive is still on ceph0 and not
+    in the repository.
+O4. Only the RGW on ceph0 was probed, from ceph0 itself. The gateways on ceph1 and ceph2 and the
+    behaviour from a separate client host are not tested. The ACL tests measure legacy AWS
+    behaviour, since AWS disabled ACLs on new buckets in 2023.
+O5. Ceph was probed in two runs. Both agree on C18 and C20. The runs are not a statistical
+    sample, each test is one request sequence.
+
+PROCESS NOTES WORTH KEEPING
+---------------------------
+- Check the client version before comparing systems. The Debian package AWS CLI on the VM was
+  2.9.19, a much older release than the 2.36.8 used on the laptop. Not tested on that CLI, but
+  checksum defaults and upload options differ between such versions, and the probe skips a test
+  when the CLI lacks a flag, so runs with it would not have been comparable. The same version as
+  on the laptop was installed next to it and the system CLI was left alone.
+- A client crash looks like a server failure. Nine of the eleven FAIL cells of the first run came from the CLI, not from
+  Ceph, and nothing in the verdict said so. The raw reply, a second client and a controlled
+  experiment found it. Every FAIL cell in the matrix still needs this treatment.
+- My first reading of C18 was wrong. I assumed the SSE-S3 backend setting was not "vault". The
+  cluster says it is. The daemon log showed the real reason. A reading from source is a
+  hypothesis until the log or a controlled test agrees.
+- The first curl check was invalid for the same kind of reason: the client, not the server,
+  was the problem. The 403 on the correct uploads was the sign.
+- Result files copied by hand from the VM console were first not identical to the originals
+  (only trailing spaces, which the writing tool removed). They were restored and the sha256
+  now equals the sha256 of the originals on ceph0.
+
+DISCARDED AND LOCAL ONLY
+------------------------
+On ceph0: /root/compat-out/ceph-20260930-233048 and /root/compat-ceph-full.log (the invalid
+first run), /root/compat-out/ceph-20260930-232852 (a one test trial run, C01), and
+/root/compat-ceph-full2.log (the log of the canonical run). On the laptop, git-ignored:
+results/compat-seaweedfs-20260930-233601, results/compat-rustfs-20260930-234432 and
+results/compat-garage-20260930-235310, the reruns with the patched probe (identical verdicts).
+The first laptop outputs of verify-checksum-header.sh were deleted, they used the version without
+the explicit Content-Type and are replaced by identical reruns.

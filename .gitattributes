@@ -2,3 +2,6 @@
 # LF line endings even though core.autocrlf is on for this Windows checkout. CRLF makes
 # bash fail with "bad interpreter" or "command not found".
 *.sh text eol=lf
+# Ceph curl outputs are cited by sha256 against the originals on ceph0, so never convert them
+results/verify-checksum-header-ceph-*.txt -text
+results/compat-ceph-*-evidence.txt -text

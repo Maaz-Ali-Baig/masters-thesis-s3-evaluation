@@ -1,0 +1,23 @@
+test	description	seaweedfs	rustfs	garage	ceph
+C01	Bucket create, head, list, delete	PASS	PASS	PASS	PASS
+C02	PUT, HEAD, GET object with content integrity	PASS	PASS	PASS	PASS
+C03	Content-Type, user metadata and cache headers round trip	PASS	PASS	PASS	PASS
+C04	Range GET: bounded, suffix, open ended, unsatisfiable	PASS	PASS	PASS	PASS
+C05	Server-side CopyObject with content integrity	PASS	PASS	PASS	PASS
+C06	Listing: v2 prefix and delimiter, pagination, start-after, v1	PASS	PASS	PASS	PASS
+C07	DeleteObject, DeleteObjects, delete of a missing key	PASS	PASS	PASS	PASS
+C08	Multipart upload: complete, list, abort, minimum part size	PASS	FAIL	FAIL	PASS
+C09	Object tagging: put, get, header form, delete	PASS	PASS	UNSUPPORTED	PASS
+C10	Versioning: versions, delete marker, restore	PASS	PASS	UNSUPPORTED	PASS
+C11	Conditional GET: If-Match, If-None-Match, date conditions	PASS	PASS	FAIL	PASS
+C12	Conditional PUT with If-None-Match: * (create only if absent)	PASS	PASS	FAIL	PASS
+C13	Presigned GET URL: works, expires, rejects a tampered signature	PASS	PASS	FAIL	PASS
+C14	Bucket policy: roundtrip and enforcement for anonymous reads	PASS	PASS	UNSUPPORTED	PASS
+C15	CORS: configuration roundtrip and preflight behaviour	PASS	PASS	FAIL	PASS
+C16	Lifecycle configuration roundtrip (enforcement not tested)	PASS	PASS	FAIL	PASS
+C17	Object lock (GOVERNANCE): retention enforced, bypass works	PASS	PASS	UNSUPPORTED	PASS
+C18	SSE-S3 header and bucket default encryption (API only, at-rest not verified)	FAIL	PASS	UNSUPPORTED	FAIL
+C19	ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)	FAIL	FAIL	UNSUPPORTED	PASS
+C20	Integrity checksums: default CLI upload, algorithms, bad values refused	PASS	FAIL	FAIL	FAIL
+C21	Awkward object keys: symbols, depth, folder marker, component and total length	FAIL	FAIL	FAIL	PASS
+C22	Error code fidelity against documented AWS S3 codes	FAIL	PASS	FAIL	PASS

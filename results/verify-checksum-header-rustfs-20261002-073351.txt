@@ -1,0 +1,25 @@
+verify-checksum-header  system=rustfs  endpoint=http://localhost:9000  region=us-east-1
+date:   2026-10-02T05:33:51Z
+bucket: s3c-verify-ck-1002073351
+body sha256 (base64) = Eb6I7VzUKhyirehej8yVdEJFU1CT7bqyBMqLYB5Zc3U=
+
+create bucket                                  HTTP 200   
+--- PUT with a checksum header (AWS: correct = 200, wrong = 400 BadDigest)
+put, correct sha256                            HTTP 200  x-amz-checksum-sha256: Eb6I7VzUKhyirehej8yVdEJFU1CT7bqyBMqLYB5Zc3U=  
+put, WRONG sha256                              HTTP 400   <?xml version="1.0" encoding="UTF-8"?><Error><Code>BadDigest</Code><Message>The Content-Md5 you specified did not match what we received.</Message></E
+put, correct sha1                              HTTP 200  x-amz-checksum-sha1: qiaS1+StRNgtxB2VRzU20GQzhKg=  
+put, WRONG sha1                                HTTP 400   <?xml version="1.0" encoding="UTF-8"?><Error><Code>BadDigest</Code><Message>The Content-Md5 you specified did not match what we received.</Message></E
+--- what was stored (HEAD with x-amz-checksum-mode: ENABLED)
+head ok256.txt                                 HTTP 200  x-amz-checksum-sha256: Eb6I7VzUKhyirehej8yVdEJFU1CT7bqyBMqLYB5Zc3U=  HTTP/1.1 200 OK  accept-ranges: bytes  x-amz-checksum-sha256: Eb6I7VzUKhyirehej8yVdEJFU1CT7bqyBMqLYB5Zc3U=  content-length: 27  content-type: applicat
+head bad256.txt                                HTTP 404   HTTP/1.1 404 Not Found  content-type: application/xml  x-request-id: ca1e3492-7061-4e16-9263-406a0e636af1  date: Fri, 02 Oct 2026 05:33:52 GMT    
+head ok1.txt                                   HTTP 200  x-amz-checksum-sha1: qiaS1+StRNgtxB2VRzU20GQzhKg=  HTTP/1.1 200 OK  accept-ranges: bytes  x-amz-checksum-sha1: qiaS1+StRNgtxB2VRzU20GQzhKg=  content-length: 27  content-type: application/octet-stream  
+head bad1.txt                                  HTTP 404   HTTP/1.1 404 Not Found  content-type: application/xml  x-request-id: 61fb9c05-7de4-4ecc-a489-9d5520e71adb  date: Fri, 02 Oct 2026 05:33:52 GMT    
+--- is the body of the object stored under the wrong sha256 intact
+get bad256.txt                                 HTTP 404   <?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message></Error>
+body identical to what was sent: no (or object missing)
+--- cleanup
+delete ok256.txt                               HTTP 204   
+delete bad256.txt                              HTTP 204   
+delete ok1.txt                                 HTTP 204   
+delete bad1.txt                                HTTP 204   
+delete bucket                                  HTTP 204   

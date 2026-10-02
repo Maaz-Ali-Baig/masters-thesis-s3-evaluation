@@ -1775,10 +1775,63 @@ CORS or lifecycle configuration after deleting it returns 204 instead of 404. To
 prefix is my reading). Garage storing SSE-S3 data unencrypted (supported by its documentation and the missing echo,
 not tested on disk).
 
-**Open.** Ceph is not yet probed. Garage's expired presigned URL returning 400 and its CRC64NVME handling rest on
+**Open.** Ceph was probed afterwards, see the next section. Garage's expired presigned URL returning 400 and its CRC64NVME handling rest on
 the AWS CLI run only. RustFS and Garage data at rest were not checked. Everything is single node Docker on one
 laptop and describes these builds only.
 
 **Housekeeping.** The verification scripts left test buckets on Garage (four) and RustFS (three) when a system
 refused to delete a non empty bucket. They were removed and the scripts now empty the bucket first. The thesis
 buckets and containers were never touched, and all `sw-scratch-*` containers were removed.
+
+### S3 compatibility probe on Ceph, an AWS CLI crash, and two real differences (30 September and 2 October 2026)
+
+Full record in `results/s3-compat-ceph-2026-10-02.txt`, matrix in `results/compat-matrix-four-systems-2026-10-02.tsv`.
+Evidence files: `results/aws-cli-crash-on-ceph-error-replies-2026-10-02.txt`,
+`results/ceph-sse-s3-vault-check-2026-10-02.txt`, `results/verify-checksum-header-*-2026100*.txt`.
+
+**Setup.** The probe was fetched on `ceph0` from the public repository (commit `29e3f00`, 960 lines) and run against
+the RGW at `localhost:80` with the same AWS CLI version as the laptop runs. The Debian package on the VM is 2.9.19,
+so 2.36.8 was installed with the official installer into `/opt/aws-cli-new` and the system CLI was left alone. The
+commands reached the VM through a Claude Code session running on `ceph0` and controlled from the laptop, with the
+instruction to print the raw output only. Only that raw output was used as evidence.
+
+**The first Ceph run was invalid.** It ended 11 pass, 11 fail, and nine of the failures were not Ceph. Ceph error
+replies carry an empty `<Message></Message>`, and AWS CLI 2.36.8 then crashes with `argument of type 'NoneType' is
+not a container or iterable` in `awscli/customizations/s3errormsg.py` (line 55, `_is_sigv4_error_message`) before it
+prints the error code, so the probe saw no code. Proven three ways: the raw reply read with `--debug` (HTTP 404,
+`NoSuchBucket`, empty `Message`), the line of source at tag 2.36.8, and two local throwaway servers that differ only
+in the `<Message>` text (empty: crash, exit 255; with text: correct error, exit 254). The probe now repeats a failed
+request once with `--debug` when it sees that crash text, keeps only the status line and reply body, and appends the
+code it read to the `.err` file. The three laptop systems give the same verdict on all 22 tests with the patched
+probe, and the recovery never triggered there.
+
+**Result on the patched probe: Ceph 20 pass, 2 fail (C18, C20).** C08, C11, C12, C15, C16, C19, C21 and C22, which at
+least one other system fails, pass on Ceph.
+
+**C20, proven with two clients and three controls.** Ceph accepts an upload whose `x-amz-checksum-sha256` or
+`x-amz-checksum-sha1` header is wrong. The AWS CLI upload with a SHA256 of 32 zero bytes returned success. A curl
+script that signs its own requests got HTTP 200 for all four uploads (correct and wrong sha256 and sha1), the object
+under the wrong checksum exists with its body intact, and a HEAD with checksum mode returned no checksum header even
+for the correct values. SeaweedFS, RustFS and Garage run through the same script refuse the wrong values with HTTP
+400 (`BadDigest`, `InvalidDigest` on Garage) and store nothing.
+
+**The curl check first got 403 on Ceph, one change fixed it.** Without an explicit `Content-Type`, all four uploads
+got `403 AccessDenied`, including the correct ones. Adding `-H "Content-Type: application/octet-stream"` and nothing
+else gave 200. So RGW 20.2.4 refuses an upload that carries an unsigned `Content-Type`, which is the same behaviour
+as the Warp finding earlier in this file. The three laptop systems accepted the unsigned header.
+
+**C18, proven cause.** Ceph answers the SSE-S3 header (`--server-side-encryption AES256`) with HTTP 400
+`InvalidArgument`, where AWS accepts it. `rgw_crypt_sse_s3_backend` is `vault` on this cluster, no Vault token file is
+configured, and the RGW log at the two request times reads `ERROR: Vault token file not set in
+rgw_crypt_vault_token_file`, which the v20.2.4 source raises in `load_token_from_file` (`rgw_kms.cc` line 213). SSE-S3
+is therefore unavailable here and the header is refused, not silently ignored as Garage does. My first guess, that the
+backend setting was not `vault`, was wrong: the cluster says it is, and the log gave the real reason.
+
+**Hypothesis.** Ceph 20.2.4 does not process the `x-amz-checksum-*` request headers at all. Not separated: HEAD against
+GET, and the Ceph source was not read for this.
+
+**Open.** Whether a wrong checksum in the trailer form of an aws-chunked upload is detected. SSE-S3 with a configured
+Vault and the data on disk. The evidence archive of the canonical run (`ceph-20261002-072634`, 21210 bytes, 584
+entries, sha256 `33066ead1076d35061187c8eb4a72b6c9e64b1f0d2c1d83aefca3939fbdaad50`) is on `ceph0`; its 559 files are in the
+repository as text (`results/compat-ceph-20261002-072634-evidence.txt`), verified by sha256 block by block. Only the
+gateway on `ceph0` was probed, from `ceph0` itself.

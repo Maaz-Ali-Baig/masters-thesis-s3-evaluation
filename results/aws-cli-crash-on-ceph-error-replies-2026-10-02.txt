@@ -1,0 +1,71 @@
+AWS CLI 2.36.8 crash on Ceph RGW error replies
+==============================================
+Date: 30 September 2026 (observed), 2 October 2026 (source read). Server: Ceph Tentacle 20.2.4 RGW.
+Client: aws-cli/2.36.8 Python/3.14.6 Linux/6.1.0-51-amd64 exe/x86_64.debian.12 (official installer).
+
+1. What the first probe run stored (run ceph-20260930-233048, test C07, step 5, file C07-05.err)
+   $ aws --endpoint-url http://localhost:80 s3api get-object --bucket <bucket> --key c07/a.txt <file>
+   stderr:
+
+   aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+
+   The probe looks for "An error occurred (<Code>)" in stderr, found none, and recorded the check
+   as FAIL with no error code. That run ended 11 pass, 11 fail. After the fix in section 5, 9 of
+   those 11 FAILs are PASS (C04, C07, C08, C10, C11, C12, C15, C16, C22), C18 and C20 stay FAIL.
+
+2. The same failure reproduced with debug output, against a bucket that does not exist
+   $ /opt/aws-cli-new/bin/aws --endpoint-url http://localhost:80 s3api get-object \
+       --bucket s3c-nonexistent-check --key k /tmp/x.bin --debug 2>&1 | tail -n 40
+   (excerpt, the request headers are left out)
+
+   urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-nonexistent-check/k HTTP/1.1" 404 252
+   botocore.parsers - DEBUG - Response headers: {'Content-Length': '252', 'x-amz-request-id': 'tx00000f43629574ed3866d-006abd8057-64252-default', 'Accept-Ranges': 'bytes', 'Content-Type': 'application/xml', 'Server': 'Ceph Object Gateway (tentacle)', 'Date': 'Wed, 30 Sep 2026 21:34:15 GMT', 'Connection': 'Keep-Alive'}
+   botocore.parsers - DEBUG - Response body:
+   b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchBucket</Code><Message></Message><BucketName>s3c-nonexistent-check</BucketName><RequestId>tx00000f43629574ed3866d-006abd8057-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+   awscli.clidriver - DEBUG - Exception caught in main()
+   Traceback (most recent call last):
+     ...
+     File "awscli/botocore/client.py", line 912, in _make_api_call
+     File "awscli/botocore/hooks.py", line 255, in emit
+     File "awscli/lazy_emitter.py", line 149, in _emit
+     File "awscli/botocore/hooks.py", line 238, in _emit
+     File "awscli/customizations/s3errormsg.py", line 37, in enhance_error_msg
+     File "awscli/customizations/s3errormsg.py", line 55, in _is_sigv4_error_message
+   TypeError: argument of type 'NoneType' is not a container or iterable
+
+   The server answered correctly: HTTP 404 with the code NoSuchBucket. The client crashed
+   after receiving the reply, while post processing it.
+
+3. The client source at the same version (github.com/aws/aws-cli, tag 2.36.8)
+   awscli/customizations/s3errormsg.py, function _is_sigv4_error_message:
+       return 'Please use AWS4-HMAC-SHA256' in parsed.get('Error', {}).get('Message', '')
+   The traceback ends in a TypeError raised by the `in` operator on a None, on this line. The
+   raw reply has an empty <Message></Message> element. Reading: the parser turns the empty
+   element into None, so .get('Message', '') returns None and not the default. Section 3b
+   tests this directly. The raw reply, the traceback and the line of source agree.
+
+3b. Direct test, one thing changed (2 October 2026, laptop, same client version)
+   Two throwaway local servers answer every request with HTTP 404 and the same body, except for
+   the <Message> element: server A sends <Message></Message>, server B sends
+   <Message>The specified bucket does not exist</Message>. Client: aws-cli/2.36.8 Python/3.14.6
+   Linux/6.6.87.1-microsoft-standard-WSL2 exe/x86_64.ubuntu.24, dummy credentials.
+   $ aws --endpoint-url http://127.0.0.1:<port> s3api get-object --bucket nobucket --key k /tmp/x.bin
+   server A (empty message):
+     aws: [ERROR]: argument of type 'NoneType' is not a container or iterable        exit code 255
+   server B (message text):
+     aws: [ERROR]: An error occurred (NoSuchBucket) when calling the GetObject operation:
+     The specified bucket does not exist                                              exit code 254
+   The empty <Message> element alone turns a normal error into the crash. Proven.
+
+4. Which servers send an empty <Message>
+   The Ceph error replies seen in this work (NoSuchBucket, InvalidArgument, AccessDenied,
+   NoSuchKey) have an empty <Message>. SeaweedFS, RustFS and Garage send a text in <Message> in
+   the error replies seen in the cross checks, and no crash occurred in their probe runs with
+   the same client version.
+
+5. The fix in the probe (commit 29e3f00)
+   When a request fails and stderr contains "is not a container or iterable", the probe repeats
+   the same request once with --debug and keeps only the status line and the reply body in
+   <test>-NN.reply, then appends "An error occurred (<Code>) ... read from the raw reply" to
+   <test>-NN.err. The three laptop runs with the patched probe give the same verdict on all 22
+   tests as the committed matrix, and the recovery never triggered on them.

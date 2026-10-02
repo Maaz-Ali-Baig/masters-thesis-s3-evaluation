@@ -1,0 +1,48 @@
+Ceph RGW SSE-S3 refusal (probe test C18): why the header is answered with 400 InvalidArgument
+================================================================================================
+Date: 2 October 2026. Cluster: Ceph Tentacle 20.2.4, RGW daemon rgw.s3test.debian.ghnhoi on ceph0.
+Source read at tag v20.2.4 of github.com/ceph/ceph (raw.githubusercontent.com).
+
+1. The request and the raw answer (probe evidence, run ceph-20261002-072634, test C18, step 1)
+   $ aws --endpoint-url http://localhost:80 s3api put-object --bucket <bucket> --key c18/sse.bin
+       --body <1 MiB file> --server-side-encryption AES256
+   reply, HTTP 400, body:
+   <Error><Code>InvalidArgument</Code><Message></Message><BucketName>...</BucketName>...</Error>
+   (The AWS CLI itself crashed on the empty <Message>, see s3-compat-ceph-2026-10-02.txt, so
+   the raw reply was read from a repeat of the request with --debug.)
+
+2. The setting that selects the SSE-S3 key service, read from the cluster
+   $ cephadm shell -- ceph config get client.rgw rgw_crypt_sse_s3_backend
+Inferring fsid 377124a6-acb5-11f1-b854-bc2411d95a65
+Inferring config /var/lib/ceph/377124a6-acb5-11f1-b854-bc2411d95a65/mon.debian/config
+vault
+
+3. The RGW daemon log at the time of the two C18 requests (the original and the --debug repeat)
+   $ cephadm logs --name rgw.s3test.debian.ghnhoi -- --since "3 hours ago" | grep -i "vault" | head -5
+Oct 02 07:27:55 debian radosgw[1267]: req 1316307089153786209 0.000000000s ERROR: Vault token file not set in rgw_crypt_vault_token_file
+Oct 02 07:27:56 debian radosgw[1267]: req 18014737364719597683 0.000000000s ERROR: Vault token file not set in rgw_crypt_vault_token_file
+
+4. What the source says (v20.2.4)
+   src/rgw/rgw_crypt.cc, rgw_s3_prepare_encrypt, lines 1218 to 1229: a value other than aws:kms
+   or AES256 is refused; for AES256 the code goes on to
+       if (s->cct->_conf->rgw_crypt_sse_s3_backend != "vault") { ... return -EINVAL; }
+   and then calls get_sse_s3_bucket_key (line 1240), which calls create_sse_s3_bucket_key
+   (rgw_crypt.cc line 1018).
+   src/rgw/rgw_kms.cc, create_sse_s3_bucket_key (lines 1247 to 1272): for the vault backend it
+   uses the Vault transit secret engine to create the bucket key. TransitSecretEngine::
+   create_bucket_key (line 623) sends a POST to /keys/ through send_request (line 647).
+   src/rgw/rgw_kms.cc lines 207 to 214, load_token_from_file: when rgw_crypt_vault_token_file is
+   empty it logs at level 0 "ERROR: Vault token file not set in rgw_crypt_vault_token_file" and
+   returns -EINVAL. Lines 255 to 262, send_request of class VaultSecretEngine (the base class
+   of TransitSecretEngine), call it first when the auth method is token. The message is the
+   exact text of the daemon log lines in section 3.
+
+5. Reading
+   The backend setting is "vault", so the check in rgw_crypt.cc passes. No Vault token file is
+   configured, the daemon logged exactly that at the two request times, and the request ended
+   with 400 InvalidArgument. SSE-S3 on this cluster is therefore unavailable because no Vault
+   key service is configured, and RGW refuses the header instead of storing the object
+   unencrypted. Not tested: whether SSE-S3 works once a Vault is configured, and what the
+   data looks like on disk in that case.
+   Not traced: the line in the source that turns the failed token load into the status 400. The
+   400 is the observed reply, the log line is the observed reason.

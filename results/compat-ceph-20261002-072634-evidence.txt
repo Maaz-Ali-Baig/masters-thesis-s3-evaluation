@@ -1,0 +1,1421 @@
+Ceph S3 compatibility probe, raw evidence of the canonical run ceph-20261002-072634
+====================================================================================
+Probe:    scripts/s3-compat.sh, commit 29e3f00, run on ceph0 on 2 October 2026, 20 pass 2 fail.
+Record:   results/s3-compat-ceph-2026-10-02.txt (the reading of this evidence).
+Content:  the text of all 559 files of the run folder on ceph0, one section per file under a
+          line "### <path>". Top level: aws-config, cleanup.txt, env.txt, summary.tsv. Then the
+          command, stdout, stderr and, where the AWS CLI crashed, the raw reply of every request
+          under evidence/ (a .reply file is written only for those).
+Why text: the three laptop runs are stored as .tar.gz, but ceph0 cannot be reached from the
+          laptop. The text was read from the output of commands run on ceph0, written here, and
+          checked byte for byte with sha256 against the same text on ceph0, block by block.
+Original: /root/compat-ceph-20261002-072634.tar.gz on ceph0, 21210 bytes, 584 entries, sha256
+          33066ead1076d35061187c8eb4a72b6c9e64b1f0d2c1d83aefca3939fbdaad50. The secret key is in
+          none of its files (grep -F on ceph0, 0 files).
+
+What was changed before hashing, nothing else:
+  - On ceph0 each line was cleaned with awk '{sub(/[ \t\r]+$/,"")} 1': spaces, tabs and
+    carriage returns at the end of a line were removed. The server response headers in env.txt,
+    C15/C15-03.out and C15/C15-04.out had CR LF line endings in the original, so a blank line
+    follows them here without a CR.
+  - Carriage returns inside a line are kept: two lines in C20/C20-01.out and C20/C20-02.out (the
+    progress display of aws s3 cp). This file must not be line ending converted, see
+    .gitattributes (-text).
+  - The Ceph access key id is the label "thesiskey" (in the presigned URLs of C13). A display on
+    the VM session showed it as <REDACTED>. The text here is the real one, proven by the hash.
+
+Blocks and how to verify them (every block must give the sha256 listed here):
+  awk '/^##### block /{if(f)close(f); f="/tmp/blk-" $3; next} f{print > f}' <this file>
+  sha256sum /tmp/blk-*
+  block A  291eb4712b272fb4e470ca7c6fd7c7f0ee735943c355788ca9dcc0b750a6273d
+  block B  32869b9d76fe3e1caa70c5be55502a23ba9764ac23c754b52168fc1a93ceb6e9
+  block C  249eb293d63ffd351ed11d653b1d08437e13102d7be46043b7429d89c2a00edb
+  block D  9b29f3d78c87f25feac3255dba71df3f611f2a0daa732edc6222b9285cc78fe6
+  block E  1aef008e8ff7bcc28f14c834e3fdfe5288252db93eb8f7fc7fbc6b6d9e53aa1a
+  block F  99355ac4f93bcadaf9b9396f77d1369ec56216a64d02ec1c250c771efbaa0972
+  block G  357f02296957ecbcec93fcc24457f297d11352ebd83b5117a70ff7799cf15ccb
+  block H  8455b06e791bb7b986c1bc7cbf3975973cbcf6904741294897c1d8682ba47f6a
+
+##### block A sha256 291eb4712b272fb4e470ca7c6fd7c7f0ee735943c355788ca9dcc0b750a6273d
+### aws-config
+[default]
+region = us-east-1
+s3 =
+    addressing_style = path
+### cleanup.txt
+removed s3c-ceph-1002072634-main
+removed s3c-ceph-1002072634-c01
+removed s3c-ceph-1002072634-ver
+removed s3c-ceph-1002072634-lock
+removed s3c-ceph-1002072634-c22
+### env.txt
+name:        ceph
+endpoint:    http://localhost:80
+region:      us-east-1
+started:     2026-10-02T05:26:34Z
+aws cli:     aws-cli/2.36.8 Python/3.14.6 Linux/6.1.0-51-amd64 exe/x86_64.debian.12
+checksum:    cli default
+note:        Ceph 20.2.4 Tentacle, RGW, patched probe 29e3f00
+client host: Linux 6.1.0-51-amd64 x86_64
+run id:      s3c-ceph-1002072634
+--- server response headers, GET / (anonymous) ---
+HTTP/1.1 200 OK
+x-amz-request-id: tx000000baadae14d64b5a7-006abf408b-64252-default
+Content-Type: application/xml
+Server: Ceph Object Gateway (tentacle)
+Content-Length: 0
+Date: Fri, 02 Oct 2026 05:26:35 GMT
+Connection: Keep-Alive
+
+--- input data sha256 ---
+f03a7193538a8086c0a7045c29d5470e0c7d5d8abf0d8db7f2e365394b55a06c  ./part1.bin
+05525570a9cd07f76ac373abd5424fcc10017913f98c6c3f9b570dbe6a6fa3ed  ./part2.bin
+2d68b9e3bd595491c8af7ac0fe83d52ce7d4b7bf4f9eefcd967cf99c4e1cb413  ./rand1m.bin
+c18ee6b98f3ce46fa07824c0793e8389be02a8f68d75434e9d0d7f43d9bbf992  ./rand6m.bin
+3e12576dc2d962deba4c8703c49f28dc4e35ae3eac9a16af6e5528333a22d652  ./tiny1.bin
+a389ebaa609e0212b3215dd4f30477bd22642b584f57b8df1c41a8e8f841335d  small.txt
+finished: 2026-10-02T05:28:39Z
+### summary.tsv
+C01	PASS	Bucket create, head, list, delete	create:ok head:ok list:ok delete:ok gone:ok
+C02	PASS	PUT, HEAD, GET object with content integrity	put:ok head_length:ok get_bytes_identical:ok etag_is_md5:ok
+C03	PASS	Content-Type, user metadata and cache headers round trip	head_returns_all:ok
+C04	PASS	Range GET: bounded, suffix, open ended, unsatisfiable	bounded:ok suffix:ok open_ended:ok unsatisfiable_rejected:ok
+C05	PASS	Server-side CopyObject with content integrity	copy:ok copy_bytes_identical:ok metadata_replace:ok
+C06	PASS	Listing: v2 prefix and delimiter, pagination, start-after, v1	prefix_delimiter:ok pagination:ok start_after:ok list_v1:ok
+C07	PASS	DeleteObject, DeleteObjects, delete of a missing key	delete_one:ok get_after_delete_nosuchkey:ok delete_missing_ok:ok delete_many:ok all_gone:ok keycount_zero_when_empty:ok
+C08	PASS	Multipart upload: complete, list, abort, minimum part size	initiate:ok upload_parts:ok list_parts:ok list_uploads:ok complete:ok assembled_bytes_identical:ok etag_has_part_count:ok abort:ok part_after_abort_refused:ok min_part_size_enforced:ok
+C09	PASS	Object tagging: put, get, header form, delete	put_tagging:ok get_tagging:ok tagging_on_put:ok delete_tagging:ok
+C10	PASS	Versioning: versions, delete marker, restore	enable:ok status_enabled:ok two_versions:ok get_old_version:ok delete_creates_marker:ok hidden_behind_marker:ok remove_marker_restores:ok
+C11	PASS	Conditional GET: If-Match, If-None-Match, date conditions	if_match_ok:ok if_none_match_304:ok if_match_mismatch_412:ok if_modified_since_304:ok if_unmodified_since_412:ok
+C12	PASS	Conditional PUT with If-None-Match: * (create only if absent)	first_write_accepted:ok second_write_refused:ok
+C13	PASS	Presigned GET URL: works, expires, rejects a tampered signature	fetch_ok:ok tampered_rejected:ok expired_rejected:ok
+C14	PASS	Bucket policy: roundtrip and enforcement for anonymous reads	anonymous_denied_by_default:ok put_policy:ok get_policy:ok policy_allows_anonymous_read:ok policy_scoped_to_prefix:ok delete_policy_revokes:ok
+C15	PASS	CORS: configuration roundtrip and preflight behaviour	put_cors:ok get_cors:ok preflight_allowed_origin:ok preflight_other_origin_refused:ok delete_cors:ok
+C16	PASS	Lifecycle configuration roundtrip (enforcement not tested)	put_lifecycle:ok get_lifecycle:ok delete_lifecycle:ok
+C17	PASS	Object lock (GOVERNANCE): retention enforced, bypass works	lock_enabled:ok put_locked:ok mode_returned:ok delete_blocked:ok bypass_allowed:ok
+C18	FAIL	SSE-S3 header and bucket default encryption (API only, at-rest not verified)	put_sse:FAIL(InvalidArgument  aws: [ERROR]: argument of type 'NoneType' is not a container or iterable An error occurred (InvalidArgument) when calling the operation: read from the raw reply (HTTP 400), the AWS CLI crashed on it,) sse_echoed:FAIL(got=) sse_roundtrip:FAIL(NoSuchKey) bucket_default_roundtrip:ok
+C19	PASS	ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)	get_bucket_acl:ok put_acl_flat:ok allusers_grant_listed_flat:ok public_read_enforced_flat:ok private_restores_denial_flat:ok put_acl_prefixed:ok allusers_grant_listed_prefixed:ok public_read_enforced_prefixed:ok private_restores_denial_prefixed:ok
+C20	FAIL	Integrity checksums: default CLI upload, algorithms, bad values refused	default_cli_upload:ok CRC32:ok CRC32C:ok CRC64NVME:ok SHA1:ok SHA256:ok wrong_sha256_refused:FAIL(rc=0 rc0) wrong_md5_refused:ok
+C21	PASS	Awkward object keys: symbols, depth, folder marker, component and total length	all_keys_roundtrip:ok listing_count:ok
+C22	PASS	Error code fidelity against documented AWS S3 codes	missing_key_NoSuchKey:ok missing_bucket_NoSuchBucket:ok head_missing_404:ok recreate_own_bucket:ok nonempty_precondition:ok delete_nonempty_BucketNotEmpty:ok invalid_bucket_name:ok delete_missing_bucket:ok
+### evidence/SETUP/SETUP-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-bucket --bucket s3c-ceph-1002072634-main
+### evidence/SETUP/SETUP-01.err
+### evidence/SETUP/SETUP-01.out
+### evidence/SETUP/SETUP-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin
+### evidence/SETUP/SETUP-02.err
+### evidence/SETUP/SETUP-02.out
+{
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumCRC64NVME": "9Iq7Nl0bl4A=",
+    "ChecksumType": "FULL_OBJECT"
+}
+##### block B sha256 32869b9d76fe3e1caa70c5be55502a23ba9764ac23c754b52168fc1a93ceb6e9
+### C01/C01-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-bucket --bucket s3c-ceph-1002072634-c01
+### C01/C01-01.err
+### C01/C01-01.out
+### C01/C01-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-bucket --bucket s3c-ceph-1002072634-c01
+### C01/C01-02.err
+### C01/C01-02.out
+### C01/C01-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-buckets --query Buckets[].Name --output text
+### C01/C01-03.err
+### C01/C01-03.out
+s3c-ceph-1002072634-c01	s3c-ceph-1002072634-main	thesis-test	warp-ceph-bench
+### C01/C01-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-bucket --bucket s3c-ceph-1002072634-c01
+### C01/C01-04.err
+### C01/C01-04.out
+### C01/C01-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-bucket --bucket s3c-ceph-1002072634-c01
+### C01/C01-05.err
+
+aws: [ERROR]: An error occurred (404) when calling the HeadBucket operation: Not Found
+### C01/C01-05.out
+### C02/C02-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c02/rand1m.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --query ETag --output text
+### C02/C02-01.err
+### C02/C02-01.out
+"df5557133861b0d8d6954f4a4790dec1"
+### C02/C02-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-main --key c02/rand1m.bin --query ContentLength --output text
+### C02/C02-02.err
+### C02/C02-02.out
+1048576
+### C02/C02-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c02/rand1m.bin /root/compat-out/ceph-20261002-072634/evidence/C02/get.bin
+### C02/C02-03.err
+### C02/C02-03.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:26:40+00:00",
+    "ContentLength": 1048576,
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumCRC64NVME": "9Iq7Nl0bl4A=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C03/C03-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c03/meta.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt --content-type application/x-thesis --metadata k1=v1,k2=v2 --cache-control max-age=60 --content-disposition attachment
+### C03/C03-01.err
+### C03/C03-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C03/C03-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-main --key c03/meta.txt --query [ContentType,Metadata.k1,Metadata.k2,CacheControl,ContentDisposition] --output text
+### C03/C03-02.err
+### C03/C03-02.out
+application/x-thesis	v1	v2	max-age=60	attachment
+### C04/C04-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --range bytes=0-9 /root/compat-out/ceph-20261002-072634/evidence/C04/r1.bin
+### C04/C04-01.err
+### C04/C04-01.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:26:36+00:00",
+    "ContentLength": 10,
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ContentRange": "bytes 0-9/1048576",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C04/C04-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --range bytes=-5 /root/compat-out/ceph-20261002-072634/evidence/C04/r2.bin
+### C04/C04-02.err
+### C04/C04-02.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:26:36+00:00",
+    "ContentLength": 5,
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ContentRange": "bytes 1048571-1048575/1048576",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C04/C04-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --range bytes=100- /root/compat-out/ceph-20261002-072634/evidence/C04/r3.bin
+### C04/C04-03.err
+### C04/C04-03.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:26:36+00:00",
+    "ContentLength": 1048476,
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ContentRange": "bytes 100-1048575/1048576",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C04/C04-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --range bytes=99999999- /root/compat-out/ceph-20261002-072634/evidence/C04/r4.bin
+### C04/C04-04.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (InvalidRange) when calling the operation: read from the raw reply (HTTP 416), the AWS CLI crashed on it, see C04-04.reply
+### C04/C04-04.out
+### C04/C04-04.reply
+2026-10-02 07:26:45,730 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main/fixture/rand1m.bin HTTP/1.1" 416 255
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRange</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000290c015c822b67a3-006abf4095-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C05/C05-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api copy-object --bucket s3c-ceph-1002072634-main --key c05/copy.bin --copy-source s3c-ceph-1002072634-main/fixture/rand1m.bin
+### C05/C05-01.err
+### C05/C05-01.out
+{
+    "CopyObjectResult": {
+        "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+        "LastModified": "2026-10-02T05:26:46+00:00"
+    }
+}
+### C05/C05-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c05/copy.bin /root/compat-out/ceph-20261002-072634/evidence/C05/copy.bin
+### C05/C05-02.err
+### C05/C05-02.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:26:46+00:00",
+    "ContentLength": 1048576,
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumCRC64NVME": "9Iq7Nl0bl4A=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C05/C05-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api copy-object --bucket s3c-ceph-1002072634-main --key c05/copy.bin --copy-source s3c-ceph-1002072634-main/c05/copy.bin --metadata-directive REPLACE --metadata z=1
+### C05/C05-03.err
+### C05/C05-03.out
+{
+    "CopyObjectResult": {
+        "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+        "LastModified": "2026-10-02T05:26:47+00:00"
+    }
+}
+### C05/C05-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-main --key c05/copy.bin --query Metadata.z --output text
+### C05/C05-04.err
+### C05/C05-04.out
+1
+### C06/C06-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c06/a/1.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C06/C06-01.err
+### C06/C06-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C06/C06-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c06/a/2.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C06/C06-02.err
+### C06/C06-02.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C06/C06-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c06/b/1.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C06/C06-03.err
+### C06/C06-03.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C06/C06-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c06/root1.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C06/C06-04.err
+### C06/C06-04.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C06/C06-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c06/root2.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C06/C06-05.err
+### C06/C06-05.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C06/C06-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c06/ --delimiter / --query [length(CommonPrefixes),length(Contents)] --output text
+### C06/C06-06.err
+### C06/C06-06.out
+2	2
+### C06/C06-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c06/ --max-keys 2 --no-paginate --query [IsTruncated,NextContinuationToken,KeyCount] --output text
+### C06/C06-07.err
+### C06/C06-07.out
+True	c06/a/2.txt	2
+### C06/C06-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c06/ --max-keys 2 --no-paginate --continuation-token c06/a/2.txt --query [IsTruncated,NextContinuationToken,KeyCount] --output text
+### C06/C06-08.err
+### C06/C06-08.out
+True	c06/root1.txt	2
+### C06/C06-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c06/ --max-keys 2 --no-paginate --continuation-token c06/root1.txt --query [IsTruncated,NextContinuationToken,KeyCount] --output text
+### C06/C06-09.err
+### C06/C06-09.out
+False	None	1
+### C06/C06-10.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c06/ --start-after c06/a/2.txt --query length(Contents) --output text
+### C06/C06-10.err
+### C06/C06-10.out
+3
+### C06/C06-11.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects --bucket s3c-ceph-1002072634-main --prefix c06/ --query length(Contents) --output text
+### C06/C06-11.err
+### C06/C06-11.out
+5
+##### block C sha256 249eb293d63ffd351ed11d653b1d08437e13102d7be46043b7429d89c2a00edb
+### C07/C07-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c07/a.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C07/C07-01.err
+### C07/C07-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C07/C07-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c07/b.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C07/C07-02.err
+### C07/C07-02.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C07/C07-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c07/c.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C07/C07-03.err
+### C07/C07-03.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C07/C07-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object --bucket s3c-ceph-1002072634-main --key c07/a.txt
+### C07/C07-04.err
+### C07/C07-04.out
+### C07/C07-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c07/a.txt /root/compat-out/ceph-20261002-072634/evidence/C07/gone.bin
+### C07/C07-05.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchKey) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C07-05.reply
+### C07/C07-05.out
+### C07/C07-05.reply
+2026-10-02 07:26:58,493 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main/c07/a.txt HTTP/1.1" 404 252
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchKey</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000882cbd63c1db007b-006abf40a2-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C07/C07-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object --bucket s3c-ceph-1002072634-main --key c07/never-existed.txt
+### C07/C07-06.err
+### C07/C07-06.out
+### C07/C07-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-objects --bucket s3c-ceph-1002072634-main --delete {"Objects":[{"Key":"c07/b.txt"},{"Key":"c07/c.txt"}],"Quiet":false}
+### C07/C07-07.err
+### C07/C07-07.out
+{
+    "Deleted": [
+        {
+            "Key": "c07/b.txt"
+        },
+        {
+            "Key": "c07/c.txt"
+        }
+    ]
+}
+### C07/C07-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c07/ --query Contents[].Key --output text
+### C07/C07-08.err
+### C07/C07-08.out
+None
+### C07/C07-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c07/ --no-paginate --query KeyCount --output text
+### C07/C07-09.err
+### C07/C07-09.out
+0
+### C08/C08-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-multipart-upload --bucket s3c-ceph-1002072634-main --key c08/mp.bin --query UploadId --output text
+### C08/C08-01.err
+### C08/C08-01.out
+2~7jW1rfYw_9F8Xak9EtD36QIkHq3b2Cq
+### C08/C08-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api upload-part --bucket s3c-ceph-1002072634-main --key c08/mp.bin --upload-id 2~7jW1rfYw_9F8Xak9EtD36QIkHq3b2Cq --part-number 1 --body /root/compat-out/ceph-20261002-072634/data/part1.bin --query ETag --output text
+### C08/C08-02.err
+### C08/C08-02.out
+"c4b15b1debbe890b9e54c2f7a9a76ede"
+### C08/C08-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api upload-part --bucket s3c-ceph-1002072634-main --key c08/mp.bin --upload-id 2~7jW1rfYw_9F8Xak9EtD36QIkHq3b2Cq --part-number 2 --body /root/compat-out/ceph-20261002-072634/data/part2.bin --query ETag --output text
+### C08/C08-03.err
+### C08/C08-03.out
+"2735065e25920203c3947bc36ce51776"
+### C08/C08-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-parts --bucket s3c-ceph-1002072634-main --key c08/mp.bin --upload-id 2~7jW1rfYw_9F8Xak9EtD36QIkHq3b2Cq --query length(Parts) --output text
+### C08/C08-04.err
+### C08/C08-04.out
+2
+### C08/C08-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-multipart-uploads --bucket s3c-ceph-1002072634-main --query Uploads[].UploadId --output text
+### C08/C08-05.err
+### C08/C08-05.out
+2~7jW1rfYw_9F8Xak9EtD36QIkHq3b2Cq
+### C08/C08-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api complete-multipart-upload --bucket s3c-ceph-1002072634-main --key c08/mp.bin --upload-id 2~7jW1rfYw_9F8Xak9EtD36QIkHq3b2Cq --multipart-upload {"Parts":[{"ETag":"\"c4b15b1debbe890b9e54c2f7a9a76ede\"","PartNumber":1},{"ETag":"\"2735065e25920203c3947bc36ce51776\"","PartNumber":2}]}
+### C08/C08-06.err
+### C08/C08-06.out
+{
+    "Location": "http://localhost/s3c-ceph-1002072634-main/c08/mp.bin",
+    "Bucket": "s3c-ceph-1002072634-main",
+    "Key": "c08/mp.bin",
+    "ETag": "\"1942685951b14287611c5906bc3e09d0-2\""
+}
+### C08/C08-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c08/mp.bin /root/compat-out/ceph-20261002-072634/evidence/C08/mp.bin
+### C08/C08-07.err
+### C08/C08-07.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:27:04+00:00",
+    "ContentLength": 6291456,
+    "ETag": "\"1942685951b14287611c5906bc3e09d0-2\"",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {},
+    "PartsCount": 2
+}
+### C08/C08-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-main --key c08/mp.bin --query ETag --output text
+### C08/C08-08.err
+### C08/C08-08.out
+"1942685951b14287611c5906bc3e09d0-2"
+### C08/C08-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-multipart-upload --bucket s3c-ceph-1002072634-main --key c08/aborted.bin --query UploadId --output text
+### C08/C08-09.err
+### C08/C08-09.out
+2~lE0X1O6Vagsy5W4y7nrG9eam43Ve3YR
+### C08/C08-10.cmd
+$ aws --endpoint-url http://localhost:80 s3api upload-part --bucket s3c-ceph-1002072634-main --key c08/aborted.bin --upload-id 2~lE0X1O6Vagsy5W4y7nrG9eam43Ve3YR --part-number 1 --body /root/compat-out/ceph-20261002-072634/data/part1.bin
+### C08/C08-10.err
+### C08/C08-10.out
+{
+    "ETag": "\"c4b15b1debbe890b9e54c2f7a9a76ede\"",
+    "ChecksumCRC64NVME": "CrO7Lytrzc4="
+}
+### C08/C08-11.cmd
+$ aws --endpoint-url http://localhost:80 s3api abort-multipart-upload --bucket s3c-ceph-1002072634-main --key c08/aborted.bin --upload-id 2~lE0X1O6Vagsy5W4y7nrG9eam43Ve3YR
+### C08/C08-11.err
+### C08/C08-11.out
+### C08/C08-12.cmd
+$ aws --endpoint-url http://localhost:80 s3api upload-part --bucket s3c-ceph-1002072634-main --key c08/aborted.bin --upload-id 2~lE0X1O6Vagsy5W4y7nrG9eam43Ve3YR --part-number 2 --body /root/compat-out/ceph-20261002-072634/data/tiny1.bin
+### C08/C08-12.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchUpload) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C08-12.reply
+### C08/C08-12.out
+### C08/C08-12.reply
+2026-10-02 07:27:09,120 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "PUT /s3c-ceph-1002072634-main/c08/aborted.bin?partNumber=2&uploadId=2~lE0X1O6Vagsy5W4y7nrG9eam43Ve3YR HTTP/1.1" 404 255
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchUpload</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx000000c624a7c60878bd7-006abf40ad-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C08/C08-13.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-multipart-upload --bucket s3c-ceph-1002072634-main --key c08/small-parts.bin --query UploadId --output text
+### C08/C08-13.err
+### C08/C08-13.out
+2~oY7q_iVdi97NAcFI9-pyIjtiFA_2hRO
+### C08/C08-14.cmd
+$ aws --endpoint-url http://localhost:80 s3api upload-part --bucket s3c-ceph-1002072634-main --key c08/small-parts.bin --upload-id 2~oY7q_iVdi97NAcFI9-pyIjtiFA_2hRO --part-number 1 --body /root/compat-out/ceph-20261002-072634/data/tiny1.bin --query ETag --output text
+### C08/C08-14.err
+### C08/C08-14.out
+"b9944d220ee5144596a0a8f66d355c57"
+### C08/C08-15.cmd
+$ aws --endpoint-url http://localhost:80 s3api upload-part --bucket s3c-ceph-1002072634-main --key c08/small-parts.bin --upload-id 2~oY7q_iVdi97NAcFI9-pyIjtiFA_2hRO --part-number 2 --body /root/compat-out/ceph-20261002-072634/data/tiny1.bin --query ETag --output text
+### C08/C08-15.err
+### C08/C08-15.out
+"b9944d220ee5144596a0a8f66d355c57"
+### C08/C08-16.cmd
+$ aws --endpoint-url http://localhost:80 s3api complete-multipart-upload --bucket s3c-ceph-1002072634-main --key c08/small-parts.bin --upload-id 2~oY7q_iVdi97NAcFI9-pyIjtiFA_2hRO --multipart-upload {"Parts":[{"ETag":"\"b9944d220ee5144596a0a8f66d355c57\"","PartNumber":1},{"ETag":"\"b9944d220ee5144596a0a8f66d355c57\"","PartNumber":2}]}
+### C08/C08-16.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (EntityTooSmall) when calling the operation: read from the raw reply (HTTP 400), the AWS CLI crashed on it, see C08-16.reply
+### C08/C08-16.out
+### C08/C08-16.reply
+2026-10-02 07:27:12,447 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "POST /s3c-ceph-1002072634-main/c08/small-parts.bin?uploadId=2~oY7q_iVdi97NAcFI9-pyIjtiFA_2hRO HTTP/1.1" 400 257
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>EntityTooSmall</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000bb618d41157e26d4-006abf40b0-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C08/C08-17.cmd
+$ aws --endpoint-url http://localhost:80 s3api abort-multipart-upload --bucket s3c-ceph-1002072634-main --key c08/small-parts.bin --upload-id 2~oY7q_iVdi97NAcFI9-pyIjtiFA_2hRO
+### C08/C08-17.err
+### C08/C08-17.out
+### C09/C09-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c09/tag.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C09/C09-01.err
+### C09/C09-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C09/C09-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object-tagging --bucket s3c-ceph-1002072634-main --key c09/tag.txt --tagging {"TagSet":[{"Key":"env","Value":"test"},{"Key":"k2","Value":"v2"}]}
+### C09/C09-02.err
+### C09/C09-02.out
+### C09/C09-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object-tagging --bucket s3c-ceph-1002072634-main --key c09/tag.txt --query length(TagSet) --output text
+### C09/C09-03.err
+### C09/C09-03.out
+2
+### C09/C09-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c09/tag2.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt --tagging a=b&c=d
+### C09/C09-04.err
+### C09/C09-04.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C09/C09-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object-tagging --bucket s3c-ceph-1002072634-main --key c09/tag2.txt --query length(TagSet) --output text
+### C09/C09-05.err
+### C09/C09-05.out
+2
+### C09/C09-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object-tagging --bucket s3c-ceph-1002072634-main --key c09/tag.txt
+### C09/C09-06.err
+### C09/C09-06.out
+### C09/C09-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object-tagging --bucket s3c-ceph-1002072634-main --key c09/tag.txt --query length(TagSet) --output text
+### C09/C09-07.err
+### C09/C09-07.out
+0
+##### block D sha256 9b29f3d78c87f25feac3255dba71df3f611f2a0daa732edc6222b9285cc78fe6
+### C10/back.txt
+two
+### C10/C10-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-bucket --bucket s3c-ceph-1002072634-ver
+### C10/C10-01.err
+### C10/C10-01.out
+### C10/C10-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-bucket-versioning --bucket s3c-ceph-1002072634-ver --versioning-configuration Status=Enabled
+### C10/C10-02.err
+### C10/C10-02.out
+### C10/C10-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-versioning --bucket s3c-ceph-1002072634-ver --query Status --output text
+### C10/C10-03.err
+### C10/C10-03.out
+Enabled
+### C10/C10-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-ver --key c10/v.txt --body /root/compat-out/ceph-20261002-072634/data/v1.txt
+### C10/C10-04.err
+### C10/C10-04.out
+{
+    "ETag": "\"5bbf5a52328e7439ae6e719dfe712200\"",
+    "ChecksumCRC64NVME": "H1SXwIjuQik=",
+    "ChecksumType": "FULL_OBJECT",
+    "VersionId": "oobqnjVfYqkoYUfqwe7cG3y6Ogny7.v"
+}
+### C10/C10-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-ver --key c10/v.txt --body /root/compat-out/ceph-20261002-072634/data/v2.txt
+### C10/C10-05.err
+### C10/C10-05.out
+{
+    "ETag": "\"c193497a1a06b2c72230e6146ff47080\"",
+    "ChecksumCRC64NVME": "b16Ja51v/Ec=",
+    "ChecksumType": "FULL_OBJECT",
+    "VersionId": "kVKyM-Vknfpi702Z6M0mATzhNfhE7H0"
+}
+### C10/C10-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-object-versions --bucket s3c-ceph-1002072634-ver --prefix c10/v.txt --query length(Versions) --output text
+### C10/C10-06.err
+### C10/C10-06.out
+2
+### C10/C10-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-object-versions --bucket s3c-ceph-1002072634-ver --prefix c10/v.txt --query Versions[?IsLatest==`false`].VersionId | [0] --output text
+### C10/C10-07.err
+### C10/C10-07.out
+oobqnjVfYqkoYUfqwe7cG3y6Ogny7.v
+### C10/C10-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-ver --key c10/v.txt --version-id oobqnjVfYqkoYUfqwe7cG3y6Ogny7.v /root/compat-out/ceph-20261002-072634/evidence/C10/old.txt
+### C10/C10-08.err
+### C10/C10-08.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:27:20+00:00",
+    "ContentLength": 4,
+    "ETag": "\"5bbf5a52328e7439ae6e719dfe712200\"",
+    "ChecksumCRC64NVME": "H1SXwIjuQik=",
+    "ChecksumType": "FULL_OBJECT",
+    "VersionId": "oobqnjVfYqkoYUfqwe7cG3y6Ogny7.v",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C10/C10-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object --bucket s3c-ceph-1002072634-ver --key c10/v.txt --query DeleteMarker --output text
+### C10/C10-09.err
+### C10/C10-09.out
+True
+### C10/C10-10.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-ver --key c10/v.txt /root/compat-out/ceph-20261002-072634/evidence/C10/hidden.txt
+### C10/C10-10.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchKey) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C10-10.reply
+### C10/C10-10.out
+### C10/C10-10.reply
+2026-10-02 07:27:25,186 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-ver/c10/v.txt HTTP/1.1" 404 251
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchKey</Code><Message></Message><BucketName>s3c-ceph-1002072634-ver</BucketName><RequestId>tx00000a5982cb3bcdf7d6e-006abf40bd-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C10/C10-11.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-object-versions --bucket s3c-ceph-1002072634-ver --prefix c10/v.txt --query DeleteMarkers[0].VersionId --output text
+### C10/C10-11.err
+### C10/C10-11.out
+gd5B.QSEtQKR2kV.wNnzPOm1lAn9ja7
+### C10/C10-12.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object --bucket s3c-ceph-1002072634-ver --key c10/v.txt --version-id gd5B.QSEtQKR2kV.wNnzPOm1lAn9ja7
+### C10/C10-12.err
+### C10/C10-12.out
+{
+    "DeleteMarker": true,
+    "VersionId": "gd5B.QSEtQKR2kV.wNnzPOm1lAn9ja7"
+}
+### C10/C10-13.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-ver --key c10/v.txt /root/compat-out/ceph-20261002-072634/evidence/C10/back.txt
+### C10/C10-13.err
+### C10/C10-13.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:27:21+00:00",
+    "ContentLength": 4,
+    "ETag": "\"c193497a1a06b2c72230e6146ff47080\"",
+    "ChecksumCRC64NVME": "b16Ja51v/Ec=",
+    "ChecksumType": "FULL_OBJECT",
+    "VersionId": "kVKyM-Vknfpi702Z6M0mATzhNfhE7H0",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C10/old.txt
+one
+### C11/C11-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --query ETag --output text
+### C11/C11-01.err
+### C11/C11-01.out
+"df5557133861b0d8d6954f4a4790dec1"
+### C11/C11-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --if-match "df5557133861b0d8d6954f4a4790dec1" /root/compat-out/ceph-20261002-072634/evidence/C11/m.bin
+### C11/C11-02.err
+### C11/C11-02.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:26:36+00:00",
+    "ContentLength": 1048576,
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumCRC64NVME": "9Iq7Nl0bl4A=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C11/C11-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --if-none-match "df5557133861b0d8d6954f4a4790dec1" /root/compat-out/ceph-20261002-072634/evidence/C11/n.bin
+### C11/C11-03.err
+
+aws: [ERROR]: An error occurred (304) when calling the GetObject operation: Not Modified
+### C11/C11-03.out
+### C11/C11-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --if-match "00000000000000000000000000000000" /root/compat-out/ceph-20261002-072634/evidence/C11/p.bin
+### C11/C11-04.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (PreconditionFailed) when calling the operation: read from the raw reply (HTTP 412), the AWS CLI crashed on it, see C11-04.reply
+### C11/C11-04.out
+### C11/C11-04.reply
+2026-10-02 07:27:30,457 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main/fixture/rand1m.bin HTTP/1.1" 412 261
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>PreconditionFailed</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000e7d080f2b4451d83-006abf40c2-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C11/C11-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --if-modified-since 2099-01-01T00:00:00Z /root/compat-out/ceph-20261002-072634/evidence/C11/q.bin
+### C11/C11-05.err
+
+aws: [ERROR]: An error occurred (304) when calling the GetObject operation: Not Modified
+### C11/C11-05.out
+### C11/C11-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key fixture/rand1m.bin --if-unmodified-since 2000-01-01T00:00:00Z /root/compat-out/ceph-20261002-072634/evidence/C11/r.bin
+### C11/C11-06.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (PreconditionFailed) when calling the operation: read from the raw reply (HTTP 412), the AWS CLI crashed on it, see C11-06.reply
+### C11/C11-06.out
+### C11/C11-06.reply
+2026-10-02 07:27:32,390 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main/fixture/rand1m.bin HTTP/1.1" 412 261
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>PreconditionFailed</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000c861a894e5825819-006abf40c4-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C12/C12-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c12/once.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt --if-none-match *
+### C12/C12-01.err
+### C12/C12-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C12/C12-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c12/once.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt --if-none-match *
+### C12/C12-02.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (PreconditionFailed) when calling the operation: read from the raw reply (HTTP 412), the AWS CLI crashed on it, see C12-02.reply
+### C12/C12-02.out
+### C12/C12-02.reply
+2026-10-02 07:27:34,487 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "PUT /s3c-ceph-1002072634-main/c12/once.txt HTTP/1.1" 412 261
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>PreconditionFailed</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000c1c043f7645e619f-006abf40c6-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C13/C13-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c13/p.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C13/C13-01.err
+### C13/C13-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C13/C13-02.cmd
+$ aws --endpoint-url http://localhost:80 s3 presign s3://s3c-ceph-1002072634-main/c13/p.txt --expires-in 60
+### C13/C13-02.err
+### C13/C13-02.out
+http://localhost:80/s3c-ceph-1002072634-main/c13/p.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=thesiskey%2F20261002%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261002T052735Z&X-Amz-Expires=60&X-Amz-SignedHeaders=host&X-Amz-Signature=0cc4ff578bf632b0da89723c1a745af0b243a7a2fc865cfb2f6cd1cb48ddf7a9
+### C13/C13-03.cmd
+$ curl -s -o /root/compat-out/ceph-20261002-072634/evidence/C13/p.out -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c13/p.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=thesiskey%2F20261002%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261002T052735Z&X-Amz-Expires=60&X-Amz-SignedHeaders=host&X-Amz-Signature=0cc4ff578bf632b0da89723c1a745af0b243a7a2fc865cfb2f6cd1cb48ddf7a9
+### C13/C13-03.err
+### C13/C13-03.out
+200
+### C13/C13-04.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c13/p.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=thesiskey%2F20261002%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261002T052735Z&X-Amz-Expires=60&X-Amz-SignedHeaders=host&X-Amz-Signature=0cc4ff578bf632b0da89723c1a745af0b243a7a2fc865cfb2f6cd1cb48ddf7a0
+### C13/C13-04.err
+### C13/C13-04.out
+403
+### C13/C13-05.cmd
+$ aws --endpoint-url http://localhost:80 s3 presign s3://s3c-ceph-1002072634-main/c13/p.txt --expires-in 2
+### C13/C13-05.err
+### C13/C13-05.out
+http://localhost:80/s3c-ceph-1002072634-main/c13/p.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=thesiskey%2F20261002%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261002T052736Z&X-Amz-Expires=2&X-Amz-SignedHeaders=host&X-Amz-Signature=7faf9993657b6277125b5e57d824cf30a87dc6918e70dcba9e9d26bb8f3794bf
+### C13/C13-06.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c13/p.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=thesiskey%2F20261002%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261002T052736Z&X-Amz-Expires=2&X-Amz-SignedHeaders=host&X-Amz-Signature=7faf9993657b6277125b5e57d824cf30a87dc6918e70dcba9e9d26bb8f3794bf
+### C13/C13-06.err
+### C13/C13-06.out
+403
+### C13/p.out
+hello s3 compat
+##### block E sha256 1aef008e8ff7bcc28f14c834e3fdfe5288252db93eb8f7fc7fbc6b6d9e53aa1a
+### C14/C14-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c14/pub.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C14/C14-01.err
+### C14/C14-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C14/C14-02.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c14/pub.txt
+### C14/C14-02.err
+### C14/C14-02.out
+403
+### C14/C14-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-bucket-policy --bucket s3c-ceph-1002072634-main --policy file:///root/compat-out/ceph-20261002-072634/data/policy.json
+### C14/C14-03.err
+### C14/C14-03.out
+### C14/C14-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-policy --bucket s3c-ceph-1002072634-main --query Policy --output text
+### C14/C14-04.err
+### C14/C14-04.out
+{"Version":"2012-10-17","Statement":[{"Sid":"AnonRead","Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::s3c-ceph-1002072634-main/c14/*"]}]}
+### C14/C14-05.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c14/pub.txt
+### C14/C14-05.err
+### C14/C14-05.out
+200
+### C14/C14-06.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/fixture/rand1m.bin
+### C14/C14-06.err
+### C14/C14-06.out
+403
+### C14/C14-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-bucket-policy --bucket s3c-ceph-1002072634-main
+### C14/C14-07.err
+### C14/C14-07.out
+### C14/C14-08.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c14/pub.txt
+### C14/C14-08.err
+### C14/C14-08.out
+403
+### C15/C15-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-bucket-cors --bucket s3c-ceph-1002072634-main --cors-configuration file:///root/compat-out/ceph-20261002-072634/data/cors.json
+### C15/C15-01.err
+### C15/C15-01.out
+### C15/C15-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-cors --bucket s3c-ceph-1002072634-main --query CORSRules[0].AllowedOrigins[0] --output text
+### C15/C15-02.err
+### C15/C15-02.out
+https://example.org
+### C15/C15-03.cmd
+$ curl -s -D - -o /dev/null --max-time 20 -X OPTIONS -H Origin: https://example.org -H Access-Control-Request-Method: GET http://localhost:80/s3c-ceph-1002072634-main/fixture/rand1m.bin
+### C15/C15-03.err
+### C15/C15-03.out
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: https://example.org
+Vary: Origin
+Access-Control-Allow-Methods: GET
+Access-Control-Max-Age: 3000
+x-amz-request-id: tx0000014e589cbffdd900d-006abf40d1-64252-default
+Server: Ceph Object Gateway (tentacle)
+Content-Length: 0
+Date: Fri, 02 Oct 2026 05:27:45 GMT
+Connection: Keep-Alive
+
+### C15/C15-04.cmd
+$ curl -s -D - -o /dev/null --max-time 20 -X OPTIONS -H Origin: https://evil.example -H Access-Control-Request-Method: GET http://localhost:80/s3c-ceph-1002072634-main/fixture/rand1m.bin
+### C15/C15-04.err
+### C15/C15-04.out
+HTTP/1.1 403 Forbidden
+Content-Length: 255
+x-amz-request-id: tx00000f020d80db81124d8-006abf40d1-64252-default
+Accept-Ranges: bytes
+Content-Type: application/xml
+Server: Ceph Object Gateway (tentacle)
+Date: Fri, 02 Oct 2026 05:27:45 GMT
+Connection: Keep-Alive
+
+### C15/C15-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-bucket-cors --bucket s3c-ceph-1002072634-main
+### C15/C15-05.err
+### C15/C15-05.out
+### C15/C15-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-cors --bucket s3c-ceph-1002072634-main
+### C15/C15-06.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchCORSConfiguration) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C15-06.reply
+### C15/C15-06.out
+### C15/C15-06.reply
+2026-10-02 07:27:47,625 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main?cors HTTP/1.1" 404 266
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchCORSConfiguration</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx000006e3a3c8aa9d218d7-006abf40d3-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C16/C16-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-bucket-lifecycle-configuration --bucket s3c-ceph-1002072634-main --lifecycle-configuration file:///root/compat-out/ceph-20261002-072634/data/lifecycle.json
+### C16/C16-01.err
+### C16/C16-01.out
+### C16/C16-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-lifecycle-configuration --bucket s3c-ceph-1002072634-main --query Rules[0].ID --output text
+### C16/C16-02.err
+### C16/C16-02.out
+expire-c16
+### C16/C16-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-bucket-lifecycle --bucket s3c-ceph-1002072634-main
+### C16/C16-03.err
+### C16/C16-03.out
+### C16/C16-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-lifecycle-configuration --bucket s3c-ceph-1002072634-main
+### C16/C16-04.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchLifecycleConfiguration) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C16-04.reply
+### C16/C16-04.out
+### C16/C16-04.reply
+2026-10-02 07:27:50,974 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main?lifecycle HTTP/1.1" 404 271
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchLifecycleConfiguration</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx0000078ab76ef9f6ef565-006abf40d6-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C17/C17-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-bucket --bucket s3c-ceph-1002072634-lock --object-lock-enabled-for-bucket
+### C17/C17-01.err
+### C17/C17-01.out
+### C17/C17-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object-lock-configuration --bucket s3c-ceph-1002072634-lock --query ObjectLockConfiguration.ObjectLockEnabled --output text
+### C17/C17-02.err
+### C17/C17-02.out
+Enabled
+### C17/C17-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-lock --key c17/locked.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt --object-lock-mode GOVERNANCE --object-lock-retain-until-date 2026-10-03T05:27:52Z --query VersionId --output text
+### C17/C17-03.err
+### C17/C17-03.out
+xPWmtPEll2iq5KremMZIXOl9P.yI1Bm
+### C17/C17-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-lock --key c17/locked.txt --query ObjectLockMode --output text
+### C17/C17-04.err
+### C17/C17-04.out
+GOVERNANCE
+### C17/C17-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object --bucket s3c-ceph-1002072634-lock --key c17/locked.txt --version-id xPWmtPEll2iq5KremMZIXOl9P.yI1Bm
+### C17/C17-05.err
+
+aws: [ERROR]: An error occurred (AccessDenied) when calling the DeleteObject operation: forbidden by object lock
+### C17/C17-05.out
+### C17/C17-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object --bucket s3c-ceph-1002072634-lock --key c17/locked.txt --version-id xPWmtPEll2iq5KremMZIXOl9P.yI1Bm --bypass-governance-retention
+### C17/C17-06.err
+### C17/C17-06.out
+{
+    "VersionId": "xPWmtPEll2iq5KremMZIXOl9P.yI1Bm"
+}
+### C18/C18-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c18/sse.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --server-side-encryption AES256
+### C18/C18-01.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (InvalidArgument) when calling the operation: read from the raw reply (HTTP 400), the AWS CLI crashed on it, see C18-01.reply
+### C18/C18-01.out
+### C18/C18-01.reply
+2026-10-02 07:27:56,343 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "PUT /s3c-ceph-1002072634-main/c18/sse.bin HTTP/1.1" 400 258
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidArgument</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000fa01342fe2117873-006abf40dc-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C18/C18-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-main --key c18/sse.bin --query ServerSideEncryption --output text
+### C18/C18-02.err
+
+aws: [ERROR]: An error occurred (404) when calling the HeadObject operation: Not Found
+### C18/C18-02.out
+### C18/C18-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c18/sse.bin /root/compat-out/ceph-20261002-072634/evidence/C18/sse.bin
+### C18/C18-03.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchKey) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C18-03.reply
+### C18/C18-03.out
+### C18/C18-03.reply
+2026-10-02 07:27:58,298 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main/c18/sse.bin HTTP/1.1" 404 252
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchKey</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000082b524a07a1f16b-006abf40de-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C18/C18-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-bucket-encryption --bucket s3c-ceph-1002072634-main --server-side-encryption-configuration {"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}
+### C18/C18-04.err
+### C18/C18-04.out
+### C18/C18-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-encryption --bucket s3c-ceph-1002072634-main --query ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm --output text
+### C18/C18-05.err
+### C18/C18-05.out
+AES256
+### C18/C18-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-bucket-encryption --bucket s3c-ceph-1002072634-main
+### C18/C18-06.err
+### C18/C18-06.out
+##### block F sha256 99355ac4f93bcadaf9b9396f77d1369ec56216a64d02ec1c250c771efbaa0972
+### C19/C19-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-bucket-acl --bucket s3c-ceph-1002072634-main --query length(Grants) --output text
+### C19/C19-01.err
+### C19/C19-01.out
+1
+### C19/C19-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c19-flat.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C19/C19-02.err
+### C19/C19-02.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C19/C19-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object-acl --bucket s3c-ceph-1002072634-main --key c19-flat.txt --acl public-read
+### C19/C19-03.err
+### C19/C19-03.out
+### C19/C19-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object-acl --bucket s3c-ceph-1002072634-main --key c19-flat.txt --query Grants[].Grantee.URI --output text
+### C19/C19-04.err
+### C19/C19-04.out
+http://acs.amazonaws.com/groups/global/AllUsers
+### C19/C19-05.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c19-flat.txt
+### C19/C19-05.err
+### C19/C19-05.out
+200
+### C19/C19-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object-acl --bucket s3c-ceph-1002072634-main --key c19-flat.txt --acl private
+### C19/C19-06.err
+### C19/C19-06.out
+### C19/C19-07.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c19-flat.txt
+### C19/C19-07.err
+### C19/C19-07.out
+403
+### C19/C19-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c19/acl.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C19/C19-08.err
+### C19/C19-08.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C19/C19-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object-acl --bucket s3c-ceph-1002072634-main --key c19/acl.txt --acl public-read
+### C19/C19-09.err
+### C19/C19-09.out
+### C19/C19-10.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object-acl --bucket s3c-ceph-1002072634-main --key c19/acl.txt --query Grants[].Grantee.URI --output text
+### C19/C19-10.err
+### C19/C19-10.out
+http://acs.amazonaws.com/groups/global/AllUsers
+### C19/C19-11.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c19/acl.txt
+### C19/C19-11.err
+### C19/C19-11.out
+200
+### C19/C19-12.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object-acl --bucket s3c-ceph-1002072634-main --key c19/acl.txt --acl private
+### C19/C19-12.err
+### C19/C19-12.out
+### C19/C19-13.cmd
+$ curl -s -o /dev/null -w %{http_code} --max-time 20 http://localhost:80/s3c-ceph-1002072634-main/c19/acl.txt
+### C19/C19-13.err
+### C19/C19-13.out
+403
+### C20/C20-01.cmd
+$ aws --endpoint-url http://localhost:80 s3 cp /root/compat-out/ceph-20261002-072634/data/rand1m.bin s3://s3c-ceph-1002072634-main/c20/cp.bin
+### C20/C20-01.err
+### C20/C20-01.out
+Completed 256.0 KiB/1.0 MiB (12.5 MiB/s) with 1 file(s) remainingCompleted 512.0 KiB/1.0 MiB (24.6 MiB/s) with 1 file(s) remainingCompleted 768.0 KiB/1.0 MiB (36.2 MiB/s) with 1 file(s) remainingCompleted 1.0 MiB/1.0 MiB (47.5 MiB/s) with 1 file(s) remaining  upload: compat-out/ceph-20261002-072634/data/rand1m.bin to s3://s3c-ceph-1002072634-main/c20/cp.bin
+### C20/C20-02.cmd
+$ aws --endpoint-url http://localhost:80 s3 cp s3://s3c-ceph-1002072634-main/c20/cp.bin /root/compat-out/ceph-20261002-072634/evidence/C20/cp.bin
+### C20/C20-02.err
+### C20/C20-02.out
+Completed 256.0 KiB/1.0 MiB (11.5 MiB/s) with 1 file(s) remainingCompleted 512.0 KiB/1.0 MiB (21.7 MiB/s) with 1 file(s) remainingCompleted 768.0 KiB/1.0 MiB (31.6 MiB/s) with 1 file(s) remainingCompleted 1.0 MiB/1.0 MiB (40.7 MiB/s) with 1 file(s) remaining  download: s3://s3c-ceph-1002072634-main/c20/cp.bin to compat-out/ceph-20261002-072634/evidence/C20/cp.bin
+### C20/C20-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c20/CRC32.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --checksum-algorithm CRC32
+### C20/C20-03.err
+### C20/C20-03.out
+{
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumCRC32": "JX+aAQ==",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C20/C20-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c20/CRC32.bin --checksum-mode ENABLED --query ChecksumCRC32 --output text /root/compat-out/ceph-20261002-072634/evidence/C20/CRC32.bin
+### C20/C20-04.err
+### C20/C20-04.out
+JX+aAQ==
+### C20/C20-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c20/CRC32C.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --checksum-algorithm CRC32C
+### C20/C20-05.err
+### C20/C20-05.out
+{
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumCRC32C": "oakv3w==",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C20/C20-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c20/CRC32C.bin --checksum-mode ENABLED --query ChecksumCRC32C --output text /root/compat-out/ceph-20261002-072634/evidence/C20/CRC32C.bin
+### C20/C20-06.err
+### C20/C20-06.out
+oakv3w==
+### C20/C20-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c20/CRC64NVME.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --checksum-algorithm CRC64NVME
+### C20/C20-07.err
+### C20/C20-07.out
+{
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumCRC64NVME": "9Iq7Nl0bl4A=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C20/C20-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c20/CRC64NVME.bin --checksum-mode ENABLED --query ChecksumCRC64NVME --output text /root/compat-out/ceph-20261002-072634/evidence/C20/CRC64NVME.bin
+### C20/C20-08.err
+### C20/C20-08.out
+9Iq7Nl0bl4A=
+### C20/C20-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c20/SHA1.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --checksum-algorithm SHA1
+### C20/C20-09.err
+### C20/C20-09.out
+{
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumSHA1": "5pz4IgutqR0IWUWZqFXTAxOoWk0=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C20/C20-10.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c20/SHA1.bin --checksum-mode ENABLED --query ChecksumSHA1 --output text /root/compat-out/ceph-20261002-072634/evidence/C20/SHA1.bin
+### C20/C20-10.err
+### C20/C20-10.out
+5pz4IgutqR0IWUWZqFXTAxOoWk0=
+### C20/C20-11.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c20/SHA256.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --checksum-algorithm SHA256
+### C20/C20-11.err
+### C20/C20-11.out
+{
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\"",
+    "ChecksumSHA256": "LWi5471ZVJHIr3rA/oPVLOfUt79Pnu/Nlnz5nE4ctBM=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C20/C20-12.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c20/SHA256.bin --checksum-mode ENABLED --query ChecksumSHA256 --output text /root/compat-out/ceph-20261002-072634/evidence/C20/SHA256.bin
+### C20/C20-12.err
+### C20/C20-12.out
+LWi5471ZVJHIr3rA/oPVLOfUt79Pnu/Nlnz5nE4ctBM=
+### C20/C20-13.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c20/badsha.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --checksum-sha256 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+### C20/C20-13.err
+### C20/C20-13.out
+{
+    "ETag": "\"df5557133861b0d8d6954f4a4790dec1\""
+}
+### C20/C20-14.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c20/badmd5.bin --body /root/compat-out/ceph-20261002-072634/data/rand1m.bin --content-md5 AAAAAAAAAAAAAAAAAAAAAA==
+### C20/C20-14.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (BadDigest) when calling the operation: read from the raw reply (HTTP 400), the AWS CLI crashed on it, see C20-14.reply
+### C20/C20-14.out
+### C20/C20-14.reply
+2026-10-02 07:28:16,120 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "PUT /s3c-ceph-1002072634-main/c20/badmd5.bin HTTP/1.1" 400 252
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>BadDigest</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx00000d2fb6e81a63d9ed5-006abf40f0-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+##### block G sha256 357f02296957ecbcec93fcc24457f297d11352ebd83b5117a70ff7799cf15ccb
+### C21/C21-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/sp ace.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-01.err
+### C21/C21-01.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/sp ace.txt /root/compat-out/ceph-20261002-072634/evidence/C21/k1.bin
+### C21/C21-02.err
+### C21/C21-02.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:16+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/üñí-ünï.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-03.err
+### C21/C21-03.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/üñí-ünï.txt /root/compat-out/ceph-20261002-072634/evidence/C21/k2.bin
+### C21/C21-04.err
+### C21/C21-04.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:18+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/a+b=c&d.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-05.err
+### C21/C21-05.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/a+b=c&d.txt /root/compat-out/ceph-20261002-072634/evidence/C21/k3.bin
+### C21/C21-06.err
+### C21/C21-06.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:19+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/pct%20x.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-07.err
+### C21/C21-07.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/pct%20x.txt /root/compat-out/ceph-20261002-072634/evidence/C21/k4.bin
+### C21/C21-08.err
+### C21/C21-08.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:20+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/deep/a/b/c/d/e.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-09.err
+### C21/C21-09.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-10.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/deep/a/b/c/d/e.txt /root/compat-out/ceph-20261002-072634/evidence/C21/k5.bin
+### C21/C21-10.err
+### C21/C21-10.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:21+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-11.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/dir-marker/ --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-11.err
+### C21/C21-11.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-12.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/dir-marker/ /root/compat-out/ceph-20261002-072634/evidence/C21/k6.bin
+### C21/C21-12.err
+### C21/C21-12.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:22+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-13.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-13.err
+### C21/C21-13.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-14.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk /root/compat-out/ceph-20261002-072634/evidence/C21/k7.bin
+### C21/C21-14.err
+### C21/C21-14.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:24+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-15.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-15.err
+### C21/C21-15.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-16.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk /root/compat-out/ceph-20261002-072634/evidence/C21/k8.bin
+### C21/C21-16.err
+### C21/C21-16.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:25+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-17.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-main --key c21/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/end --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C21/C21-17.err
+### C21/C21-17.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C21/C21-18.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c21/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/end /root/compat-out/ceph-20261002-072634/evidence/C21/k9.bin
+### C21/C21-18.err
+### C21/C21-18.out
+{
+    "AcceptRanges": "bytes",
+    "LastModified": "2026-10-02T05:28:26+00:00",
+    "ContentLength": 16,
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+}
+### C21/C21-19.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-main --prefix c21/ --query length(Contents) --output text
+### C21/C21-19.err
+### C21/C21-19.out
+9
+##### block H sha256 8455b06e791bb7b986c1bc7cbf3975973cbcf6904741294897c1d8682ba47f6a
+### C22/C22-01.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-main --key c22/does-not-exist /root/compat-out/ceph-20261002-072634/evidence/C22/x.bin
+### C22/C22-01.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchKey) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C22-01.reply
+### C22/C22-01.out
+### C22/C22-01.reply
+2026-10-02 07:28:28,975 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-main/c22/does-not-exist HTTP/1.1" 404 252
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchKey</Code><Message></Message><BucketName>s3c-ceph-1002072634-main</BucketName><RequestId>tx0000060557240122b718e-006abf40fc-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C22/C22-02.cmd
+$ aws --endpoint-url http://localhost:80 s3api get-object --bucket s3c-ceph-1002072634-no-such-bucket --key x /root/compat-out/ceph-20261002-072634/evidence/C22/x.bin
+### C22/C22-02.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchBucket) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C22-02.reply
+### C22/C22-02.out
+### C22/C22-02.reply
+2026-10-02 07:28:30,264 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "GET /s3c-ceph-1002072634-no-such-bucket/x HTTP/1.1" 404 265
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchBucket</Code><Message></Message><BucketName>s3c-ceph-1002072634-no-such-bucket</BucketName><RequestId>tx0000003c88dafb87a08c2-006abf40fe-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C22/C22-03.cmd
+$ aws --endpoint-url http://localhost:80 s3api head-object --bucket s3c-ceph-1002072634-main --key c22/does-not-exist
+### C22/C22-03.err
+
+aws: [ERROR]: An error occurred (404) when calling the HeadObject operation: Not Found
+### C22/C22-03.out
+### C22/C22-04.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-bucket --bucket s3c-ceph-1002072634-main
+### C22/C22-04.err
+### C22/C22-04.out
+### C22/C22-05.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-bucket --bucket s3c-ceph-1002072634-c22
+### C22/C22-05.err
+### C22/C22-05.out
+### C22/C22-06.cmd
+$ aws --endpoint-url http://localhost:80 s3api put-object --bucket s3c-ceph-1002072634-c22 --key sentinel.txt --body /root/compat-out/ceph-20261002-072634/data/small.txt
+### C22/C22-06.err
+### C22/C22-06.out
+{
+    "ETag": "\"b801580491886a52445c66f39ba4c173\"",
+    "ChecksumCRC64NVME": "3Jxd3X64IoY=",
+    "ChecksumType": "FULL_OBJECT"
+}
+### C22/C22-07.cmd
+$ aws --endpoint-url http://localhost:80 s3api list-objects-v2 --bucket s3c-ceph-1002072634-c22 --query Contents[].Key --output text
+### C22/C22-07.err
+### C22/C22-07.out
+sentinel.txt
+### C22/C22-08.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-bucket --bucket s3c-ceph-1002072634-c22
+### C22/C22-08.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (BucketNotEmpty) when calling the operation: read from the raw reply (HTTP 409), the AWS CLI crashed on it, see C22-08.reply
+### C22/C22-08.out
+### C22/C22-08.reply
+2026-10-02 07:28:34,910 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "DELETE /s3c-ceph-1002072634-c22 HTTP/1.1" 409 256
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>BucketNotEmpty</Code><Message></Message><BucketName>s3c-ceph-1002072634-c22</BucketName><RequestId>tx0000042356078f3ccd6d6-006abf4102-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C22/C22-09.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-object --bucket s3c-ceph-1002072634-c22 --key sentinel.txt
+### C22/C22-09.err
+### C22/C22-09.out
+### C22/C22-10.cmd
+$ aws --endpoint-url http://localhost:80 s3api create-bucket --bucket Bad_Name_s3c-ceph-1002072634
+### C22/C22-10.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (InvalidBucketName) when calling the operation: read from the raw reply (HTTP 400), the AWS CLI crashed on it, see C22-10.reply
+### C22/C22-10.out
+### C22/C22-10.reply
+2026-10-02 07:28:37,982 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "PUT /Bad_Name_s3c-ceph-1002072634 HTTP/1.1" 400 264
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidBucketName</Code><Message></Message><BucketName>Bad_Name_s3c-ceph-1002072634</BucketName><RequestId>tx00000fe34994e65ab5313-006abf4105-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'
+### C22/C22-11.cmd
+$ aws --endpoint-url http://localhost:80 s3api delete-bucket --bucket s3c-ceph-1002072634-never-created
+### C22/C22-11.err
+
+aws: [ERROR]: argument of type 'NoneType' is not a container or iterable
+An error occurred (NoSuchBucket) when calling the operation: read from the raw reply (HTTP 404), the AWS CLI crashed on it, see C22-11.reply
+### C22/C22-11.out
+### C22/C22-11.reply
+2026-10-02 07:28:39,186 - MainThread - urllib3.connectionpool - DEBUG - http://localhost:80 "DELETE /s3c-ceph-1002072634-never-created HTTP/1.1" 404 264
+b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchBucket</Code><Message></Message><BucketName>s3c-ceph-1002072634-never-created</BucketName><RequestId>tx00000fc08ebe06b4be50d-006abf4107-64252-default</RequestId><HostId>64252-default-default</HostId></Error>'

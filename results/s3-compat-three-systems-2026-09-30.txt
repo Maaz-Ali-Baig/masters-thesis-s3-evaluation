@@ -3,7 +3,8 @@ S3 API compatibility, SeaweedFS, RustFS and Garage, with cross verification
 Date:      30 September 2026
 Probe:     scripts/s3-compat.sh, 22 tests (C01 to C22), run through scripts/s3-compat-run.sh
 Clients:   AWS CLI 2.36.8 (probe), curl 8.5.0 signing its own requests (cross checks)
-Targets:   three single node Docker containers on the laptop, Ceph not yet probed
+Targets:   three single node Docker containers on the laptop. Ceph was probed on 2 October 2026,
+           see results/s3-compat-ceph-2026-10-02.txt
            SeaweedFS  chrislusf/seaweedfs  sha256:c42a5268ca13fcb65e0fae925886b107f4bf294d8db15e1be5509d55104eb509
                       Server header "SeaweedFS 30GB 4.25", started with: server -s3 -s3.config=...
            RustFS     rustfs/rustfs        sha256:fa19210ac4697c79d7ccca1ec9b0eb91aebacc6691991ffb14014bb3c67e6cc3

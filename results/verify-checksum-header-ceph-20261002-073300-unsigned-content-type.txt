@@ -1,0 +1,25 @@
+verify-checksum-header  system=ceph  endpoint=http://localhost:80  region=us-east-1
+date:   2026-10-02T05:33:01Z
+bucket: s3c-verify-ck-1002073300
+body sha256 (base64) = Eb6I7VzUKhyirehej8yVdEJFU1CT7bqyBMqLYB5Zc3U=
+
+create bucket                                  HTTP 200   
+--- PUT with a checksum header (AWS: correct = 200, wrong = 400 BadDigest)
+put, correct sha256                            HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message></Message><RequestId>tx00000060306c34956052e-006abf420d-64252-default</
+put, WRONG sha256                              HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message></Message><RequestId>tx000000a5df7ea1506b3ec-006abf420d-64252-default</
+put, correct sha1                              HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message></Message><RequestId>tx00000326c2ef26f4c609d-006abf420d-64252-default</
+put, WRONG sha1                                HTTP 403   <?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message></Message><RequestId>tx00000ec6fbb51052a5d12-006abf420d-64252-default</
+--- what was stored (HEAD with x-amz-checksum-mode: ENABLED)
+head ok256.txt                                 HTTP 404   HTTP/1.1 404 Not Found  Content-Length: 252  x-amz-delete-marker: false  x-amz-request-id: tx00000f5264ab57550468f-006abf420d-64252-default  Accept-Ra
+head bad256.txt                                HTTP 404   HTTP/1.1 404 Not Found  Content-Length: 252  x-amz-delete-marker: false  x-amz-request-id: tx000004e56094d2ba26e34-006abf420d-64252-default  Accept-Ra
+head ok1.txt                                   HTTP 404   HTTP/1.1 404 Not Found  Content-Length: 252  x-amz-delete-marker: false  x-amz-request-id: tx0000019f25d8605eaf6ff-006abf420d-64252-default  Accept-Ra
+head bad1.txt                                  HTTP 404   HTTP/1.1 404 Not Found  Content-Length: 252  x-amz-delete-marker: false  x-amz-request-id: tx0000086d58e7a41a5f31c-006abf420d-64252-default  Accept-Ra
+--- is the body of the object stored under the wrong sha256 intact
+get bad256.txt                                 HTTP 404   <?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchKey</Code><Message></Message><BucketName>s3c-verify-ck-1002073300</BucketName><RequestId>tx00
+body identical to what was sent: no (or object missing)
+--- cleanup
+delete ok256.txt                               HTTP 204   
+delete bad256.txt                              HTTP 204   
+delete ok1.txt                                 HTTP 204   
+delete bad1.txt                                HTTP 204   
+delete bucket                                  HTTP 204   
