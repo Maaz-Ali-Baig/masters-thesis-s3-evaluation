@@ -127,6 +127,24 @@ begin() {
     return 0
 }
 
+# recover_reply <n> <aws args>: AWS CLI 2.36 crashes with "argument of type
+# 'NoneType' is not a container or iterable" (s3errormsg.py) on an error reply
+# whose <Message> is empty, which Ceph RGW sends. The crash hides the server's
+# answer, so the failed request is repeated once with --debug and only the HTTP
+# status line and the reply body are kept (never the request headers, which hold
+# the signature). The error code read from the raw reply is appended to the .err
+# file in the CLI's own wording, so errcode sees what the server really said.
+recover_reply() {
+    local n="$1" code status
+    shift
+    grep -q "is not a container or iterable" "$T_DIR/$n.err" || return 0
+    aws_ "$@" --debug 2>&1 | awk '/HTTP\/1\.1" [0-9]+ /{print} /Response body:/{getline; print; exit}' > "$T_DIR/$n.reply"
+    code="$(sed -n 's/.*<Code>\([^<]*\)<\/Code>.*/\1/p' "$T_DIR/$n.reply" | head -1)"
+    status="$(sed -n 's/.*HTTP\/1\.1" \([0-9]*\) .*/\1/p' "$T_DIR/$n.reply" | head -1)"
+    [ -n "$code" ] && printf 'An error occurred (%s) when calling the operation: read from the raw reply (HTTP %s), the AWS CLI crashed on it, see %s.reply\n' "$code" "$status" "$n" >> "$T_DIR/$n.err"
+    return 0
+}
+
 # run <aws args>: execute the AWS CLI against the endpoint and keep the evidence.
 run() {
     STEP=$((STEP + 1))
@@ -135,6 +153,7 @@ run() {
     printf '$ aws --endpoint-url %s %s\n' "$S3C_ENDPOINT" "$*" > "$T_DIR/$n.cmd"
     aws_ "$@" > "$T_DIR/$n.out" 2> "$T_DIR/$n.err"
     LAST_RC=$?
+    [ "$LAST_RC" -ne 0 ] && recover_reply "$n" "$@"
     LAST_OUT="$T_DIR/$n.out"; LAST_ERR="$T_DIR/$n.err"
     return $LAST_RC
 }

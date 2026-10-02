@@ -87,6 +87,17 @@ S3C_NAME=ceph S3C_ENDPOINT=http://localhost:80 S3C_KEY=<key> S3C_SECRET=<secret>
   S3C_NOTE="Ceph 20.2.4 Tentacle, RGW" bash /root/s3-compat.sh
 ```
 
+Use the same AWS CLI version as the laptop runs (2.36.8). The Debian 12 package is 2.9.19, which
+predates default checksums and conditional upload flags, so its results are not comparable. The
+official installer for a pinned version goes into its own folder and leaves the system CLI alone:
+
+```bash
+curl -fsSL -o /tmp/awscliv2.zip https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.36.8.zip
+unzip -q -o /tmp/awscliv2.zip -d /tmp/awscli-new
+mkdir -p /opt/aws-cli-new/bin && /tmp/awscli-new/aws/install -i /opt/aws-cli-new/files -b /opt/aws-cli-new/bin
+PATH=/opt/aws-cli-new/bin:$PATH   # put in front of the probe run
+```
+
 **Options and variables.** `--only C01,C08` runs selected tests, `--keep` skips bucket cleanup,
 `--list` prints the test ids. `S3C_REGION` defaults to `us-east-1` (Garage needs `garage`).
 `S3C_CHECKSUM=when_required` stops the AWS CLI adding default integrity checksums, which
@@ -103,6 +114,15 @@ design difference is a judgement made afterwards from the saved evidence.
 (command, stdout, stderr), so any matrix cell traces back to the raw server reply.
 `summary.tsv` has one row per test. `env.txt` records the AWS CLI version, the server's
 response headers, and checksums of the payloads used. Credentials are never written out.
+
+**AWS CLI crash on Ceph error replies.** Ceph RGW sends error replies with an empty
+`<Message>`. AWS CLI 2.36.8 then crashes with `argument of type 'NoneType' is not a container or
+iterable` (in `awscli/customizations/s3errormsg.py`) before it prints the error code, so every
+check that expects a specific error looked like a failure with no code. The probe now repeats
+such a failed request once with `--debug` and keeps only the status line and reply body in
+`<test>-NN.reply` (never the request headers, which hold the signature). The code read from
+that reply is appended to the `.err` file. It only acts when the crash text is present: the
+SeaweedFS, RustFS and Garage runs give identical verdicts with and without it.
 
 **What the probe does not prove.** SSE-S3 (C18) tests that the API accepts and echoes the
 header, not that data is encrypted on disk. Lifecycle (C16) tests that the configuration is
