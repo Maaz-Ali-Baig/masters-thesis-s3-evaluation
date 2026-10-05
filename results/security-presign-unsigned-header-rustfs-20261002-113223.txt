@@ -1,0 +1,127 @@
+security-presign-unsigned-header  system=rustfs  endpoint=http://localhost:9000  region=us-east-1
+date:   2026-10-02T09:32:24Z
+bucket: s3c-sec-ps-1002113223
+
+    create bucket                      HTTP 200  
+    put object for the GET control     HTTP 200  
+    create second bucket               HTTP 200  
+    put secret.txt in second bucket    HTTP 200  
+
+g0  control, presigned GET
+    presigned GET                      HTTP 200  presigned put body 
+
+p0  control, nothing extra
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p1  unsigned Content-Type: application/octet-stream
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p2  unsigned x-amz-meta-injected: yes
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream x-amz-meta-injected: yes 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p3  unsigned x-amz-acl: public-read
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p4  unsigned x-amz-tagging: unsignedtag=1
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream x-amz-tagging-count: 1 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p5  unsigned x-amz-storage-class: STANDARD_IA
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream x-amz-storage-class: STANDARD_IA 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p6  unsigned x-amz-website-redirect-location
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream x-amz-website-redirect-location: https://example.org/ 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p7  unsigned x-amz-copy-source: /s3c-sec-ps-1002113223/g0, empty body
+    presigned PUT                      HTTP 200  <?xml version="1.0" encoding="UTF-8"?><CopyObjectResult><ETag>"475560fcfd50b5c1693e8e476a2f772e"</ETag><LastModified>2026-10-02T09:32:27.094Z</LastMod
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: text/plain  etag: "475560fcfd50b5c1693e8e476a2f
+    headers kept                       content-length: 19 content-type: text/plain 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p8  unsigned x-amz-copy-source from ANOTHER bucket: /s3c-sec-ps-1002113223-src/secret.txt, empty body
+    presigned PUT                      HTTP 200  <?xml version="1.0" encoding="UTF-8"?><CopyObjectResult><ETag>"ed2393656865cb5eaffb62e42939539f"</ETag><LastModified>2026-10-02T09:32:27.396Z</LastMod
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 25  content-type: text/plain  etag: "ed2393656865cb5eaffb62e42939
+    headers kept                       content-length: 25 content-type: text/plain 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  cross bucket source body 
+
+s2  control, signed x-amz-meta-injected: yes
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream x-amz-meta-injected: yes 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+s3  control, signed x-amz-acl: public-read
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  accept-ranges: bytes  content-length: 19  content-type: application/octet-stream  etag: "475560fcfd50b5
+    headers kept                       content-length: 19 content-type: application/octet-stream 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?><AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><AccessContro
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+--- cleanup
+    delete g0                          HTTP 204  
+    delete p0                          HTTP 204  
+    delete p1                          HTTP 204  
+    delete p2                          HTTP 204  
+    delete p3                          HTTP 204  
+    delete p4                          HTTP 204  
+    delete p5                          HTTP 204  
+    delete p6                          HTTP 204  
+    delete p7                          HTTP 204  
+    delete p8                          HTTP 204  
+    delete s2                          HTTP 204  
+    delete s3                          HTTP 204  
+    delete bucket                      HTTP 204  
+    delete secret.txt                  HTTP 204  
+    delete second bucket               HTTP 204  

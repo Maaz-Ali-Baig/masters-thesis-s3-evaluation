@@ -1,0 +1,85 @@
+security-presign-unsigned-header  system=seaweedfs  endpoint=http://localhost:8333  region=us-east-1
+date:   2026-10-02T09:32:20Z
+bucket: s3c-sec-ps-1002113220
+
+    create bucket                      HTTP 200  
+    put object for the GET control     HTTP 200  
+    create second bucket               HTTP 200  
+    put secret.txt in second bucket    HTTP 200  
+
+g0  control, presigned GET
+    presigned GET                      HTTP 200  presigned put body 
+
+p0  control, nothing extra
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  Accept-Ranges: bytes  Content-Length: 19  Content-Type: text/plain; charset=utf-8  Etag: "475560fcfd50b
+    headers kept                       Content-Length: 19 Content-Type: text/plain; charset=utf-8 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?> <AccessControlPolicy><Owner><ID>admin</ID><DisplayName>admin</DisplayName></Owner
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p1  unsigned Content-Type: application/octet-stream
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  Accept-Ranges: bytes  Content-Length: 19  Content-Type: application/octet-stream  Etag: "475560fcfd50b5
+    headers kept                       Content-Length: 19 Content-Type: application/octet-stream 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?> <AccessControlPolicy><Owner><ID>admin</ID><DisplayName>admin</DisplayName></Owner
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p2  unsigned x-amz-meta-injected: yes
+    presigned PUT                      HTTP 403  <?xml version="1.0" encoding="UTF-8"?> <Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signat
+
+p3  unsigned x-amz-acl: public-read
+    presigned PUT                      HTTP 403  <?xml version="1.0" encoding="UTF-8"?> <Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signat
+
+p4  unsigned x-amz-tagging: unsignedtag=1
+    presigned PUT                      HTTP 403  <?xml version="1.0" encoding="UTF-8"?> <Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signat
+
+p5  unsigned x-amz-storage-class: STANDARD_IA
+    presigned PUT                      HTTP 403  <?xml version="1.0" encoding="UTF-8"?> <Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signat
+
+p6  unsigned x-amz-website-redirect-location
+    presigned PUT                      HTTP 403  <?xml version="1.0" encoding="UTF-8"?> <Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signat
+
+p7  unsigned x-amz-copy-source: /s3c-sec-ps-1002113220/g0, empty body
+    presigned PUT                      HTTP 403  <?xml version="1.0" encoding="UTF-8"?> <Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signat
+
+p8  unsigned x-amz-copy-source from ANOTHER bucket: /s3c-sec-ps-1002113220-src/secret.txt, empty body
+    presigned PUT                      HTTP 403  <?xml version="1.0" encoding="UTF-8"?> <Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signat
+
+s2  control, signed x-amz-meta-injected: yes
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  Accept-Ranges: bytes  Content-Length: 19  Content-Type: text/plain; charset=utf-8  Etag: "475560fcfd50b
+    headers kept                       Content-Length: 19 Content-Type: text/plain; charset=utf-8 X-Amz-Meta-injected: yes 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?> <AccessControlPolicy><Owner><ID>admin</ID><DisplayName>admin</DisplayName></Owner
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+s3  control, signed x-amz-acl: public-read
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  Accept-Ranges: bytes  Content-Length: 19  Content-Type: text/plain; charset=utf-8  Etag: "475560fcfd50b
+    headers kept                       Content-Length: 19 Content-Type: text/plain; charset=utf-8 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 200  <?xml version="1.0" encoding="UTF-8"?> <AccessControlPolicy><Owner><ID>admin</ID><DisplayName>admin</DisplayName></Owner
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+--- cleanup
+    delete g0                          HTTP 204  
+    delete p0                          HTTP 204  
+    delete p1                          HTTP 204  
+    delete p2                          HTTP 204  
+    delete p3                          HTTP 204  
+    delete p4                          HTTP 204  
+    delete p5                          HTTP 204  
+    delete p6                          HTTP 204  
+    delete p7                          HTTP 204  
+    delete p8                          HTTP 204  
+    delete s2                          HTTP 204  
+    delete s3                          HTTP 204  
+    delete bucket                      HTTP 204  
+    delete secret.txt                  HTTP 204  
+    delete second bucket               HTTP 204  

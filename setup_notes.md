@@ -1835,3 +1835,37 @@ Vault and the data on disk. The evidence archive of the canonical run (`ceph-202
 entries, sha256 `33066ead1076d35061187c8eb4a72b6c9e64b1f0d2c1d83aefca3939fbdaad50`) is on `ceph0`; its 559 files are in the
 repository as text (`results/compat-ceph-20261002-072634-evidence.txt`), verified by sha256 block by block. Only the
 gateway on `ceph0` was probed, from `ceph0` itself.
+
+---
+
+## Security: presigned PUT with unsigned headers, three systems on the laptop (2 October 2026, written 5 October)
+
+Full record in `results/security-presign-unsigned-header-three-systems-2026-10-02.txt`, raw runs in `results/security-presign-unsigned-header-{seaweedfs,rustfs,garage}-20261002-*.txt`, script `scripts/security-presign-unsigned-header.sh` (sha256 `f1678fc1e4f2559eb33d1c59d3b2e520b97882aa488f27ec4e5aa943a4d0ab92`).
+
+**Why.** The four way SigV4 test of 22 September showed that three systems accept an unsigned `Content-Type`, which AWS also tolerates. It did not show whether they act on unsigned `x-amz-` headers, which is the CVE-2026-54330 vector. This is the test designed at the end of that section.
+
+**Method.** A presigned PUT URL (`SignedHeaders=host`) is built by hand with openssl, because the AWS CLI can only presign GET. One header is added per case without being signed, curl's own `Content-Type` is removed so only that header differs, and an accepted object is read back by a second signed request (HEAD, ACL, content) and by an anonymous GET. Controls: g0 (presigned GET), p0 (nothing extra), s2 and s3 (the metadata and ACL headers inside the signature).
+
+**Result.**
+
+| Unsigned header | SeaweedFS 4.25 | RustFS 1.0.0-beta.8 | Garage v1.0.0 |
+|---|---|---|---|
+| `x-amz-meta-*` | 403 | 200, applied | 400 |
+| `x-amz-acl` | 403 | 200, not applied | 400 |
+| `x-amz-tagging` | 403 | 200, applied | 400 |
+| `x-amz-storage-class` | 403 | 200, applied | 400 |
+| `x-amz-website-redirect-location` | 403 | 200, applied | 400 |
+| `x-amz-copy-source`, same bucket | 403 | 200, applied | 400 |
+| `x-amz-copy-source`, other bucket | 403 | 200, applied | 400 |
+
+SeaweedFS answers `403 SignatureDoesNotMatch`. Garage answers `400 InvalidRequest`, "Header `x-amz-meta-injected` should be signed". RustFS accepts every case. Read back: `x-amz-meta-injected: yes`, `x-amz-tagging-count: 1`, `x-amz-storage-class: STANDARD_IA` and the redirect header are present, and with an empty body plus an unsigned `x-amz-copy-source` the object holds the source content (19 bytes of g0, and in the second bucket case 25 bytes, "cross bucket source body"). The ACL header has no effect on RustFS even when signed (0 AllUsers grants, anonymous GET 403).
+
+**Limits.** The signer was the admin identity, so the cross bucket copy shows that the header is acted on, not that a permission was bypassed (O1). Whether RustFS applies an unsigned `Content-Type` is not separable, because both p0 and p1 store `application/octet-stream`. Ceph is not run yet (needs the VM). Cause in the RustFS source is not read.
+
+**Hypotheses.** H1: RustFS checks only the headers listed in `SignedHeaders`. H2: Ceph 20.2.4 rejects all these cases after the CVE fix.
+
+**Next.** (1) Scoped identity without read access to the second bucket signs the URL, to settle O1. (2) Run the script on ceph0. (3) Repeat all four on the VMs, as Prof. Baun requires (see below).
+
+### Supervisor ruling on the platform (reply of 22 September 2026, found 4 October)
+
+Prof. Baun replied on 22 September: the software solutions must run on the same platform and be tested with the same parameters, so all of them are to be deployed on the university VMs and tested one after the other. His reply was missed because the university moved the internal mail to Outlook. A follow up mail was sent on 4 October. Consequences: SeaweedFS, RustFS and Garage are deployed on the Proxmox VMs with the same nodes and resources as Ceph, and performance figures come from the VMs. The laptop results stay in the thesis and are labelled as laptop runs next to the VM runs. The compatibility and security scripts are repeated on the VMs.

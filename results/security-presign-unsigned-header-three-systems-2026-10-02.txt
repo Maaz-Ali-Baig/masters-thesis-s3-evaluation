@@ -1,0 +1,116 @@
+Security test: presigned PUT URL with headers the signature does not cover, three systems on the laptop
+=====================================================================================================
+Run date:  2 October 2026 (record written 5 October 2026)
+Script:    scripts/security-presign-unsigned-header.sh, 173 lines, sha256
+           f1678fc1e4f2559eb33d1c59d3b2e520b97882aa488f27ec4e5aa943a4d0ab92
+Clients:   curl 8.5.0 sending the request, openssl building the SigV4 query signature by hand (the AWS CLI
+           can only presign GET). A second, independently signed curl request reads every object back.
+Targets:   the same three single node Docker containers on the laptop as in
+           results/s3-compat-three-systems-2026-09-30.txt
+           SeaweedFS  4.25, git 7acba59a5, image sha256:c42a5268ca13fcb65e0fae925886b107f4bf294d8db15e1be5509d55104eb509
+           RustFS     1.0.0-beta.8, git 64c0ede0261eeb7ccd415221d6f102aa70829b6a, built 2026-06-10, image
+                      sha256:fa19210ac4697c79d7ccca1ec9b0eb91aebacc6691991ffb14014bb3c67e6cc3
+                      (versions read from the same image digests on 22 September, see setup_notes.md)
+           Garage     dxflrs/garage:v1.0.0 sha256:0c7ed80d22c0b0f902fbd0ec74fc68073f72a46ea15d54e3c4c484184a8c7516
+Raw runs:  results/security-presign-unsigned-header-seaweedfs-20261002-113220.txt
+           results/security-presign-unsigned-header-rustfs-20261002-113223.txt
+           results/security-presign-unsigned-header-garage-20261002-113228.txt
+Not yet:   Ceph. The Ceph run needs the VM session (the VM subnet is not reachable from the laptop). Per the
+           supervisor's ruling of 22 September 2026 (all systems on the university VMs, same parameters, one
+           after another) the three laptop systems are also to be repeated on the VMs. This record is the
+           laptop part and does not replace that.
+
+QUESTION
+--------
+A presigned PUT URL is signed with SignedHeaders=host. If a client adds further x-amz-* headers that the
+signature does not cover, does the server reject the request, or does it accept it, and does it then act on
+those headers? AWS SigV4 says such a request must be rejected. Ceph fixed exactly this class of flaw in
+CVE-2026-54330 (Tentacle 20.2.4), which is why the question matters for the comparison.
+
+METHOD
+------
+Every case sends one presigned PUT built from the same signing code, with one change per case, and removes the
+Content-Type that curl would add on its own, so only the named header differs. After an accepted upload the
+object is read back with the owner's credentials (HEAD, ACL, content) and with an anonymous GET.
+Controls: g0 (a presigned GET of an existing object, proves the signing code is right), p0 (nothing extra),
+s2 and s3 (the metadata header and the ACL header put inside the signature).
+
+RESULT (HTTP status of the presigned PUT, then what the read back shows)
+------------------------------------------------------------------------
+Case  Unsigned header sent                       SeaweedFS 4.25      RustFS               Garage 1.0.0
+g0    control, presigned GET                     200                 200                  200
+p0    control, nothing extra                     200                 200                  200
+p1    Content-Type: application/octet-stream     200, applied        200, see O3          200, applied
+p2    x-amz-meta-injected: yes                   403                 200, APPLIED         400
+p3    x-amz-acl: public-read                     403                 200, not applied     400
+p4    x-amz-tagging: unsignedtag=1               403                 200, APPLIED         400
+p5    x-amz-storage-class: STANDARD_IA           403                 200, APPLIED         400
+p6    x-amz-website-redirect-location            403                 200, APPLIED         400
+p7    x-amz-copy-source: same bucket object      403                 200, APPLIED         400
+p8    x-amz-copy-source: object in another bucket 403                200, APPLIED         400
+s2    control, meta header signed                200, applied        200, applied         200, applied
+s3    control, ACL header signed                 200                 200, not applied     200
+
+Error replies quoted from the raw files:
+  SeaweedFS  HTTP 403 <Code>SignatureDoesNotMatch</Code> ("The request signature we calculated does not match
+             the signature ...") for p2 to p8.
+  Garage     HTTP 400 <Code>InvalidRequest</Code> <Message>Bad request: Header `x-amz-meta-injected` should be
+             signed</Message>, and the same text with the header name for p3 to p8 (`x-amz-copy-source` for
+             p7 and p8).
+
+PROVEN (quoted evidence in the raw files)
+-----------------------------------------
+1. RustFS accepts every unsigned x-amz-* header in the test with HTTP 200 and acts on five of them.
+   Read back with the owner's credentials:
+     p2  HEAD shows "x-amz-meta-injected: yes" (p0 shows no such header).
+     p4  HEAD shows "x-amz-tagging-count: 1".
+     p5  HEAD shows "x-amz-storage-class: STANDARD_IA".
+     p6  HEAD shows "x-amz-website-redirect-location: https://example.org/".
+     p7  The PUT reply is a <CopyObjectResult>, the request body was empty, and the object read back has
+         content-length 19 and the content "presigned put body", which is the content of g0.
+     p8  The same with a source in a second bucket: content-length 25, content "cross bucket source body",
+         which is the content of secret.txt in the other bucket (a different length and text than g0, so
+         the copy cannot come from anywhere else).
+2. RustFS accepts x-amz-acl: public-read and does not apply it, signed or unsigned. For p3 and for the
+   signed control s3 the ACL read back has 0 AllUsers grants and an anonymous GET gives 403. So the ACL
+   header has no effect in either form.
+3. SeaweedFS rejects p2 to p8 with 403 SignatureDoesNotMatch and Garage rejects them with 400 InvalidRequest
+   naming the header that "should be signed". The script reads nothing back after a rejected PUT, so
+   whether an object was left behind is not checked. Both accept the signed controls s2 and s3.
+4. All three accept an unsigned Content-Type. SeaweedFS and Garage apply it (SeaweedFS stores
+   application/octet-stream for p1 and text/plain; charset=utf-8 for p0, Garage stores
+   content-type: application/octet-stream for p1 and none for p0). AWS also tolerates an unsigned
+   non x-amz header, so this is normal. Ceph 20.2.4 rejects it with 403 (results/s3-compat-ceph-2026-10-02.txt),
+   so Ceph is stricter than AWS here.
+5. The signing code is correct: g0 is 200 on all three, and the signed controls s2 and s3 are accepted, so
+   the rejections in point 3 are caused by the unsigned header and not by a faulty signature.
+
+HYPOTHESES (not settled, do not cite as findings)
+-------------------------------------------------
+H1. RustFS builds its signature check from the SignedHeaders list only, which would explain why it ignores
+    extra headers. The RustFS source at the tested image was not read.
+    Settling test: read the verifier in the source of the exact version.
+H2. Ceph 20.2.4 rejects p2 to p8, as the CVE fix says. Not tested here.
+    Settling test: run the same script on the Ceph VM.
+
+OPEN
+----
+O1. Whether the RustFS behaviour is a privilege escalation. In this test the signer is the admin identity and
+    can read the source bucket anyway, so p8 shows that the header is acted upon, not that a permission
+    was bypassed. Settling test: a scoped identity that has no read access to the second bucket signs the
+    URL. If the copy from the second bucket still succeeds, the server does not check the signer's
+    permission on the source.
+O2. Ceph run on the VM (the cell is empty in the table above), and the repeat of all four systems on the VMs.
+O3. Whether RustFS applies an unsigned Content-Type: p0 and p1 both store application/octet-stream, so the
+    test cannot tell. Settling test: send a distinct value, for example text/x-test, and compare.
+O4. RustFS is a beta (1.0.0-beta.8). Its behaviour here may change in a later release, and it must not be
+    read as a statement about a stable RustFS release.
+O5. Single node containers on a laptop, one run each. The behaviours above are rejections and
+    acceptances of requests, so repetition is unlikely to change them, but it was not repeated.
+
+PROCESS NOTES
+-------------
+- curl adds an unsigned Content-Type on its own when it sends a body. The script removes it with
+  -H "Content-Type:" in every case, otherwise Ceph would refuse every request for that reason (see the
+  Ceph record) and the test would not show the header under study.
+- The classification of a case is read from the raw files by a person. The script prints, it does not judge.

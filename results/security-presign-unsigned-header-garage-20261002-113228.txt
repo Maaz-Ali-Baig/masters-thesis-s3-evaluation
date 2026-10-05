@@ -1,0 +1,85 @@
+security-presign-unsigned-header  system=garage  endpoint=http://localhost:3900  region=garage
+date:   2026-10-02T09:32:28Z
+bucket: s3c-sec-ps-1002113228
+
+    create bucket                      HTTP 200  
+    put object for the GET control     HTTP 200  
+    create second bucket               HTTP 200  
+    put secret.txt in second bucket    HTTP 200  
+
+g0  control, presigned GET
+    presigned GET                      HTTP 200  presigned put body 
+
+p0  control, nothing extra
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  last-modified: Fri, 02 Oct 2026 09:32:29 GMT  accept-ranges: bytes  etag: "475560fcfd50b5c1693e8e476a2f
+    headers kept                       content-length: 19 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 501  <?xml version="1.0" encoding="UTF-8"?><Error><Code>NotImplemented</Code><Message>Unimplemented action: GetObjectAcl</Mes
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p1  unsigned Content-Type: application/octet-stream
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  last-modified: Fri, 02 Oct 2026 09:32:29 GMT  accept-ranges: bytes  etag: "475560fcfd50b5c1693e8e476a2f
+    headers kept                       content-type: application/octet-stream content-length: 19 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 501  <?xml version="1.0" encoding="UTF-8"?><Error><Code>NotImplemented</Code><Message>Unimplemented action: GetObjectAcl</Mes
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+p2  unsigned x-amz-meta-injected: yes
+    presigned PUT                      HTTP 400  <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Header `x-amz-meta-injected` should be signed</Message><
+
+p3  unsigned x-amz-acl: public-read
+    presigned PUT                      HTTP 400  <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Header `x-amz-acl` should be signed</Message><Resource>/
+
+p4  unsigned x-amz-tagging: unsignedtag=1
+    presigned PUT                      HTTP 400  <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Header `x-amz-tagging` should be signed</Message><Resour
+
+p5  unsigned x-amz-storage-class: STANDARD_IA
+    presigned PUT                      HTTP 400  <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Header `x-amz-storage-class` should be signed</Message><
+
+p6  unsigned x-amz-website-redirect-location
+    presigned PUT                      HTTP 400  <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Header `x-amz-website-redirect-location` should be signe
+
+p7  unsigned x-amz-copy-source: /s3c-sec-ps-1002113228/g0, empty body
+    presigned PUT                      HTTP 400  <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Header `x-amz-copy-source` should be signed</Message><Re
+
+p8  unsigned x-amz-copy-source from ANOTHER bucket: /s3c-sec-ps-1002113228-src/secret.txt, empty body
+    presigned PUT                      HTTP 400  <?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidRequest</Code><Message>Bad request: Header `x-amz-copy-source` should be signed</Message><Re
+
+s2  control, signed x-amz-meta-injected: yes
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  last-modified: Fri, 02 Oct 2026 09:32:32 GMT  accept-ranges: bytes  etag: "475560fcfd50b5c1693e8e476a2f
+    headers kept                       x-amz-meta-injected: yes content-length: 19 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 501  <?xml version="1.0" encoding="UTF-8"?><Error><Code>NotImplemented</Code><Message>Unimplemented action: GetObjectAcl</Mes
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+s3  control, signed x-amz-acl: public-read
+    presigned PUT                      HTTP 200  
+    head, own credentials              HTTP 200  HTTP/1.1 200 OK  last-modified: Fri, 02 Oct 2026 09:32:32 GMT  accept-ranges: bytes  etag: "475560fcfd50b5c1693e8e476a2f
+    headers kept                       content-length: 19 
+    anonymous GET                      HTTP 403
+    acl, own credentials               HTTP 501  <?xml version="1.0" encoding="UTF-8"?><Error><Code>NotImplemented</Code><Message>Unimplemented action: GetObjectAcl</Mes
+    AllUsers grants in ACL             0
+    content stored, own credentials    HTTP 200  presigned put body 
+
+--- cleanup
+    delete g0                          HTTP 204  
+    delete p0                          HTTP 204  
+    delete p1                          HTTP 204  
+    delete p2                          HTTP 204  
+    delete p3                          HTTP 204  
+    delete p4                          HTTP 204  
+    delete p5                          HTTP 204  
+    delete p6                          HTTP 204  
+    delete p7                          HTTP 204  
+    delete p8                          HTTP 204  
+    delete s2                          HTTP 204  
+    delete s3                          HTTP 204  
+    delete bucket                      HTTP 204  
+    delete secret.txt                  HTTP 204  
+    delete second bucket               HTTP 204  
