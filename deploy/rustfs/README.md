@@ -1,8 +1,9 @@
 # RustFS on the three VMs
 
-Three node RustFS 1.0.0-beta.8 on ceph0, ceph1 and ceph2 (192.168.1.72, .71, .70), one system at a time with
+Three node RustFS 1.0.1 on ceph0, ceph1 and ceph2 (192.168.1.72, .71, .70), one system at a time with
 Ceph, Garage and SeaweedFS stopped. The design is in `setup_notes.md` (section "Three node layouts"). The image
-is pinned by digest, the same digest as the laptop image.
+is pinned by digest (`sha256:1803faef5762...`, tag 1.0.1). The laptop image 1.0.0-beta.8 does not run on the VM CPU
+(no AVX2, crash with exit 132), so the laptop RustFS results are labelled beta.8 and have to be repeated on 1.0.1 (not done yet).
 
 Order (all run as root on the VM named in the first column):
 

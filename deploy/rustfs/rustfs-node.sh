@@ -10,7 +10,12 @@
 #   - /root/rustfs-config exists and is IDENTICAL on all three VMs (rustfs-secret.sh)
 #   - Ceph, Garage and SeaweedFS are stopped (one system at a time on the VMs)
 #
-# What it does: starts one RustFS 1.0.0-beta.8 container with podman on the host network. The volume list
+# Image: RustFS 1.0.1 (tag 1.0.1 = latest on 8 October 2026). The laptop image 1.0.0-beta.8 (sha256
+# fa19210ac469...) crashed on all VMs with "trap invalid opcode" (exit 132): its erasure coding crate
+# reed-solomon-erasure uses the AVX2 instruction vbroadcasti128 in reedsolomon_gal_mul, and the VM CPU
+# (QEMU Virtual CPU 2.5+) has no AVX2. 1.0.1 is the redo, see setup_notes.md.
+#
+# What it does: starts one RustFS container with podman on the host network. The volume list
 # names all six drives of the cluster (three nodes, two drives each), so RustFS forms one erasure coded
 # set over the six drives. The vendor documentation gives EC:3 (3 data and 3 parity shards) as the default
 # for 6 drives, two shards per node, and says that distributed mode needs at least 4 servers. We have 3 and
@@ -22,7 +27,7 @@
 
 set -eu
 
-IMAGE="docker.io/rustfs/rustfs@sha256:fa19210ac4697c79d7ccca1ec9b0eb91aebacc6691991ffb14014bb3c67e6cc3"
+IMAGE="docker.io/rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c"
 CFG="/root/rustfs-config"
 D1="/srv/s3/disk1/rustfs"
 D2="/srv/s3/disk2/rustfs"
