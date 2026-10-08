@@ -1963,7 +1963,7 @@ First system deployed on the university VMs under Prof. Baun's ruling (same plat
 
 ## SeaweedFS three node scripts and laptop test (8 October 2026)
 
-Scripts for the VMs are in `deploy/seaweedfs/` (secret and config creation, node start, roundtrip, stop). Not yet run on the VMs.
+Scripts for the VMs are in `deploy/seaweedfs/` (secret and config creation, node start, roundtrip, stop). First run on the VMs: see the section "SeaweedFS on the three VMs" at the end.
 
 **Laptop test of the planned flags** (pinned image digest `c42a5268...`, three containers `sw0`, `sw1`, `sw2` on one Docker network, embedded filer stores, flags as planned: `-master.peers`, `-dir` with two directories, `-volume.max=0,0`, `-master.volumeSizeLimitMB=1024`, `-master.defaultReplication=002`, same data center and rack, `-filer -s3`):
 - The three masters formed one cluster (`IsLeader` true on sw0 with two peers), three volume servers appeared in the topology, 1904 volume slots each.
@@ -1989,3 +1989,22 @@ Record: `results/garage-vm-extra-checks-2026-10-08.txt`.
 - **G2 multipart, proven with a condition:** a 100 MiB object (13 parts) written through ceph0 and read through ceph2 is identical, after the CLI was told `AWS_REQUEST_CHECKSUM_CALCULATION=when_required`. **Finding F1:** with the default settings of AWS CLI 2.36.8 the multipart upload to Garage v1.0.0 fails with `InvalidRequest: invalid checksum algorithm`. Every load tool in the performance phase must use the same checksum setting on all four systems.
 - **G3 restart persistence, proven:** containers removed and recreated on all three nodes. Same node ids, same layout and status hash (`c8d1a44f...315e`), the G1 object and the G2 object read back identical through ceph1. Not tested: unclean stop, a node down longer than the others (fault tolerance phase).
 - **G4 admin API:** no admin token and no metrics token set. `/health` and `/metrics` answer 200 without credentials from the LAN, `/v1/status`, `/v1/bucket`, `/v1/key` answer 403. Belongs to the security phase.
+
+## SeaweedFS on the three VMs (8 October 2026)
+
+Second system on the VMs. Garage was stopped first on ceph2, ceph1, ceph0 (`garage-stop.sh`, `containers left: 0` on each, data kept). Scripts: `deploy/seaweedfs/`, four scripts fetched at commit `c798c4d` and checked with `sha256sum -c` on all three VMs (all OK), later `seaweedfs-node.sh` again at commit `4325e39` (sha256 `0f132333...75ac`).
+
+**Steps and evidence** (hostname printed in every output):
+1. `seaweedfs-secret.sh create` on ceph0 made `/root/seaweedfs-config` (three files, mode 600, directory 700, never printed). The directory was copied to ceph1 and ceph2 with `scp -rp` typed by the user. The fingerprint (modes, sizes, sha256 of the three files) gives the same output hash `bf7227df...d4a4` on all three VMs.
+2. The pinned image digest `sha256:c42a5268...eb509` was pulled on all three (image id `7a6dd7173f8015fb178a`, same digest shown).
+3. **First start failed on all three VMs:** container `seaweedfs Exited (255)`. Log on ceph0: `master.go:234 please verify /srv/s3/disk1/seaweedfs is writable ... mkdir /srv/s3/disk1/seaweedfs/m9333: permission denied`. Cause found by tests on ceph0: the image entrypoint `/entrypoint.sh` drops to the user `seaweed` (uid 1000, `su-exec seaweed`) and only fixes the ownership of `/data`, while our data directories (root, 755) and the config (root, 600) belong to root. A throwaway container run as root with `--entrypoint sh` could create the directory (`mkdir-ok`), so the cause is the user switch. This is a difference from the laptop test, which did not hit it.
+4. **Fix:** `seaweedfs-node.sh` now runs `chown 1000:1000` on the two data directories and `chown -R 1000:1000` on the config directory before starting the container (commit `4325e39`). Rerun on all three: `seaweedfs Up`, `version 30GB 4.25 7acba59a5 linux amd64`, `master status (answered: 1)`.
+5. `seaweedfs-roundtrip.sh` on ceph0 (17:27:40Z, endpoints on port 8333, region us-east-1): 12 of 12 PASS (1 KiB and 1 MiB objects written through each node and read through the other two, sha256 equal), list on all three endpoints returns 0 objects after cleanup, `RESULT all passed`. Leader `192.168.1.70:9333` (ceph2), three volume servers `192.168.1.70:8080`, `.71:8080`, `.72:8080`. Raw record: `results/seaweedfs-roundtrip-vm-3node-20261008-192740.txt` (sha256 `087048cf84e96e9e9364ce4da899381c8b9ee85461086105687b64c205c8ff4f`, equal to the file hash printed on ceph0 after one byte, a trailing space on line 4, was restored in my copy).
+
+**What is proven:** a three node SeaweedFS cluster (three masters, three volume servers, three filers with S3) runs on the VMs under the pinned image, and objects written through any S3 endpoint read back identical through the other two. The embedded filer metadata is shared across the nodes on the VMs as well (a bucket created through ceph0 was usable through the other endpoints).
+
+**What is not proven yet:** that every volume really has three copies (replication 002 is configured, the roundtrip does not count copies), behaviour under load, failure behaviour, the compatibility probe and presigned PUT results on SeaweedFS on the VMs. The run as the non root user `seaweed` is a property of the image and is part of the setup.
+
+**Tool note:** the Claude session on ceph0 added a "correction" comment of its own to one copied output (about a comment line in the entrypoint) although told not to. The reading of the entrypoint (`su-exec seaweed`, `chown -R seaweed:seaweed /data`, uid 1000) is from its direct lines and fits the observed error.
+
+**State now:** SeaweedFS is running on all three VMs (container `seaweedfs`), Garage and Ceph stopped.
