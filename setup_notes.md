@@ -1960,3 +1960,16 @@ First system deployed on the university VMs under Prof. Baun's ruling (same plat
 **Tool note:** the Claude session on ceph0 retyped the first status table instead of copying it and mislabelled the ceph1 row (`[ceph2] z3`), then added a correction itself. Because of this, VM output that matters is now taken from compact commands that print a sha256 of their own output, and compared with the sha256 of my transcription. The table on the first run is not used as evidence.
 
 **State now:** Garage is running on all three VMs (containers `garage`), Ceph stopped. The Garage data stays on `/srv/s3/disk1/garage` and `/srv/s3/disk2/garage`.
+
+## SeaweedFS three node scripts and laptop test (8 October 2026)
+
+Scripts for the VMs are in `deploy/seaweedfs/` (secret and config creation, node start, roundtrip, stop). Not yet run on the VMs.
+
+**Laptop test of the planned flags** (pinned image digest `c42a5268...`, three containers `sw0`, `sw1`, `sw2` on one Docker network, embedded filer stores, flags as planned: `-master.peers`, `-dir` with two directories, `-volume.max=0,0`, `-master.volumeSizeLimitMB=1024`, `-master.defaultReplication=002`, same data center and rack, `-filer -s3`):
+- The three masters formed one cluster (`IsLeader` true on sw0 with two peers), three volume servers appeared in the topology, 1904 volume slots each.
+- Written through sw0, the 1 MiB object was identical when read through sw0, sw1 and sw2 (`cmp`). Written through sw2, identical when read through sw1. The bucket made on sw0 was listed on sw1. So the filers share metadata in this setup. This settles the hypothesis from the layout design for the laptop. It is not yet proven on the VMs (different network mode).
+- After the writes each node directory held three `.dat` files. That is a count and fits replication 002, it is not a proof of three copies per volume.
+- First run: one of the three containers (sw2) was not running 30 seconds after the start. The log was not captured, so the cause is unknown. The second run started all three. Open: whether a start race exists. The VM script prints the container state and can be rerun.
+- My own test mistakes in the first run: the bucket name `rt` is shorter than the three characters S3 needs.
+
+**Deliberate difference from the laptop single node run:** `-master.volumeSizeLimitMB=1024`, because the default of 30000 MB does not fit the 32 GB disks (the laptop topology reported `30GB 4.25 7acba59a5`). This must be named in the thesis when SeaweedFS figures from the laptop and from the VMs are compared.
