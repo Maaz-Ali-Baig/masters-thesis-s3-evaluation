@@ -52,10 +52,24 @@ Difference: the ACL read of the control objects (p0, p1, s2, s3) answers HTTP 40
 (<Error><Code>AccessDenied</Code><Message>Forbidden: Invalid signature) and HTTP 501 NotImplemented on the laptop.
 PROVEN: Garage v1.0.0 on the VMs rejects every unsigned header case, as the laptop single node did.
 
-HYPOTHESIS H3 (untested): the 403 on the ACL read is caused by the client on ceph0, not by Garage. Reasons for
-suspicion: the same request signs correctly with curl 8.5.0 on the laptop (501, the answer comes after the
-signature check), curl on ceph0 is 7.88.1, and the Ceph record has the same open point (O6, ACL read fails on Ceph
-from ceph0). The ACL request is the only one with a query parameter without a value (?acl). Settling test: send
-the ACL read with the AWS CLI on ceph0 (s3api get-object-acl). If Garage answers 501 NotImplemented, the curl
-signing on ceph0 is the cause and the same applies to Ceph O6.
-OPEN: whether the 403 is an effect of the three node cluster (not excluded until H3 is settled).
+The 403 on the ACL read, settled the same day on ceph0 (hostname debian, a temporary bucket with one object, removed
+afterwards, key never printed). Hypothesis H3 was: the 403 is caused by the client on ceph0 (curl 7.88.1, laptop
+curl 8.5.0), not by Garage. Result, each request signed by curl --aws-sigv4 with the header x-amz-content-sha256 of
+the empty body, except the AWS CLI line:
+  curl GET of the key, no query            HTTP 200
+  curl GET <key>?acl                       HTTP 403 AccessDenied "Forbidden: Invalid signature"  (the form the script sends)
+  curl GET <key>?acl=                      HTTP 501 NotImplemented "Unimplemented action: GetObjectAcl"
+  aws s3api get-object-acl (CLI 2.36.8)    NotImplemented "Unimplemented action: GetObjectAcl"
+(A first attempt without the x-amz-content-sha256 header answered 400 "Missing X-Amz-Content-Sha256 field" for both
+curl forms. That was a mistake in my test command and says nothing about ACLs.)
+PROVEN: Garage on the three node cluster answers an ACL read with 501 NotImplemented, as on the laptop. The 403 is
+produced by curl 7.88.1 on ceph0 when the query parameter has no value (?acl): the same request with ?acl= is
+accepted. So the three node cluster is not the cause, and the ACL lines of the VM presign file (403) are an artifact
+of the client on ceph0.
+NOT PROVEN: that curl 8.5.0 signs ?acl correctly (the laptop run answering 501 is consistent with it, the curl
+source was not read, and the laptop was not retested). NOT PROVEN for Ceph: the Ceph record O6 (ACL read answers 403
+SignatureDoesNotMatch on Ceph in p0, s2, s3) shows the same pattern with the same client, but the Ceph cluster is
+stopped, so O6 stays open. Settling test for O6 when Ceph runs again: the ACL read with ?acl=.
+CONSEQUENCE: the scripts send ?acl, so on ceph0 every ACL read through curl is unreliable until the scripts send
+?acl= (the form the AWS CLI sends). Changing the scripts changes the comparison with the laptop runs and needs a
+decision. The verdicts in section 1 (AWS CLI) are not affected, the presign verdicts p2 to p8 (400) are not affected.

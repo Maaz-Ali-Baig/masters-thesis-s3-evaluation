@@ -1,0 +1,75 @@
+Garage v1.0.0, three nodes on the university VMs: four further checks (8 October 2026)
+==========================================================================================
+
+Cluster:  ceph0 (hostname debian, 192.168.1.72), ceph1 (192.168.1.71), ceph2 (192.168.1.70), replication factor 3,
+          zones z1, z2, z3, layout version 1 (setup_notes.md, section "Garage v1.0.0 on the three VMs").
+Method:   commands typed into the Claude sessions on the three VMs, output read from the screen and checked, where
+          it carries a hash, against a second value. The hostname is printed first in every output.
+Times:    UTC on the VMs, afternoon of 8 October 2026 (the clock readings that matter are given per check).
+
+G1. Three real copies of an object
+----------------------------------
+Before the write, the same on all three VMs: 2 files under /srv/s3/disk1/garage/data and /srv/s3/disk2/garage/data
+(two files of 64 bytes named garage-marker), du -sb disk1 251, disk2 187.
+Write: a 3 MiB random object (sha256 37484a689f49bb2b80df0c99bdd985bf1ded008d435645611649f84835c1120c, key
+g1-3mib in thesis-test-bucket) through the S3 endpoint of ceph0. An ETag came back.
+After the write (16:32:06 ceph0, 16:32:22 ceph1, 16:32:32 ceph2), the same on all three VMs: 5 files, du -sb disk1
+3146414, disk2 187. The file list (size and the first 12 characters of the name) is the same on all three VMs:
+1048613 31b5f4b86646, 1048613 3fcfec56b528, 1048613 b59d70096497, 64 garage-marke, 64 garage-marke. The sha256 of
+the sorted list of file names is 9c107a1ca1e3611f62e39245fee95ac2a895b30211ec336d3dfe5010cf3f0a2a on all three.
+PROVEN: after one write through one node, each of the three VMs stores the same three block files (three blocks of
+1 MiB plus 37 bytes), so the object data exists three times, once per node.
+NOT PROVEN: that the block files are byte identical on the three VMs (the names are the block hashes by Garage's
+design, not checked here, and the sizes are equal). All three blocks went to disk1, disk2 received none, so the
+spread of blocks over the two data directories of a node is not tested.
+
+G2. Large object, multipart
+---------------------------
+First attempt, AWS CLI 2.36.8 default settings, aws s3 cp of a 100 MiB random file through ceph0 (sha256
+e3186f92abab4e208028528731c05d99ed5e723c17d8ec9dcac1d8aee037f756): failed with
+  An error occurred (InvalidRequest) when calling the CreateMultipartUpload operation: Bad request: invalid
+  checksum algorithm
+Nothing was stored (HeadObject answered 404 afterwards). The newer AWS CLI adds a default checksum to uploads, and
+Garage v1.0.0 refuses the algorithm on the multipart request.
+Second attempt, the same command with AWS_REQUEST_CHECKSUM_CALCULATION=when_required (a new random 100 MiB file,
+sha256 7fab7168607645af8e365fcee23866ddce8e69c99a85773a0ec3d5a3fa9f0ac6): upload through ceph0 rc 0, ETag
+"0bc9cf98fc3c70002562cc52bb876e86-13" (13 parts, so it was a multipart upload), download through ceph2 rc 0, sha256
+of the download equal to the upload, cmp prints IDENTICAL. The seconds printed (2 and 1) are whole second readings
+on a shared VM, not a benchmark.
+PROVEN: Garage v1.0.0 stores a 13 part multipart object written through one node and returns it unchanged through
+another node, when the client does not send the default checksum.
+FINDING F1: with the default settings of AWS CLI 2.36.8, a multipart upload to Garage v1.0.0 fails. This matters for
+the performance phase: any load tool must use the same checksum setting for all four systems, and Garage needs the
+when_required behaviour. Related to the probe result C20 (CRC64NVME accepted but the checksum not returned), but
+that the two have the same cause is not proven.
+
+G3. Restart persistence
+-----------------------
+Garage was stopped on ceph2, ceph1, ceph0 (garage-stop.sh, container removed, "containers left: 0", the directories
+data and meta kept on disk), then started again on ceph0, ceph1, ceph2 with garage-node.sh (rc 0, "garage Up").
+After the start:
+  - the node ids begin f3ef27cd (ceph0), f8b9d17e (ceph1), b33b45c3 (ceph2), the same as before;
+  - the config fingerprint of ceph0 is 596559a01599ce682991e4eab78b3f03cf498cc2b7ea51e6ad3aa0881b4821fa, the same as
+    at the first start;
+  - the compact status and layout listing (layout version, three nodes with zones and 60.0 GB) has the sha256
+    c8d1a44fade0e7f56e9c506f7faabba801021ed37bb25f0c62c8fbb39aee315e, the same value as before the stop;
+  - the 3 MiB object of G1 read through ceph1 is byte identical to the original (cmp), sha256 37484a68...120c;
+  - the 100 MiB object of G2 read through ceph1 has sha256 7fab7168...f0ac6, equal to the value recorded before the stop.
+PROVEN: a Garage cluster whose containers were removed and recreated on all three nodes comes back with the same node
+ids, layout and stored data.
+NOT TESTED: a restart with a node down longer than the others, an unclean stop (power loss), data written while a
+node was away (that belongs to the fault tolerance phase).
+
+G4. Admin API on port 3902, no token
+------------------------------------
+Config: no admin_token and no metrics_token (grep -c in /etc/garage/garage.toml: 0). The API is bound to 0.0.0.0.
+GET requests from ceph0, to localhost and to 192.168.1.71, without any credentials:
+  /health      200 "Garage is fully operational ..."
+  /metrics     200 "# HELP api_admin_request_counter ..." (the Prometheus metrics, readable without a token)
+  /v1/status   403 AccessDenied "Forbidden: Admin t..." (cut at 60 characters in the listing)
+  /v1/bucket   403 AccessDenied
+  /v1/key      403 AccessDenied
+PROVEN: with this configuration the admin endpoints that manage buckets and keys refuse every request, and the health
+and metrics endpoints answer anyone who can reach the port on the network of the VMs.
+NOT TESTED: what the metrics reveal (bucket names, node ids, request counts), whether a token would be needed for the
+thesis threat model. Belongs to the security phase, with the same question for the other systems.
