@@ -1973,3 +1973,11 @@ Scripts for the VMs are in `deploy/seaweedfs/` (secret and config creation, node
 - My own test mistakes in the first run: the bucket name `rt` is shorter than the three characters S3 needs.
 
 **Deliberate difference from the laptop single node run:** `-master.volumeSizeLimitMB=1024`, because the default of 30000 MB does not fit the 32 GB disks (the laptop topology reported `30GB 4.25 7acba59a5`). This must be named in the thesis when SeaweedFS figures from the laptop and from the VMs are compared.
+
+### Garage on the VMs: compatibility probe and presigned PUT (8 October 2026)
+
+Run on ceph0 by `deploy/garage/garage-tests.sh` (commit `ef0da01`), which fetches the two test scripts at commit `c798c4d` and stops if their sha256 differs. Record: `results/garage-vm-compat-and-presign-2026-10-08.txt`.
+- **Compatibility probe, 22 tests:** 7 PASS, 9 FAIL, 6 UNSUPPORTED. The `summary.tsv` has sha256 `bef96583...960fb` on ceph0, the same as the laptop single node file of 30 September. So all verdicts and sub-check details are identical, the three node cluster changed nothing here.
+- **Presigned PUT:** p2 to p8 (every unsigned x-amz header case) answer 400 InvalidRequest, the controls answer 200, same as the laptop. One difference: the ACL read of the control objects answers 403 AccessDenied (Invalid signature) on the VMs and 501 NotImplemented on the laptop. Normalized comparison: changing the four 501 lines to 403 reproduces the VM hash exactly, so nothing else differs.
+- **Hypothesis H3 (untested):** the 403 comes from curl 7.88.1 on ceph0 (laptop 8.5.0) signing the valueless `?acl` query wrongly, the same symptom as Ceph O6. Settling test: `aws s3api get-object-acl` on ceph0, expect 501 on Garage.
+- Evidence archives stay on ceph0 (sha256 in the record), the key never appeared in them (0 files).

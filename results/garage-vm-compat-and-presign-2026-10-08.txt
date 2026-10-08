@@ -1,0 +1,61 @@
+Garage v1.0.0, three nodes on the university VMs: S3 compatibility probe and presigned PUT test
+================================================================================================
+
+Run on:   ceph0 (hostname debian, 192.168.1.72), 8 October 2026, against the Garage node on ceph0 itself
+          (http://localhost:3900, region garage). Cluster: three nodes ceph0, ceph1, ceph2, replication
+          factor 3, one zone per node (setup_notes.md, section "Garage v1.0.0 on the three VMs").
+Scripts:  scripts/s3-compat.sh sha256 6dabde8fbb8b9c166563595fa50ec29c98c7159d27b632d42552c45daf3e762d
+          scripts/security-presign-unsigned-header.sh sha256 f1678fc1e4f2559eb33d1c59d3b2e520b97882aa488f27ec4e5aa943a4d0ab92
+          fetched at commit c798c4d0ec8d7bb5288463802399572a6ff8a178 by deploy/garage/garage-tests.sh
+          (commit ef0da013b29a541b3a0875727838a72ff1c7a0fb), which refuses to run if the hash differs.
+          AWS CLI 2.36.8 (/opt/aws-cli-new). curl on ceph0 is 7.88.1, curl on the laptop is 8.5.0.
+Compare:  the laptop run of 30 September 2026 against Garage v1.0.0 as a single node, replication factor 1
+          (results/compat-garage-20260930-210449.tar.gz, results/security-presign-unsigned-header-garage-20261002-113228.txt).
+
+Evidence kept on ceph0 (not in the repository, the raw replies of 22 probe tests are in the archive):
+  /root/compat-garage-vm-20261008-142155.tar.gz   19364 bytes  sha256 a9e600dd9d3dfccfbc81446d96109e9875627724a89f60f8c3146a02a635e957
+  /root/presign-garage-vm-20261008-142536.tar.gz   1216 bytes  sha256 4b9eb01677205fd523ee29d93643ac8148b254ea7133e97cf64ff55f87f9f9dc
+  Each run was scanned for the secret key (grep -rlF on ceph0): 0 files contain it, in both runs.
+  The hashes above were read from the screen of the session on ceph0 at full zoom. The probe summary
+  and the presign file were also compared by hash with the laptop files, see below.
+
+1. S3 compatibility probe (22 tests)
+------------------------------------
+Result on the VMs: 7 PASS, 9 FAIL, 6 UNSUPPORTED (lines "9 FAIL", "7 PASS", "6 UNSUPPORTED" of the count).
+Per test verdict: C01 to C07 PASS; C08 FAIL; C09 and C10 UNSUPPORTED; C11 to C13 FAIL; C14 UNSUPPORTED;
+C15 and C16 FAIL; C17 to C19 UNSUPPORTED; C20 to C22 FAIL.
+Comparison with the laptop run:
+  - The list "<test id> <verdict>" plus the counts has sha256 3b5c117b2a0db6e466f50b17fc97c2024cc59169f30dd6a135b02be788a2a30b
+    on ceph0 and the same value computed from the laptop summary.tsv. The verdict of every test is identical.
+  - summary.tsv itself has sha256 bef965838671722571e2ecac53025ca4b44650ce76fc466b07f416904b9960fb on ceph0 and the
+    same value for the laptop file. The sub-check details are byte for byte identical as well.
+PROVEN: running the same probe against the three node cluster on the VMs gives the same result as the single
+node laptop run. Nothing in the three node setup (replication factor 3, three zones) changed the S3 behaviour
+measured by these 22 tests.
+NOT PROVEN: that the 22 tests cover behaviour that could differ between one node and three nodes (they do not
+test replication or failure).
+
+2. Presigned PUT with unsigned x-amz headers (CVE-2026-54330 vector)
+--------------------------------------------------------------------
+Raw file on ceph0: 85 lines, 5667 bytes, sha256 c19e0f874d39208dfa116dd655b3d2b93b9f0c47951e08901236e3270db2d8b7
+(/root/presign-garage-vm-20261008-142536/run/security-presign-unsigned-header-garage-vm-20261008-142537.txt).
+The laptop file has 85 lines and 5664 bytes (the three extra bytes are "garage-vm" against "garage" in the header).
+Comparison method, the same awk on both files: drop the header, date and bucket lines, print only the case id on
+case lines, squeeze spaces and cut every other line to 45 characters. Result: 82 lines each. The hashes differ,
+laptop 27587da3eb69a3515030aeb45e534dd3ee4fe4eb01c49d1543157ed30382fb18, VMs c6c14f85b7516dfa29fe9d60f629a01199bca536bcf664729dfef3b04ec2d9ea.
+If the four lines "acl, own credentials HTTP 501" of the laptop view are changed to "HTTP 403", the hash of the
+laptop view is exactly c6c14f85...d9ea. So the two runs differ in nothing else within the compared text.
+Same on both: g0, p0, p1, s2 and s3 answer HTTP 200 (controls and the Content-Type case); p2 to p8 (unsigned
+x-amz-meta, acl, tagging, storage class, website redirect, copy source from the same bucket and from another
+bucket) answer HTTP 400 InvalidRequest "Header ... should be signed"; the cleanup deletes answer HTTP 204.
+Difference: the ACL read of the control objects (p0, p1, s2, s3) answers HTTP 403 on the VMs
+(<Error><Code>AccessDenied</Code><Message>Forbidden: Invalid signature) and HTTP 501 NotImplemented on the laptop.
+PROVEN: Garage v1.0.0 on the VMs rejects every unsigned header case, as the laptop single node did.
+
+HYPOTHESIS H3 (untested): the 403 on the ACL read is caused by the client on ceph0, not by Garage. Reasons for
+suspicion: the same request signs correctly with curl 8.5.0 on the laptop (501, the answer comes after the
+signature check), curl on ceph0 is 7.88.1, and the Ceph record has the same open point (O6, ACL read fails on Ceph
+from ceph0). The ACL request is the only one with a query parameter without a value (?acl). Settling test: send
+the ACL read with the AWS CLI on ceph0 (s3api get-object-acl). If Garage answers 501 NotImplemented, the curl
+signing on ceph0 is the cause and the same applies to Ceph O6.
+OPEN: whether the 403 is an effect of the three node cluster (not excluded until H3 is settled).
