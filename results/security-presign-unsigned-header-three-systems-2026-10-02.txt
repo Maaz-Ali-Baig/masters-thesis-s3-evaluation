@@ -15,8 +15,9 @@ Targets:   the same three single node Docker containers on the laptop as in
 Raw runs:  results/security-presign-unsigned-header-seaweedfs-20261002-113220.txt
            results/security-presign-unsigned-header-rustfs-20261002-113223.txt
            results/security-presign-unsigned-header-garage-20261002-113228.txt
-Not yet:   Ceph. The Ceph run needs the VM session (the VM subnet is not reachable from the laptop). Per the
-           supervisor's ruling of 22 September 2026 (all systems on the university VMs, same parameters, one
+Ceph:      run later on ceph0 (the VM subnet is not reachable from the laptop), 5 October 2026, see
+           results/security-presign-unsigned-header-ceph-2026-10-05.txt, which also holds the four system
+           table. Per the supervisor's ruling of 22 September 2026 (all systems on the university VMs, same parameters, one
            after another) the three laptop systems are also to be repeated on the VMs. This record is the
            laptop part and does not replace that.
 
@@ -90,8 +91,8 @@ HYPOTHESES (not settled, do not cite as findings)
 H1. RustFS builds its signature check from the SignedHeaders list only, which would explain why it ignores
     extra headers. The RustFS source at the tested image was not read.
     Settling test: read the verifier in the source of the exact version.
-H2. Ceph 20.2.4 rejects p2 to p8, as the CVE fix says. Not tested here.
-    Settling test: run the same script on the Ceph VM.
+H2. Ceph 20.2.4 rejects p2 to p8, as the CVE fix says. Not tested in this laptop run. SETTLED on
+    5 October 2026: the Ceph run rejects all of them, see the Ceph record.
 
 OPEN
 ----
@@ -100,7 +101,8 @@ O1. Whether the RustFS behaviour is a privilege escalation. In this test the sig
     was bypassed. Settling test: a scoped identity that has no read access to the second bucket signs the
     URL. If the copy from the second bucket still succeeds, the server does not check the signer's
     permission on the source.
-O2. Ceph run on the VM (the cell is empty in the table above), and the repeat of all four systems on the VMs.
+O2. Ceph run on the VM: done on 5 October (the Ceph column is in the Ceph record). Still open: the repeat of
+    the three laptop systems on the VMs.
 O3. Whether RustFS applies an unsigned Content-Type: p0 and p1 both store application/octet-stream, so the
     test cannot tell. Settling test: send a distinct value, for example text/x-test, and compare.
 O4. RustFS is a beta (1.0.0-beta.8). Its behaviour here may change in a later release, and it must not be

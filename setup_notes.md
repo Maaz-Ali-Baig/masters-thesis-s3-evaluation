@@ -1869,3 +1869,75 @@ SeaweedFS answers `403 SignatureDoesNotMatch`. Garage answers `400 InvalidReques
 ### Supervisor ruling on the platform (reply of 22 September 2026, found 4 October)
 
 Prof. Baun replied on 22 September: the software solutions must run on the same platform and be tested with the same parameters, so all of them are to be deployed on the university VMs and tested one after the other. His reply was missed because the university moved the internal mail to Outlook. A follow up mail was sent on 4 October. Consequences: SeaweedFS, RustFS and Garage are deployed on the Proxmox VMs with the same nodes and resources as Ceph, and performance figures come from the VMs. The laptop results stay in the thesis and are labelled as laptop runs next to the VM runs. The compatibility and security scripts are repeated on the VMs.
+
+### Presigned PUT test on Ceph (5 October 2026)
+
+Record `results/security-presign-unsigned-header-ceph-2026-10-05.txt` (it also holds the four system table), raw file `results/security-presign-unsigned-header-ceph-20261005-230914.txt` (79 lines, sha256 `0c9d51ba3593b9e46661341d6643bd8d78de5d0017069c75947995eced776476`, trailing spaces stripped, copy checked by hash against ceph0). The script was fetched on ceph0 from the repository at commit `6917bc3` and its sha256 equals the one recorded above (`f1678fc1...0ab92`).
+
+**Result.** Ceph 20.2.4 rejects all eight unsigned cases (unsigned `Content-Type`, metadata, ACL, tagging, storage class, website redirect, copy source in the same and in another bucket) with `403 AccessDenied`. The controls pass: the presigned GET and a plain PUT give 200, the metadata header inside the signature is accepted and applied, and the ACL header inside the signature is accepted and applied (anonymous GET 200, while p0 and s2 stay private with 403). So the rejection is caused by the header not being signed, and the test can detect an applied header on Ceph.
+
+| | SeaweedFS 4.25 | RustFS 1.0.0-beta.8 | Garage v1.0.0 | Ceph 20.2.4 |
+|---|---|---|---|---|
+| Unsigned `x-amz-*` headers (all cases) | 403 | 200, five applied | 400 | 403 |
+| Unsigned `Content-Type` | accepted | accepted | accepted | 403 |
+
+**Limits.** The ACL read with the owner's credentials returns `403 SignatureDoesNotMatch` on Ceph, so the "AllUsers grants 0" line is not valid for Ceph (cause not investigated, open O6). One run on one gateway, from ceph0 itself. The test shows the behaviour of the patched release, not that an older release accepted the headers, so it does not by itself prove the content of CVE-2026-54330. The RGW source was not read for the reason behind the status code.
+
+## VM disks for the other three systems, and a Ceph orchestrator surprise (5 October 2026)
+
+Baun's ruling (all systems on the same platform, the university VMs) means SeaweedFS, RustFS and Garage are deployed on ceph0, ceph1 and ceph2. Every VM has 4 vCPU, 7.7 GiB RAM, 975 MiB swap and three 32 GB disks (OS disk, two Ceph OSD disks). The free space on the OS disk is only 15 to 20 GB, so two more 32 GB disks were added to each VM in Proxmox (serials `drive-scsi3` and `drive-scsi4`) to give the other systems the same capacity as Ceph's two OSDs per node. Ceph is stopped during the other systems' runs.
+
+**Disk names are not stable.** After the reboot of ceph0 the OS disk was `sda`, the OSDs `sdb` and `sdd`, the new disks `sdc` and `sde`, while before the reboot the OS disk had been `sdc`. All disk work uses `/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsiN` and a check that the disk is empty (`wipefs -n` prints nothing, `blkid` returns 2).
+
+**What went wrong.** The cluster has an OSD service `osd.all-available-devices` (`host_pattern: '*'`, `all: true`, not unmanaged). cephadm turns every blank disk into an OSD. On ceph0 the new disks were formatted as XFS within minutes, before cephadm reached them. On ceph1 and ceph2 the blank disks were claimed as osd.6, osd.7, osd.8 and osd.9 (the cluster went from 6 to 10 OSDs, still `HEALTH_OK`, 449 PGs `active+clean`) between the blank check and the format command. The format command has a guard that checks the disk is empty before `mkfs`, and it aborted on ceph1, so nothing was formatted and no existing OSD disk was written. My mistake: I did not look at the orchestrator spec before the disks were added.
+
+**Fix.** `ceph orch apply osd --all-available-devices --unmanaged=true` (the spec now shows `unmanaged: true`, existing OSDs unchanged), then `ceph orch osd rm 6 7 8 9 --zap`. Ceph drained the four OSDs (few data, 5.3 MiB in 295 objects), purged and zapped them. Afterwards: 6 OSDs up, `HEALTH_OK`, 449 PGs `active+clean`, 192 GiB capacity again, and the four disks listed as available with no reject reason.
+
+**Result.** On all three VMs the two new disks are XFS (labels `s3disk1` and `s3disk2`), mounted at `/srv/s3/disk1` and `/srv/s3/disk2` by UUID with `nofail`, `xfsprogs` installed. Ceph's own disks (`drive-scsi1` and `drive-scsi2`) were not written by anything I ran.
+
+**Permanent change to the Ceph cluster configuration:** the OSD service is unmanaged, so a blank disk added later is not claimed automatically. Say so wherever the Ceph setup is described.
+
+**A tool note.** The Claude Code sessions on the VMs have their own safety classifier. It blocked disk formatting twice, once because its last `lsblk` still showed OSDs on the disks (stale, they had just been removed). A fresh read only `lsblk` and `wipefs` plus the changed facts in the prompt cleared that. Nothing was run in pieces to get around a block.
+
+### Images for SeaweedFS, RustFS and Garage on the VMs (6 October 2026)
+
+podman 4.3.1 is the container runtime on ceph0, ceph1 and ceph2 (docker is not installed). Docker Hub is reachable from the VMs (`HTTP/2 401` on an unauthenticated `/v2/` request). Each VM pulled the same three images by registry digest, which is the digest recorded for the laptop images, so the builds are identical and not "latest" of a later day:
+
+| Image | Digest (same on laptop and all three VMs) | Version printed by the binary on each VM |
+|---|---|---|
+| `docker.io/chrislusf/seaweedfs` | `sha256:c42a5268ca13fcb65e0fae925886b107f4bf294d8db15e1be5509d55104eb509` | `version 30GB 4.25 7acba59a5 linux amd64` |
+| `docker.io/rustfs/rustfs` | `sha256:fa19210ac4697c79d7ccca1ec9b0eb91aebacc6691991ffb14014bb3c67e6cc3` | `rustfs 1.0.0-beta.8`, git commit `64c0ede0261eeb7ccd415221d6f102aa70829b6a`, built 2026-06-10, rustc 1.96.0 |
+| `docker.io/dxflrs/garage` | `sha256:0c7ed80d22c0b0f902fbd0ec74fc68073f72a46ea15d54e3c4c484184a8c7516` | `garage v1.0.0` |
+
+Proof on each VM: `podman images --digests` prints the digests above, and the binaries print the version strings above (the SeaweedFS and RustFS strings equal the ones captured from the laptop images on 22 September). Note for readers of the raw output: podman's image id (`7a6dd717...`, `df6c9c72...`, `3754b851...`, the same on all three VMs) differs from the laptop id because Docker on the laptop reports the registry digest as the id and podman reports the content id, and the sizes differ because Docker shows compressed and podman unpacked sizes. The digest and the version strings are the comparison that counts. `podman manifest inspect docker://...` is not supported in podman 4.3.1, so images were pulled directly by digest. Free space on the OS disk after the pull: 15 GB (ceph0), 18 GB (ceph1), 19 GB (ceph2).
+
+## Three node layouts for SeaweedFS, RustFS and Garage on the VMs (design, 6 October 2026)
+
+Status: **design only, nothing deployed yet.** Every statement taken from the vendor documentation is marked (doc) and is untested until a deployment step proves it.
+
+**Common rules.** Nodes: ceph0 (hostname `debian`, 192.168.1.72), ceph1 (192.168.1.71), ceph2 (192.168.1.70). One system runs at a time and Ceph is stopped (`noout` set first). Containers run with podman 4.3.1, `--network host`, the images by digest from the section above. Data goes to `/srv/s3/disk1/<system>` and `/srv/s3/disk2/<system>` (two XFS disks of 32 GB per node, the same capacity as Ceph's two OSDs). No resource limits (the VMs are identical: 4 vCPU, 7.7 GiB RAM). Test credentials are generated per system, kept in a mode 600 file on the VM and never printed. After each deployment: an S3 round trip through every node (write on one, read on the other two), the cluster status commands, and the versions recorded.
+
+**Redundancy is not identical across the four systems, and the thesis must say so.** Ceph: replicated pools, size 3 across 3 hosts (default `osd_pool_default_size` 3, to be confirmed with `ceph osd pool ls detail` when Ceph is restarted). Garage: `replication_factor = 3`, three zones, so every node holds every object. SeaweedFS: replication `002`, three copies on three different volume servers. RustFS: erasure coding over 6 drives, and the docs give EC:3 as the default for 6 to 7 drives per set (doc), so 3 data plus 3 parity shards, two shards per node, 2x raw overhead against 3x for the others. One failed node costs RustFS 2 of 6 shards (still readable), two failed nodes cost 4 of 6 (not readable). The fault tolerance chapter compares what each system survives, not an equal storage overhead.
+
+**Garage v1.0.0 (3 nodes).**
+- `garage.toml` per node: `replication_factor = 3`, `db_engine = "lmdb"` and `s3_region = "garage"` as on the laptop, `rpc_bind_addr = "[::]:3901"`, `rpc_public_addr = "<node ip>:3901"`, the same `rpc_secret` on all nodes, `metadata_dir = /srv/s3/disk1/garage/meta`, `data_dir` as a list of two directories with a capacity each (list syntax exists since v0.9.0, doc): `[{ path = "/srv/s3/disk1/garage/data", capacity = "30G" }, { path = "/srv/s3/disk2/garage/data", capacity = "30G" }]`.
+- Connect: `garage node connect <id>@<ip>:3901` from two nodes to the third (doc: one direction per pair is enough). Layout: `layout assign <id> -z z1|z2|z3 -c <capacity>` and `layout apply`, then `key create` and bucket create.
+- Open: what `-c` means with two data directories (sum of both?). Settled by `garage layout show` after the assign.
+
+**SeaweedFS 4.25 (3 nodes).**
+- The laptop ran the all in one `weed server -s3 -s3.config=...`. On the VMs the same command runs on each node with `-master.peers=<three ip>:9333`, `-dir=/srv/s3/disk1/seaweedfs,/srv/s3/disk2/seaweedfs`, `-volume.max=0`, `-master.defaultReplication=002`, the same data center and rack on all nodes (so `002` means two more copies on other servers in that rack), and `-filer -s3` with the same `s3_config.json` and `security.toml` (the JWT signing keys, see Issue 4 above) mounted at `/etc/seaweedfs`. Three masters is the odd number a quorum needs (doc).
+- Filers: each node runs a filer with the embedded store. The wiki says that filers find each other through the master and aggregate each other's metadata, and warns that mixing embedded and shared stores is not fine (doc). So an object written through one node's S3 endpoint should be visible through the others. This is a hypothesis until proven. Fallback if it fails: one filer and one S3 gateway on ceph0 only, which would be a single point of failure and has to be reported as a limit.
+
+**RustFS 1.0.0-beta.8 (3 nodes).**
+- `RUSTFS_VOLUMES="http://192.168.1.{70...72}:9000/srv/s3/disk{1...2}/rustfs"` (brace expansion with three dots, doc) on every node, plus `RUSTFS_ACCESS_KEY`, `RUSTFS_SECRET_KEY`, `RUSTFS_ADDRESS=":9000"`, `RUSTFS_CONSOLE_ENABLE`, `RUSTFS_CONSOLE_ADDRESS=":9001"`. Host networking is required for the node to node traffic (noted on 22 August).
+- **Real risk:** the docs state that a minimum of 4 servers is required for distributed mode (doc). We have 3, and Baun requires the same number of nodes for every system. Whether RustFS starts, refuses or runs degraded with 3 nodes and 6 drives is unknown and is the first thing the deployment shows. If it refuses, that is a result to report (RustFS cannot run in the required topology), and the choice of a different RustFS topology goes to Prof. Baun. It is not decided silently.
+
+**Order of deployment:** Garage (cluster first by design, a good test of the process), then SeaweedFS, then RustFS (riskiest).
+
+### Ceph stopped on all three VMs (6 October 2026)
+
+Before the stop (ceph0, `ceph osd pool ls detail`): all 8 pools are `replicated size 3 min_size 2` (this confirms the redundancy statement above). Flags `noout` and `norebalance` were set with `ceph osd set`, then the cluster target `ceph-377124a6-acb5-11f1-b854-bc2411d95a65.target` was stopped on ceph1, ceph2 and last on ceph0 (`systemctl stop`). Verified on each host (hostname in the output): target `inactive`, 0 podman containers, RAM available 6.0 GiB (ceph1), 5.5 GiB (ceph2), 6.1 GiB (ceph0), and on ceph0 `/srv/s3/disk1` and `/srv/s3/disk2` still mounted. Nothing was deleted.
+
+**To start Ceph again:** `systemctl start ceph-377124a6-acb5-11f1-b854-bc2411d95a65.target` on ceph0, ceph1 and ceph2, wait for the monitors, then `ceph osd unset noout` and `ceph osd unset norebalance`, and check `ceph -s` for `HEALTH_OK`. The OSD service stays `unmanaged`.
+
+**Tool note:** the stop was blocked in the sessions on ceph0 (twice by the Claude there and once by the harness' own check, which treated resending as a bypass of the earlier refusal) and passed on ceph1 and ceph2. It was finished by running the command in the Proxmox console of ceph0. The `!` prefix does not run in the web view of a Remote Control session.

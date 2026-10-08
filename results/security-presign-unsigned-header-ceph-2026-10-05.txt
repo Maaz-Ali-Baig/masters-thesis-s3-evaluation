@@ -1,0 +1,89 @@
+Security test: presigned PUT URL with headers the signature does not cover, Ceph RGW, with the four system table
+================================================================================================================
+Run date:  5 October 2026, 21:09 UTC (the VM shows 23:09 local time)
+Script:    scripts/security-presign-unsigned-header.sh, 173 lines, sha256
+           f1678fc1e4f2559eb33d1c59d3b2e520b97882aa488f27ec4e5aa943a4d0ab92. On ceph0 it was fetched from
+           the public repository at commit 6917bc3 (raw.githubusercontent.com, pinned to the commit) and the
+           hash printed on ceph0 equals the hash above.
+Client:    curl signing its own requests, openssl for the signature, run on ceph0 against the gateway on
+           localhost:80 (the same arrangement as the Ceph compatibility run). The keys were read inline from
+           the AWS CLI configuration and are in no output file.
+Target:    Ceph Tentacle 20.2.4, three VMs, RGW daemon rgw.s3test.debian.ghnhoi on ceph0.
+Raw file:  results/security-presign-unsigned-header-ceph-20261005-230914.txt, 79 lines, 5268 bytes, sha256
+           0c9d51ba3593b9e46661341d6643bd8d78de5d0017069c75947995eced776476. This is the file as the script
+           wrote it, with trailing spaces removed from the line ends (awk sub on whitespace at the end of a
+           line, nothing else changed). The original on ceph0 is /root/security-presign-unsigned-header-ceph-
+           20261005-230914.txt, 5319 bytes, sha256
+           3387cf0de034d88d52aca4230a0bd63b298ebf0277dd752a99889bcab1241322. The stripped text was printed on
+           ceph0 between markers with its sha256, copied from the page text and written here, and the hash of
+           the copy equals the hash printed on ceph0.
+Laptop:    the three other systems are in results/security-presign-unsigned-header-three-systems-2026-10-02.txt
+Order:     this run was done after the laptop runs and with the same script, unchanged.
+
+RESULT (HTTP status of the presigned PUT)
+-----------------------------------------
+Case  Unsigned header sent                        SeaweedFS 4.25   RustFS 1.0.0-beta.8   Garage 1.0.0   Ceph 20.2.4
+g0    control, presigned GET                      200              200                   200            200
+p0    control, nothing extra                      200              200                   200            200
+p1    Content-Type: application/octet-stream      200, applied     200, see O3           200, applied   403
+p2    x-amz-meta-injected: yes                    403              200, APPLIED          400            403
+p3    x-amz-acl: public-read                      403              200, not applied      400            403
+p4    x-amz-tagging: unsignedtag=1                403              200, APPLIED          400            403
+p5    x-amz-storage-class: STANDARD_IA            403              200, APPLIED          400            403
+p6    x-amz-website-redirect-location             403              200, APPLIED          400            403
+p7    x-amz-copy-source: same bucket object       403              200, APPLIED          400            403
+p8    x-amz-copy-source: object in another bucket 403              200, APPLIED          400            403
+s2    control, meta header signed                 200, applied     200, applied          200, applied   200, applied
+s3    control, ACL header signed                  200              200, not applied      200            200, APPLIED
+
+Ceph error reply for p1 to p8: HTTP 403 <Code>AccessDenied</Code> with an empty <Message></Message>
+(the empty Message is the same Ceph behaviour that crashes the AWS CLI, see
+results/aws-cli-crash-on-ceph-error-replies-2026-10-02.txt).
+
+PROVEN (quoted lines in the raw file)
+-------------------------------------
+1. Ceph 20.2.4 rejects all eight unsigned cases, p1 to p8, with 403 AccessDenied. That includes every
+   x-amz header that RustFS accepted and applied.
+2. The rejection is caused by the header not being signed, not by the header itself and not by the request
+   shape. With nothing extra (p0) the same PUT is accepted, and with the metadata header inside the signature
+   (s2) it is accepted and applied ("x-amz-meta-injected: yes" in the headers read back). Only the signing
+   of the header differs between p2 and s2.
+3. The test can detect an applied header on Ceph. In the control s3, where x-amz-acl: public-read is part of
+   the signature, an anonymous GET returns 200 on an object that p0 and s2 leave private (403). So Ceph
+   applies the ACL header when it is signed, and refuses the same header when it is not (p3).
+4. The signing code is correct on Ceph: g0 (presigned GET) and p0 are 200.
+5. Ceph also rejects an unsigned Content-Type (p1), as in the compatibility and Warp results. The other
+   three systems accept it and apply it. AWS tolerates an unsigned non x-amz header, so Ceph is the
+   strictest of the four here.
+
+HYPOTHESES (not settled, do not cite as findings)
+-------------------------------------------------
+H2 (from the laptop record) is now settled for this build: Ceph 20.2.4 rejects the cases. What is NOT shown
+is that an older Ceph accepted them, because no unpatched release was run. So this record shows the current
+behaviour of the patched release, and it does not itself prove the content of CVE-2026-54330. The CVE text
+in setup_notes.md comes from the Ceph advisory and is cited as such.
+H4. The 403 (and not 400 as on Garage, or 403 SignatureDoesNotMatch as on SeaweedFS) reflects a separate
+    check in RGW for unsigned x-amz headers. The source of v20.2.4 was not read for this.
+    Settling test: read the RGW authentication code of the exact version.
+
+OPEN
+----
+O6. The ACL read with the owner's credentials returns 403 SignatureDoesNotMatch on Ceph in p0, s2 and s3
+    (RGW rejects the script's hand signed GET for the ?acl subresource). The line "AllUsers grants in ACL 0"
+    for Ceph therefore does not mean that there are no grants, the read failed. The public read in s3 is
+    shown by the anonymous GET (200), not by the ACL read. Cause (the canonical query string of the
+    subresource in the script, or RGW behaviour) not investigated. The same read works on RustFS (200) and
+    gives 501 on Garage.
+O7. One run on one gateway (ceph0, from ceph0 itself). Rejections are deterministic, but the run was not
+    repeated, and the other two gateways were not tried.
+O8. Per the supervisor's ruling (all systems on the university VMs), SeaweedFS, RustFS and Garage are still
+    to be repeated on the VMs. The O1 question for RustFS (scoped identity, permission on the copy source)
+    is not affected by this run and is still open.
+
+PROCESS NOTES
+-------------
+- Commands reached ceph0 through the Claude Code session running there, controlled from the laptop. Only the
+  raw command output was used, never the session's own text.
+- The page text of the VM output shows each blank line twice. Halving them gave text whose sha256 equals the
+  hash printed on ceph0 (checked in the page, then again on the written file), so the copy is exact.
+- Cleanup deleted every object and both buckets (all 204), nothing was left on the cluster.

@@ -5,3 +5,4 @@
 # Ceph curl outputs are cited by sha256 against the originals on ceph0, so never convert them
 results/verify-checksum-header-ceph-*.txt -text
 results/compat-ceph-*-evidence.txt -text
+results/security-presign-unsigned-header-ceph-*.txt -text
