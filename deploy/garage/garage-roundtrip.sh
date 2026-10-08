@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+#
+# Garage 3 node deployment, step 3 of 3. Run as root on ceph0, after garage-cluster.sh.
+#
+#   bash garage-roundtrip.sh
+#
+# Proves that the three S3 endpoints serve the same data: objects written through one node are
+# read back through the other two and compared by sha256, in both directions, with two sizes.
+# Uses the key in /root/garage-key.txt (never printed) and the AWS CLI in /opt/aws-cli-new
+# (the same pinned 2.36.8 as for the Ceph runs). Output goes to stdout and to
+# /root/garage-roundtrip-<time>.txt.
+
+set -u
+
+AWS=/opt/aws-cli-new/bin/aws
+KEYFILE=/root/garage-key.txt
+B=thesis-test-bucket
+EP0=http://192.168.1.72:3900
+EP1=http://192.168.1.71:3900
+EP2=http://192.168.1.70:3900
+OUT="/root/garage-roundtrip-$(date +%Y%m%d-%H%M%S).txt"
+T="$(mktemp -d)"
+trap 'rm -rf "$T"' EXIT
+
+[ -x "$AWS" ] || { echo "garage-roundtrip: $AWS missing" >&2; exit 1; }
+[ -s "$KEYFILE" ] || { echo "garage-roundtrip: $KEYFILE missing" >&2; exit 1; }
+AK="$(awk -F': *' '/^Key ID:/{print $2}' "$KEYFILE")"
+SK="$(awk -F': *' '/^Secret key:/{print $2}' "$KEYFILE")"
+[ -n "$AK" ] && [ -n "$SK" ] || { echo "garage-roundtrip: cannot parse $KEYFILE" >&2; exit 1; }
+
+a() { AWS_ACCESS_KEY_ID="$AK" AWS_SECRET_ACCESS_KEY="$SK" AWS_DEFAULT_REGION=garage "$AWS" "$@"; }
+
+{
+echo "garage-roundtrip  host=$(hostname)  date=$(date -u +%FT%TZ)"
+echo "endpoints: $EP0 $EP1 $EP2   bucket: $B"
+head -c 1024 /dev/urandom > "$T/small.bin"
+head -c 1048576 /dev/urandom > "$T/mib.bin"
+fail=0
+check() { # label, endpoint written, endpoint read, file
+    local lbl="$1" w="$2" r="$3" f="$4" k
+    k="rt-$(basename "$f")-$$-$RANDOM"
+    if ! a --endpoint-url "$w" s3api put-object --bucket "$B" --key "$k" --body "$f" >/dev/null 2>"$T/err"; then
+        echo "FAIL $lbl put: $(head -c 200 "$T/err")"; fail=1; return
+    fi
+    if ! a --endpoint-url "$r" s3api get-object --bucket "$B" --key "$k" "$T/back" >/dev/null 2>"$T/err"; then
+        echo "FAIL $lbl get: $(head -c 200 "$T/err")"; fail=1; return
+    fi
+    if [ "$(sha256sum < "$f")" = "$(sha256sum < "$T/back")" ]; then
+        echo "PASS $lbl  $(basename "$f")  sha256 $(sha256sum < "$f" | cut -c1-16)"
+    else
+        echo "FAIL $lbl  $(basename "$f")  content differs"; fail=1
+    fi
+    a --endpoint-url "$w" s3api delete-object --bucket "$B" --key "$k" >/dev/null 2>&1
+}
+for f in "$T/small.bin" "$T/mib.bin"; do
+    check "write ceph0 read ceph1" "$EP0" "$EP1" "$f"
+    check "write ceph0 read ceph2" "$EP0" "$EP2" "$f"
+    check "write ceph1 read ceph0" "$EP1" "$EP0" "$f"
+    check "write ceph1 read ceph2" "$EP1" "$EP2" "$f"
+    check "write ceph2 read ceph0" "$EP2" "$EP0" "$f"
+    check "write ceph2 read ceph1" "$EP2" "$EP1" "$f"
+done
+for e in "$EP0" "$EP1" "$EP2"; do
+    printf 'list %s ' "$e"
+    if a --endpoint-url "$e" s3api list-objects-v2 --bucket "$B" --query 'length(Contents || `[]`)' --output text 2>"$T/err"; then :; else echo "FAIL $(head -c 200 "$T/err")"; fail=1; fi
+done
+if [ "$fail" = 0 ]; then echo "RESULT all passed"; else echo "RESULT failures, see FAIL lines"; fi
+} 2>&1 | tee "$OUT"
+echo "saved: $OUT"
+sha256sum "$OUT"
