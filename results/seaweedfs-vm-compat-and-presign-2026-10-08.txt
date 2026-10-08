@@ -1,0 +1,86 @@
+SeaweedFS 4.25, three nodes on the university VMs: S3 compatibility probe and presigned PUT test
+=================================================================================================
+
+Run on:   ceph0 (hostname debian, 192.168.1.72), 8 October 2026, against the SeaweedFS S3 gateway on ceph0 itself
+          (http://localhost:8333, region us-east-1). Cluster: three nodes ceph0, ceph1, ceph2, three masters, three
+          volume servers, three filers with S3, default replication 002 (setup_notes.md, section "SeaweedFS on the
+          three VMs"). The version string of the master is "30GB 4.25 7acba59a5".
+Scripts:  scripts/s3-compat.sh sha256 6dabde8fbb8b9c166563595fa50ec29c98c7159d27b632d42552c45daf3e762d
+          scripts/security-presign-unsigned-header.sh sha256 f1678fc1e4f2559eb33d1c59d3b2e520b97882aa488f27ec4e5aa943a4d0ab92
+          fetched at commit c798c4d0ec8d7bb5288463802399572a6ff8a178 by deploy/seaweedfs/seaweedfs-tests.sh
+          (commit 080a8c7228e1dc6b90d24acbf68dc8495ad2b2ca, sha256 ce55df63...72a8, checked on ceph0 before the run),
+          which refuses to run if the hash of a test script differs. AWS CLI 2.36.8 (/opt/aws-cli-new) with its default
+          checksum behaviour. curl on ceph0 is 7.88.1, curl on the laptop is 8.5.0.
+Compare:  the laptop runs of 30 September and 2 October 2026 against SeaweedFS as a single node
+          (results/compat-seaweedfs-20260930-205945, canonical run, and
+          results/security-presign-unsigned-header-seaweedfs-20261002-113220.txt).
+Times:    the folder names carry the local time of the VM (UTC+2), the files carry UTC. The presign file header
+          reads 2026-10-08T18:00:29Z.
+
+Evidence kept on ceph0 (not in the repository, the raw replies of the probe are in the archive):
+  /root/compat-seaweedfs-vm-20261008-195552.tar.gz    20986 bytes  sha256 42688f2d02d57a63853f3860521b43d57c4a127d0d33d8b71e4f45972aefa041
+  /root/presign-seaweedfs-vm-20261008-200028.tar.gz    1210 bytes  sha256 1a7f231cc272538b2e7fff1724466e57d54e45010b4484c7c0f47a959a56d7d5
+  Each run was scanned for the secret key (grep -rlF on ceph0): 0 files contain it, in both runs.
+  The hashes in this record were checked on ceph0 with sha256sum -c against the values typed here (all OK).
+
+1. S3 compatibility probe (22 tests)
+------------------------------------
+Result on the VMs: 18 PASS, 4 FAIL, 0 UNSUPPORTED (counted from column 2 of summary.tsv on ceph0). The four FAIL are
+C18 (SSE-S3 header and bucket default encryption), C19 (ACLs), C21 (awkward object keys) and C22 (error code fidelity).
+Comparison with the laptop run:
+  - summary.tsv on ceph0 has sha256 ab8f15223ef382852a4835bbfc2d7918a764d07eb70979545c109a073a81eb61. The same value was
+    computed from the laptop file results/compat-seaweedfs-20260930-205945/summary.tsv, and ceph0 confirmed the match
+    with sha256sum -c against the laptop value ("summary.tsv: OK").
+  - So the file is byte for byte identical: every verdict and every sub-check detail is the same as in the laptop
+    single node run.
+PROVEN: running the same probe against the three node cluster on the VMs gives the same result as the single node
+laptop run. Nothing in the three node setup (three masters, replication 002, the filers sharing their metadata) changed the
+S3 behaviour measured by these 22 tests.
+NOT PROVEN: that the 22 tests cover behaviour that could differ between one node and three nodes (they do not test
+replication or failure). The reasons for the four FAIL are the same as on the laptop and are not examined again here.
+
+2. Presigned PUT with unsigned x-amz headers (CVE-2026-54330 vector)
+--------------------------------------------------------------------
+Raw file on ceph0: 85 lines, 5793 bytes, sha256 98caef532f96e3ed93ff20bcf0c6403b900d99b71748c62c98a6179aa77a9b10
+(/root/presign-seaweedfs-vm-20261008-200028/run/security-presign-unsigned-header-seaweedfs-vm-20261008-200029.txt).
+The laptop file has 85 lines and 5790 bytes, sha256 4d831e3065cde3d90eea514465dccea60acb8ff8de7fc5cb713d29b998701318
+(the three extra bytes are "seaweedfs-vm" against "seaweedfs" in the header).
+Comparison method, the same awk on both files: drop the first three lines (header, date, bucket), print only the case
+id on case lines (lines that do not start with a space), squeeze spaces and cut every other line to 45 characters.
+Result: 82 lines each. The hashes differ, laptop ae458d9605035606f838a5b057bfd7fd21298fcc42f504d52bd3d0b89fbf7455,
+VMs 833e21c92b2728a6c2502432d167bb470cd595789b6ac02c17608b03f7f134ec.
+To find the difference, the first four characters of the md5 of every line were listed on both sides (82 values each).
+They differ at exactly four positions, the lines 15, 24, 54 and 63 of the view, which are the four lines "acl, own
+credentials" (cases p0, p1, s2, s3). Replacing that one value in the laptop list reproduces the hash of the VM list
+(dbdf84ba9e4fa4b1e17c8240f29ea8ed4741ba21d2d3a2db906f3058642486ae). So the two runs differ in nothing else within
+the compared text.
+Same on both: g0, p0, p1, s2 and s3 answer HTTP 200 (controls and the Content-Type case); p2 to p8 (unsigned
+x-amz-meta, acl, tagging, storage class, website redirect, copy source from the same bucket and from another bucket)
+answer HTTP 403 with an XML error; the anonymous GET of every stored control object answers HTTP 403.
+Difference: the ACL read of the control objects answers HTTP 403 with the error code SignatureDoesNotMatch ("The request
+signature we calcul..." in the 230 characters that were read) on the VMs, and HTTP 200 with an AccessControlPolicy on the
+laptop.
+PROVEN: SeaweedFS on the VMs rejects every unsigned header case, as the laptop single node did.
+NOTE: on the VMs the line "AllUsers grants in ACL 0" counts zero in an error reply, so in this run it carries no
+information (the line is identical to the laptop line only because both are 0).
+
+3. The 403 on the ACL read, settled the same day on ceph0
+---------------------------------------------------------
+Hypothesis H3 (as for Garage): the 403 is caused by the client on ceph0 (curl 7.88.1), not by SeaweedFS. Test on ceph0, a
+temporary bucket with one object (removed afterwards, cleanup rc 0, key never printed), each request signed by
+curl --aws-sigv4 with the header x-amz-content-sha256 of the empty body, except the AWS CLI line:
+  curl GET of the key, no query            HTTP 200 (body "hi")
+  curl GET <key>?acl                       HTTP 403 SignatureDoesNotMatch ("The request ..." cut at 100 characters)
+  curl GET <key>?acl=                      HTTP 200 AccessControlPolicy, Owner admin
+  aws s3api get-object-acl (CLI 2.36.8)    answered with Owner admin and a Grants list
+PROVEN: SeaweedFS answers the ACL read correctly. The 403 is produced when curl 7.88.1 sends the query parameter without
+a value (?acl): the same request with ?acl= is accepted, and so is the AWS CLI. So the three node cluster is not the
+cause, and the ACL lines of the VM presign file (403) are an artifact of the client on ceph0. This is the same pattern as
+for Garage (403 on ?acl, 501 on ?acl=).
+NOT PROVEN: that curl 8.5.0 signs ?acl correctly (the laptop answering 200 is consistent with it, the curl source was not
+read, and the laptop was not retested). NOT PROVEN for Ceph: the Ceph record O6 (ACL read answers 403 SignatureDoesNotMatch
+in p0, s2, s3) shows the same pattern with the same client, but the Ceph cluster is stopped, so O6 stays open. Settling
+test for O6 when Ceph runs again: the ACL read with ?acl=.
+CONSEQUENCE: the scripts send ?acl, so on ceph0 every ACL read through curl is unreliable until the scripts send ?acl=
+(the form the AWS CLI sends). Changing the scripts changes the comparison with the laptop runs and needs a decision. The
+verdicts in section 1 (AWS CLI) are not affected, the presign verdicts p2 to p8 are not affected.

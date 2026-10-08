@@ -2008,3 +2008,12 @@ Second system on the VMs. Garage was stopped first on ceph2, ceph1, ceph0 (`gara
 **Tool note:** the Claude session on ceph0 added a "correction" comment of its own to one copied output (about a comment line in the entrypoint) although told not to. The reading of the entrypoint (`su-exec seaweed`, `chown -R seaweed:seaweed /data`, uid 1000) is from its direct lines and fits the observed error.
 
 **State now:** SeaweedFS is running on all three VMs (container `seaweedfs`), Garage and Ceph stopped.
+
+### SeaweedFS on the VMs: compatibility probe and presigned PUT (8 October 2026)
+
+Run on ceph0 by `deploy/seaweedfs/seaweedfs-tests.sh` (commit `080a8c7`), which fetches the two test scripts at commit `c798c4d` and stops if their sha256 differs. Record: `results/seaweedfs-vm-compat-and-presign-2026-10-08.txt`.
+- **Compatibility probe, 22 tests:** 18 PASS, 4 FAIL (C18, C19, C21, C22), 0 UNSUPPORTED. The `summary.tsv` has sha256 `ab8f1522...eb61`, the same as the laptop canonical single node run `compat-seaweedfs-20260930-205945` (ceph0 confirmed it with `sha256sum -c` against the laptop value). So all verdicts and sub-check details are identical, the three node cluster changed nothing here.
+- **Presigned PUT:** p2 to p8 (every unsigned x-amz header case) answer 403, the controls answer 200, the anonymous GET answers 403, same as the laptop. One difference, found with per line fingerprints of the normalized view: the four ACL reads of the control objects answer 403 SignatureDoesNotMatch on the VMs and 200 on the laptop. Replacing that one value in the laptop list reproduces the VM list hash, so nothing else differs. In this run the line "AllUsers grants in ACL 0" carries no information (it counts an error reply).
+- **H3 settled on ceph0 the same day (second system):** curl 7.88.1 answers 403 SignatureDoesNotMatch to `?acl` and 200 to `?acl=`, and the AWS CLI `get-object-acl` returns the Owner and the Grants. So SeaweedFS is not the cause, the valueless query sent by curl 7.88.1 is. Same pattern as Garage. Not proven: curl 8.5.0 on the laptop (not retested). Ceph O6 still open (Ceph stopped). Decision open (P4): change the scripts to send `?acl=`.
+- Evidence archives stay on ceph0 (sha256 in the record), the key never appeared in them (0 files).
+- **Tool note:** the Claude session on ceph0 dropped one line when copying the 82 line view and said so itself, so the view was compared by per line fingerprints and hashes instead of by copying.
