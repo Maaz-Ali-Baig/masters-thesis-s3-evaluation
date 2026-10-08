@@ -1,0 +1,90 @@
+SeaweedFS 4.25, three nodes on the university VMs: four further checks (8 October 2026)
+========================================================================================
+
+Cluster:  ceph0 (hostname debian, 192.168.1.72), ceph1 (192.168.1.71), ceph2 (192.168.1.70), three masters, three volume
+          servers, three filers with S3, default replication 002, one data center dc1 and one rack rack1 (setup_notes.md,
+          section "SeaweedFS on the three VMs"). Buckets are collections, so a volume file is named <bucket>_<volume id>.dat.
+Method:   commands typed into the Claude sessions on the three VMs, output read from the screen and checked, where it
+          carries a hash, against a second value on the VM itself. The hostname is printed first in every output.
+Times:    the VM clock shows local time (UTC+2) in file names and in the podman messages, UTC where stated.
+
+S1. Three real copies of an object
+----------------------------------
+Write: a 3 MiB random object (sha256 147dea2bd176b7801f41926dcb03a4f07836f06cf12a0f4f1affd5baefc84658, key g1 in the new
+bucket s1bucket7958) through the S3 endpoint of ceph0. An ETag came back. The filer metadata of the object
+(GET /buckets/s1bucket7958/g1?metadata=true on ceph0, port 8888) lists one chunk, file id 32,4c3ad04a91, so the object lives in
+volume 32.
+Lookup: the master (GET /dir/lookup?volumeId=32 on ceph0, port 9333) answers three locations, 192.168.1.72:8080,
+192.168.1.70:8080 and 192.168.1.71:8080, all with dataCenter dc1.
+Files: /srv/s3/disk2/seaweedfs/s1bucket7958_32.dat exists on all three VMs, 3145784 bytes on each (3145728 bytes of data
+plus 56 bytes of volume and needle structure). The owner of the file on ceph0 is "user1", the host account with uid 1000
+(the uid of the user seaweed in the container).
+Hashes:
+  - The sha256 of the whole file on ceph0 is 9682e45358160a6b083ab91a1191adfe26d3fe2bf14683672462a574f3a4f790 (ceph0
+    confirmed my copy of the value with sha256sum -c: OK). On ceph1 and on ceph2 the same check FAILED. So the three
+    volume files are NOT byte identical, although their size is equal.
+  - The 3145728 bytes of the data (from byte 29 on, after the 28 byte header) hash to the sha256 of the original object on
+    all three VMs (test "[ hash = original ]" on each VM printed DATA-MATCH three times).
+  - The first 3145756 bytes of the file (all but the last 28) have sha256
+    b6724bf42b9d19d282f032a42eee17936e8288f6945c6ba671bfeec314ea04aa on ceph0, and the same test printed BODY-MATCH on ceph0,
+    ceph1 and ceph2. So the three files differ only inside the last 28 bytes.
+  - The last 28 bytes as hex (copied from the screens of the three sessions, not hash checked), identical except for four
+    bytes: ceph0 ...18dca0cd493534ec..., ceph1 ...18dca0cd4a44d9e9..., ceph2 ...18dca0cd4a4f881c... (the full lines were
+    0e0000006ac7dea33dfa79b418dca0cd493534ec0030000c00000000, ...4a44d9e9..., ...4a4f881c...). Read as an 8 byte number, the
+    three values are nanosecond timestamps of 2026-10-08 18:19:15Z (20:19:15 local, the file time on ceph0 is 20:19), 17.8 ms
+    and 0.7 ms apart.
+PROVEN: after one write through one node, all three VMs hold the same volume 32 with the object data byte identical to the
+original, and the master lists the three servers for that volume. So the object exists three times, once per node.
+CONSISTENT WITH, NOT PROVEN: the 8 byte field that differs is a per node append timestamp of the needle (the values decode
+as times at the moment of the write). The format of the volume file was not read, so this is a hypothesis. Settling test:
+the needle format in the SeaweedFS source or documentation, or a volume export that prints the timestamp.
+NOT PROVEN: that other volumes, written later or under load, are also complete on three nodes. The spread of volumes
+over the two disks of a node is not tested (this volume went to disk2 on all three nodes).
+
+S2. Large object, multipart, default client settings
+----------------------------------------------------
+aws s3 cp of a 100 MiB random file (sha256 b0a1b19210739eb27b49134f6e9a7f0754032bee55344d0da1969f94080f9545) into the
+same bucket through ceph0, AWS CLI 2.36.8 with its default settings (no AWS_REQUEST_CHECKSUM_CALCULATION): rc 0.
+head-object: 104857600 bytes, ETag "2b5c7e2d26728ea428475f8d178f26f5-13" (13 parts, so it was a multipart upload). Download
+through the endpoint of ceph2: rc 0, sha256 equal to the upload, cmp prints IDENTICAL.
+PROVEN: SeaweedFS stores a 13 part multipart object written through one node and returns it unchanged through another
+node, with the default settings of AWS CLI 2.36.8. This differs from Garage v1.0.0 (finding F1: the same upload failed
+there with "invalid checksum algorithm" until the checksum behaviour was set to when_required). So the checksum setting
+of the load tool for the performance phase is still open: SeaweedFS accepts the default, Garage does not.
+
+S3. Restart persistence
+-----------------------
+The containers were removed on ceph2, ceph1 and ceph0 with seaweedfs-stop.sh (podman rm -f, data and config kept). On all
+three the output carries the line "StopSignal SIGTERM failed to stop container seaweedfs in 10 seconds, resorting to
+SIGKILL" (20:25:25 ceph2, 20:25:32 ceph1, 20:25:39 ceph0). So the stop was a kill after ten seconds, not a clean shutdown.
+The cause (the process does not end on SIGTERM within ten seconds) was not examined.
+Then seaweedfs-node.sh was run again on ceph0, ceph1, ceph2: rc 0, "seaweedfs Up", version "30GB 4.25 7acba59a5 linux amd64",
+master status answered 1 on all three.
+After ten seconds, from ceph0: the 3 MiB object (S1) and the 100 MiB object (S2) read through the endpoint of ceph1 are
+identical to the original files (cmp, G1-IDENTICAL and G2-IDENTICAL). The master lists the same three locations for volume 32.
+The leader is 192.168.1.72 (ceph0); before the restart it was 192.168.1.70 (ceph2, roundtrip record).
+PROVEN: a SeaweedFS cluster whose containers were killed and recreated on all three nodes comes back with the stored data
+readable and all three volume servers registered, and elects a leader again (a different one).
+NOT TESTED: a restart with a node down longer than the others, power loss, data written while a node was away (fault
+tolerance phase).
+
+S4. Endpoints without credentials
+---------------------------------
+GET requests from ceph0 to ceph1 (192.168.1.71), no credentials, no signature:
+  :9333/cluster/status                     200  {"Leader":"192.168.1.72:9333.19333","Peers":[...
+  :9333/dir/status                         200  the topology (Max 180, Free 162, DataCenters ...)
+  :8080/status                             200  {"DiskStatuses":[{"dir":"/srv/s3/disk1/seaweedfs", ...
+  :8888/                                   200  HTML page of the filer, 11467 bytes
+  :8888/buckets/                           200  HTML listing, 10206 bytes
+  :8888/buckets/s1bucket7958/g1            200  3145728 bytes, the stored object itself
+  :8333/s1bucket7958/g1                    403  S3 error XML (the S3 endpoint asks for credentials)
+Listening TCP ports on ceph0 (ss, all ports): 22 631 8080 8181 8333 8888 9333 18080 18333 18888 19333. The SeaweedFS ports are
+8080, 8333, 8888, 9333 and the grpc ports 18080, 18333, 18888, 19333. Port 8181 was not identified.
+The security.toml of this cluster has [access] ui = false and a [jwt.signing.read] key, and the master, volume and filer
+interfaces still answer these requests.
+PROVEN: with this configuration, anyone who can reach the VMs on the network can read the cluster topology, the volume
+status and the filer listing, and can read a stored object from the filer port 8888 without any credentials, although the
+S3 endpoint refuses the same request.
+NOT TESTED: whether the filer port accepts writes or deletes without credentials (deliberately not done here), whether a
+volume server read by file id needs a token, what the open pages reveal beyond the first bytes shown. Belongs to the
+security phase, with the same question for the other systems.
