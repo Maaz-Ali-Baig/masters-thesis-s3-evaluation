@@ -21,6 +21,9 @@
 # for the laptop, not yet for the VMs). Differences from the laptop test: host network instead of a
 # Docker network, and -ip is the node address.
 #
+# The container process runs as the user seaweed (uid 1000), not as root, so the script gives uid 1000
+# the two data directories and the config directory (the config keeps its modes, only the owner changes).
+#
 # Deliberate setting: -master.volumeSizeLimitMB=1024. The default is 30000 (30 GB), which does not fit
 # the 32 GB disks. The laptop single node run used the default.
 
@@ -60,6 +63,11 @@ echo "== node: $HOST $IP"
 echo "== image: $IMAGE"
 
 mkdir -p "$D1" "$D2"
+# The image entrypoint drops to the user seaweed (uid 1000, su-exec) and only fixes ownership of /data.
+# Root owned data directories and a root only config make the master stop with "mkdir m9333: permission
+# denied" (first start on the VMs, 8 October 2026), so uid 1000 must own both.
+chown 1000:1000 "$D1" "$D2"
+chown -R 1000:1000 "$CFG"
 podman rm -f seaweedfs >/dev/null 2>&1 || true
 podman run -d --name seaweedfs --network host --restart no \
     -v "$CFG":/etc/seaweedfs:ro \
