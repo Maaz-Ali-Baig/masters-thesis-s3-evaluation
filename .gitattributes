@@ -6,3 +6,4 @@
 results/verify-checksum-header-ceph-*.txt -text
 results/compat-ceph-*-evidence.txt -text
 results/security-presign-unsigned-header-ceph-*.txt -text
+results/garage-roundtrip-vm-*.txt -text

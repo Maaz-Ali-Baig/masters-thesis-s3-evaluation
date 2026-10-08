@@ -1941,3 +1941,22 @@ Before the stop (ceph0, `ceph osd pool ls detail`): all 8 pools are `replicated 
 **To start Ceph again:** `systemctl start ceph-377124a6-acb5-11f1-b854-bc2411d95a65.target` on ceph0, ceph1 and ceph2, wait for the monitors, then `ceph osd unset noout` and `ceph osd unset norebalance`, and check `ceph -s` for `HEALTH_OK`. The OSD service stays `unmanaged`.
 
 **Tool note:** the stop was blocked in the sessions on ceph0 (twice by the Claude there and once by the harness' own check, which treated resending as a bypass of the earlier refusal) and passed on ceph1 and ceph2. It was finished by running the command in the Proxmox console of ceph0. The `!` prefix does not run in the web view of a Remote Control session.
+
+## Garage v1.0.0 on the three VMs (8 October 2026)
+
+First system deployed on the university VMs under Prof. Baun's ruling (same platform for all systems). Scripts: `deploy/garage/` at commit `adf5690` (five scripts fetched from the pinned commit, sha256 of all five equal to the local files on ceph0, ceph1 and ceph2).
+
+**Steps and evidence** (hostname printed in every output):
+1. The RPC secret was made on ceph0 (`garage-secret.sh create`, 65 bytes incl. newline, mode 600, never printed) and copied to ceph1 and ceph2 by `scp` typed by the user (ssh from ceph0 to the others had no key, both refused with `Permission denied (publickey,password)`). First attempt failed because the wrong password was typed (ceph1 `sshd -T`: `permitrootlogin yes`, `passwordauthentication yes`). Fingerprint (sha256 of the file) is identical on the three VMs, mode 600, 65 bytes.
+2. `garage-node.sh` on each VM: container `garage Up`, the pinned image digest `sha256:0c7ed80d...`, node ids `f3ef27cd...` (ceph0, `debian`), `f8b9d17e...` (ceph1), `b33b45c3...` (ceph2). The ids of ceph1 and ceph2 given to the cluster script were checked by the sha256 of the id string on the VM against the sha256 of the transcription (both equal).
+3. `garage-cluster.sh` on ceph0: connect, layout with one zone per node (`z1` ceph0, `z2` ceph1, `z3` ceph2), `-c 60GB` per node, `layout apply --version 1`, key `thesis-key` (secret masked in the output, file mode 600), bucket `thesis-test-bucket`.
+4. Strict re-check on ceph0 (`garage status`, `garage layout show`, output sha256 `c8d1a44f...315e`, equal to the hash of my transcription): layout version 1, three healthy nodes, zones z1, z2, z3, 60.0 GB each.
+5. `garage-roundtrip.sh` on ceph0 (11:48:38Z): 12 of 12 PASS (1 KiB and 1 MiB objects, written through each node and read through the other two, sha256 equal), list on all three endpoints returns 0 objects after cleanup, `RESULT all passed`. Raw record: `results/garage-roundtrip-vm-3node-20261008-134838.txt` (sha256 `97cfe2bb3875ac68a0cda03dd35b847e09dd9bde0cbf9c3acd35df514fae4e67`, equal to the file hash printed on ceph0).
+
+**What is proven:** a three node Garage cluster with replication factor 3 and one zone per node runs on the VMs, and objects are readable through every S3 endpoint after being written through any other.
+
+**What is not proven yet:** that every object really has three copies (the roundtrip does not count copies), behaviour under load, the failure behaviour. The 60.0 GB capacity is the value I assigned with `-c 60GB`, it is not measured from the two data directories (open question on `-c` with two data directories stays open).
+
+**Tool note:** the Claude session on ceph0 retyped the first status table instead of copying it and mislabelled the ceph1 row (`[ceph2] z3`), then added a correction itself. Because of this, VM output that matters is now taken from compact commands that print a sha256 of their own output, and compared with the sha256 of my transcription. The table on the first run is not used as evidence.
+
+**State now:** Garage is running on all three VMs (containers `garage`), Ceph stopped. The Garage data stays on `/srv/s3/disk1/garage` and `/srv/s3/disk2/garage`.

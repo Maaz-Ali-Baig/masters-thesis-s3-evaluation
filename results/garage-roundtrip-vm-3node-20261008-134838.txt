@@ -1,0 +1,18 @@
+garage-roundtrip  host=debian  date=2026-10-08T11:48:38Z
+endpoints: http://192.168.1.72:3900 http://192.168.1.71:3900 http://192.168.1.70:3900   bucket: thesis-test-bucket
+PASS write ceph0 read ceph1  small.bin  sha256 ef53ea93f8985079
+PASS write ceph0 read ceph2  small.bin  sha256 ef53ea93f8985079
+PASS write ceph1 read ceph0  small.bin  sha256 ef53ea93f8985079
+PASS write ceph1 read ceph2  small.bin  sha256 ef53ea93f8985079
+PASS write ceph2 read ceph0  small.bin  sha256 ef53ea93f8985079
+PASS write ceph2 read ceph1  small.bin  sha256 ef53ea93f8985079
+PASS write ceph0 read ceph1  mib.bin  sha256 74dadb0621219aba
+PASS write ceph0 read ceph2  mib.bin  sha256 74dadb0621219aba
+PASS write ceph1 read ceph0  mib.bin  sha256 74dadb0621219aba
+PASS write ceph1 read ceph2  mib.bin  sha256 74dadb0621219aba
+PASS write ceph2 read ceph0  mib.bin  sha256 74dadb0621219aba
+PASS write ceph2 read ceph1  mib.bin  sha256 74dadb0621219aba
+list http://192.168.1.72:3900 0
+list http://192.168.1.71:3900 0
+list http://192.168.1.70:3900 0
+RESULT all passed
