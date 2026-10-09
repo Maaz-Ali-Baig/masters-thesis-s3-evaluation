@@ -76,3 +76,30 @@ version. The VM runs and every later RustFS result are for 1.0.1.
 The ACL 403 on the VMs is consistent with the curl 7.88.1 artifact found for Garage and SeaweedFS (valueless ?acl signed wrongly, the laptop with
 curl 8.5.0 answers 200 for the same request). NOT PROVEN for RustFS on the VMs: the test with ?acl= was not run on ceph0 for RustFS (settling test:
 signed GET with ?acl= on ceph0, as for SeaweedFS). Until then the ACL lines of the VM presign file carry no information about RustFS.
+
+4. Rerun of the compatibility probe with the SSE-S3 master key (9 October 2026, evening)
+----------------------------------------------------------------------------------------
+Change: a key file sse.env (RUSTFS_SSE_S3_MASTER_KEY, a base64 encoded 32 byte key made on ceph0 with rustfs-secret.sh sse) was copied by scp to ceph1 and
+ceph2 (commit 66a6e1f, rustfs-node.sh sha256 2f190f70d1cf4e732b6b91cc575fcc12aa21c8788c34de3784a9c3720abd2997 and rustfs-secret.sh sha256
+62dd91273c84f536cd3f16a89ca3dc828788d6b5c3c76c5a0db15e1167cf58cf, both checked with sha256sum -c on all three VMs). The three files of /root/rustfs-config
+(rustfs.env, s3_credentials.txt, sse.env) have the same sha256 on all three VMs (sha256sum -c on each VM against the ceph0 values, all OK, modes 600, sizes
+98, 86 and 70 bytes). Then the three containers were removed and started again at 23:34 (the node script printed "sse.env: present, passed to the
+container" on each), and the same wrapper rustfs-tests.sh compat (sha256 bad8f129...6c24) was run again on ceph0 (script hash equal to the expected one).
+Result: 20 PASS, 2 FAIL (C19 and C21), 0 UNSUPPORTED. summary.tsv sha256 008bb153ec17d8596c66627e530dce03adbd35d9dd9af8d06abb167527de3158 (checked with
+sha256sum -c on ceph0). Archive on ceph0 /root/compat-rustfs-vm-20261009-233542.tar.gz, 20642 bytes, sha256
+54ee43971b32b8e2478026f315bda8631a1271f46d54c5bfbbcfc5be83c8decb (checked). Scans on ceph0: the access secret key is in 0 files (wrapper), the SSE master
+key is in 0 files (grep -rlF with the key read from sse.env inside the command, never printed).
+Comparison with the first VM run of the same day (19 PASS, 3 FAIL, summary.tsv fff93eca...b648): the first four characters of the md5 of every line
+differ at exactly one line, C18. C18 now reads put_sse:ok sse_echoed:ok sse_roundtrip:ok bucket_default_roundtrip:ok (PASS). Its md5 prefix equals the
+one of the C18 line of the laptop beta.8 run (41d3), so that line is identical to the beta.8 line.
+Repeat on the laptop (single node container, same image digest, throwaway keys including a throwaway SSE master key, same script): summary.tsv sha256
+008bb153ec17d8596c66627e530dce03adbd35d9dd9af8d06abb167527de3158, the same as the three node VM run, 20 PASS and 2 FAIL. Archive
+results/compat-rustfs101-laptop-ssekey-20261009.tar.gz, 19820 bytes, sha256 071552ed63ce1c6f47de8644b5ab8629c634b6fb942dbe60dbda45223609654d. Earlier on the same day a run with only C18 gave PASS
+(results/compat-rustfs101-laptop-ssekey-C18-20261009.tsv). No key was found in any output of the laptop run (0 files for the access secret and for the master key).
+PROVEN: with the SSE-S3 master key set on all three nodes, RustFS 1.0.1 passes the SSE-S3 API test C18 (header accepted and echoed, GET returns the data,
+bucket default encryption round trip), and the three node cluster again gives the same file as the single node on the laptop. So the C18 FAIL of the
+first run was caused by the missing key in the deployment, as the error text said, and not by a missing feature.
+NOT PROVEN: that the data is encrypted at rest (the probe tests the API only, at rest was not checked for RustFS). That the key setting has no effect on
+other tests: the other 21 lines are byte identical to the first run except C18, so it had none in this probe.
+Result summary for RustFS 1.0.1 on the VMs: 20 PASS and 2 FAIL (C19 ACLs, C21 awkward object keys) with the SSE-S3 key, 19 PASS and 3 FAIL without it.
+The first run stays in this record as the default deployment.
