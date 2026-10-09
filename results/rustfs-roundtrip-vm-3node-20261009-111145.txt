@@ -1,0 +1,18 @@
+rustfs-roundtrip  host=debian  date=2026-10-09T09:11:45Z
+endpoints: http://192.168.1.72:9000 http://192.168.1.71:9000 http://192.168.1.70:9000   bucket: rtbucket-13096509
+PASS write ceph0 read ceph1  small.bin  sha256 c9f1549fe11c7b95
+PASS write ceph0 read ceph2  small.bin  sha256 c9f1549fe11c7b95
+PASS write ceph1 read ceph0  small.bin  sha256 c9f1549fe11c7b95
+PASS write ceph1 read ceph2  small.bin  sha256 c9f1549fe11c7b95
+PASS write ceph2 read ceph0  small.bin  sha256 c9f1549fe11c7b95
+PASS write ceph2 read ceph1  small.bin  sha256 c9f1549fe11c7b95
+PASS write ceph0 read ceph1  mib.bin  sha256 7afb0017f859dc4e
+PASS write ceph0 read ceph2  mib.bin  sha256 7afb0017f859dc4e
+PASS write ceph1 read ceph0  mib.bin  sha256 7afb0017f859dc4e
+PASS write ceph1 read ceph2  mib.bin  sha256 7afb0017f859dc4e
+PASS write ceph2 read ceph0  mib.bin  sha256 7afb0017f859dc4e
+PASS write ceph2 read ceph1  mib.bin  sha256 7afb0017f859dc4e
+list http://192.168.1.72:9000 0
+list http://192.168.1.71:9000 0
+list http://192.168.1.70:9000 0
+RESULT all passed

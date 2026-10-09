@@ -2051,3 +2051,19 @@ CONSISTENT WITH, NOT PROVEN: the crash is this AVX2 instruction running on a CPU
 
 **Decision (Maaz, 8 October 2026):** redo RustFS before reporting anything, with the 1.0.1 image (pinned by digest in `rustfs-node.sh`, commit 760cdd0). The small `.rustfs.sys` folders (4 KB each) of the failed start were removed on all three VMs (looked at first, size under 16 KB). Consequence: the laptop RustFS runs (compat probe, presign, SigV4 test) used beta.8 and have to be repeated on 1.0.1 and labelled by version.
 Still open: whether 1.0.1 starts and stays up on the 3 nodes (first test), whether RustFS accepts 3 nodes (the docs say 4 servers), whether the two drives of a node count as distinct physical disks (disk1 and disk2 are different devices on the VMs, the device numbers were not printed).
+
+## RustFS 1.0.1 on the three VMs: start and roundtrip (9 October 2026)
+
+Image `docker.io/rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c` (tag 1.0.1, `rustfs 1.0.1`, build time 2026-10-03 02:33:36 UTC, printed by the node script on each VM). `rustfs-node.sh` (commit 760cdd0, sha256 db59d3b2...4867) was fetched on each VM and checked there with sha256sum -c (OK on all three), the image was pulled first (digest listed on all three), then the script was started on ceph2, ceph1, ceph0 within a minute. The data folders were empty before (the 4 KB `.rustfs.sys` of the failed beta.8 start had been removed).
+
+**Observed (PROVEN, VM output):**
+- The three containers are `Up` three minutes after the start, with no new kernel trap today (`dmesg | grep traps:` counted for 9 October: 0 on each VM). The beta.8 containers had crashed within 6 seconds to one minute. The two `traps:` lines still visible in the kernel log on ceph0 and ceph2 are the ones of 8 October (23:24:56 and 23:23:54).
+- Port 9000 answers 403 (unsigned request) on all three addresses from each VM, 503 in the first two seconds after the start.
+- Roundtrip (`rustfs-roundtrip.sh`, AWS CLI 2.36.8, default checksum behaviour, one endpoint written and the other two read, sha256 compared): 12 of 12 PASS (a 1 KiB and a 1 MiB file, six directions each), listing 0 objects on all three endpoints after the deletes, `RESULT all passed`. Record `results/rustfs-roundtrip-vm-3node-20261009-111145.txt`, 18 lines, sha256 ec78c4f0e3385e18be3cce38d6a1d374064b93d8bcd1311fe367bf238b773795 (the file on ceph0 and the laptop copy have the same hash).
+- After the writes the data folders on each VM hold only `.rustfs.sys` (2276 KB per disk folder on all three, identical). The test objects were deleted, so this shows the system folder, not the layout of stored objects.
+
+**PROVEN:** RustFS 1.0.1 starts, stays up and serves a write and read roundtrip across the three nodes on the VM CPU that crashed beta.8. This shows that the AVX2 problem is not present in this path of 1.0.1. It does not show which erasure coding layout RustFS chose.
+**NOT PROVEN / OPEN:**
+- The erasure layout (data and parity shards, the docs say EC:3 for 6 drives and a minimum of 4 servers). Not read from the system yet.
+- That the pinned 1.0.1 never executes an AVX2 instruction: only the paths used so far ran (writes up to 1 MiB, reads). Larger objects, multipart, healing and the scanner were not run.
+- Everything else of the test list (compat probe, presigned PUT, multipart, restart, open endpoints) on 1.0.1, and the repeat of the laptop runs of beta.8 on 1.0.1.
