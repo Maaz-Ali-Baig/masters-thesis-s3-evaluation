@@ -1,0 +1,1 @@
+C18	PASS	SSE-S3 header and bucket default encryption (API only, at-rest not verified)	put_sse:ok sse_echoed:ok sse_roundtrip:ok bucket_default_roundtrip:ok

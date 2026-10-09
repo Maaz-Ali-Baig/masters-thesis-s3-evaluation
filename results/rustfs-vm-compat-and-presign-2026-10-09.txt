@@ -1,0 +1,78 @@
+RustFS 1.0.1, three nodes on the university VMs: S3 compatibility probe and presigned PUT test (9 October 2026)
+===============================================================================================================
+
+Run on:   ceph0 (hostname debian, 192.168.1.72), 9 October 2026, against the RustFS S3 endpoint on ceph0 itself
+          (http://localhost:9000, region us-east-1). Cluster: three nodes ceph0, ceph1, ceph2, one container each
+          (rustfs 1.0.1, build time 2026-10-03 02:33:36 UTC, image docker.io/rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c),
+          volume list of six drives (two per node). The first attempt with the laptop image 1.0.0-beta.8 crashed on the VM
+          CPU and was replaced (setup_notes.md, sections "RustFS on the three VMs").
+Scripts:  scripts/s3-compat.sh sha256 6dabde8fbb8b9c166563595fa50ec29c98c7159d27b632d42552c45daf3e762d
+          scripts/security-presign-unsigned-header.sh sha256 f1678fc1e4f2559eb33d1c59d3b2e520b97882aa488f27ec4e5aa943a4d0ab92
+          fetched at commit c798c4d0ec8d7bb5288463802399572a6ff8a178 by deploy/rustfs/rustfs-tests.sh (commit e56d6660d18b53ecc679e5db13b694f7961273d1,
+          sha256 of the wrapper bad8f129736d2774ebed6cd0ecb409ec1b0a4b884728b066880fd634166a6c24, checked on ceph0 with sha256sum -c before the run),
+          which refuses to run if the hash of a test script differs (both runs printed "script hash equals the expected one").
+          AWS CLI 2.36.8 (/opt/aws-cli-new) with its default checksum behaviour. curl on ceph0 is 7.88.1, curl on the laptop is 8.5.0.
+Times:    the folder names carry the local time of the VM (UTC+2). The compat run started 11:03:37 UTC, the presign file header
+          reads 2026-10-09T11:09:03Z.
+
+Evidence kept on ceph0 (not in the repository, the raw replies of the probe are in the archive):
+  /root/compat-rustfs-vm-20261009-130337.tar.gz    20980 bytes  sha256 4c8b8465ff11f9344f343d04b061a52065167be417db9fdd57cbf5d10e78c474
+  /root/presign-rustfs-vm-20261009-130903.tar.gz    1151 bytes  sha256 b99ed2ea3a6ec0b6e105573e02e136c0c2ae6471885b716e1ac3195b70eac6e1
+  Each run was scanned for the secret key (grep -rlF on ceph0): 0 files contain it, in both runs.
+  The hashes of this record were checked on ceph0 with sha256sum -c against the values typed here (all OK).
+
+Repeat on the laptop (internal experiment, same day): the same image digest as a single node container (docker, one data directory, port 19000,
+throwaway test keys), the same two scripts, AWS CLI 2.36.8 in WSL, curl 8.5.0. Files in this repository:
+  results/compat-rustfs101-laptop-20261009-131301.tar.gz   19897 bytes, sha256 2205f80b3dfb4d6b6b3c8b5e689df466ec06ab75d19655857fc66b0cba638c8b (the extracted folder stays local; its summary.tsv has sha256 fff93eca987be3d720ea470b6e25659f0234996b11a32ed5b843dfd5c8eeb648)
+  results/security-presign-unsigned-header-rustfs101-laptop-20261009-131222.txt   85 lines, sha256 5dabb10418b4f7069d3e22bce80bbb67f5cdb42ee0467962c9174fed20c242a5
+  Both were scanned for the test key (0 files). Purpose: to separate the effect of the version (1.0.1 against beta.8) from the effect of the
+  topology (three nodes against one node), because the earlier laptop RustFS runs used 1.0.0-beta.8.
+
+1. S3 compatibility probe (22 tests)
+------------------------------------
+Result on the VMs: 19 PASS, 3 FAIL, 0 UNSUPPORTED (counted from column 2 of summary.tsv on ceph0). The three FAIL are
+C18 (SSE-S3 header and bucket default encryption), C19 (ACLs) and C21 (awkward object keys).
+summary.tsv on ceph0 has sha256 fff93eca987be3d720ea470b6e25659f0234996b11a32ed5b843dfd5c8eeb648 (checked on ceph0 with sha256sum -c).
+Comparison 1, with the single node RustFS 1.0.1 run on the laptop: the same sha256 (computed in WSL). So the file is byte for byte identical.
+Comparison 2, with the earlier laptop run of RustFS 1.0.0-beta.8 (results/compat-rustfs-20260930-210446, summary.tsv sha256
+720e003f05c568f58cb8c74672aff90c1331fa033f728bc23ec6dd166179ac34, 18 PASS and 4 FAIL: C08, C19, C20, C21): the files differ. The first four
+characters of the md5 of every line (22 values on each side) differ at exactly three lines, C08, C18 and C20. The other 19 lines are byte identical.
+  C08  beta.8 FAIL (list_uploads:FAIL(upload not listed)), 1.0.1 PASS (list_uploads:ok).
+  C18  beta.8 PASS, 1.0.1 FAIL: put_sse:FAIL(InvalidRequest ... "SSE-S3 requires RUSTFS_SSE_S3_MASTER_KEY to be set to a base64-encoded 32-byte
+       key when KMS is not configured"), then sse_echoed:FAIL(got=) and sse_roundtrip:FAIL(NoSuchKey), bucket_default_roundtrip:ok.
+  C20  beta.8 FAIL (wrong_md5_refused:FAIL(rc=254 InternalError)), 1.0.1 PASS (wrong_md5_refused:ok).
+  The wording of the three VM lines was read from the screen, and each marker string was then counted in summary.tsv on ceph0 with grep -cF (seven
+  strings, each found once).
+PROVEN: running the same probe against the three node cluster on the VMs gives the same result as the single node run of the same version on the
+laptop. The three differences from the laptop beta.8 run come from the version of RustFS, not from the three node topology.
+The deployment sets no SSE-S3 key. The error text says that without KMS the server needs RUSTFS_SSE_S3_MASTER_KEY, so C18 failed because of the
+configuration of this deployment, not necessarily because RustFS cannot do SSE-S3.
+NOT PROVEN: that C18 passes when the master key is set on all three nodes (settling test: set the variable, restart, rerun C18, a separate labelled
+run). NOT PROVEN: that the data is encrypted at rest (the probe tests the API only). The reasons for C19 and C21 were not examined again here.
+
+2. Presigned PUT with unsigned x-amz headers (CVE-2026-54330 vector)
+--------------------------------------------------------------------
+Raw file on ceph0: 85 lines, 5787 bytes, sha256 65b037bb0ee196b559c53270091966a43d5bd58b73edda9a6cd6f694bdaefa39 (checked with sha256sum -c).
+Per case HTTP code of the presigned PUT (same awk on the VM file, the laptop 1.0.1 file and the laptop beta.8 file of 2 October,
+results/security-presign-unsigned-header-rustfs-20261002-113223.txt, 127 lines):
+                          g0   p0   p1   p2   p3   p4   p5   p6   p7   p8   s2   s3
+  VMs, 3 nodes, 1.0.1     200  200  200  403  403  403  403  403  403  403  200  200
+  laptop, 1 node, 1.0.1   200  200  200  403  403  403  403  403  403  403  200  200
+  laptop, 1 node, beta.8  200  200  200  200  200  200  200  200  200  200  200  200
+The refused cases on the VMs show HTTP 403 with <Error><Code>AccessDenied</Code> (seven such lines in the file). The anonymous GET of every stored
+control object answers 403 in all three runs. In the beta.8 file the unsigned headers were acted on: p2 stored x-amz-meta-injected: yes and p4
+stored x-amz-tagging-count: 1 (read in the file). The other beta.8 cases are in setup_notes.md (section on the presigned PUT test of 2 October).
+Comparison method for the 1.0.1 files, the same awk on both: drop the first three lines (header, date, bucket), print only the case id on case lines
+(lines that do not start with a space), squeeze spaces and cut every other line to 45 characters. Result: 82 lines each. The first four characters of the
+md5 of every line differ at exactly four positions, the lines 15, 24, 54 and 63 of the view, which are the four lines "acl, own credentials" (cases
+p0, p1, s2, s3). The md5 of the VM list of 82 values (484d2f455243) equals the md5 of my copy of it, so the comparison used the right values.
+The ACL read of the control objects answers HTTP 403 on the VMs and HTTP 200 with an AccessControlPolicy on the laptop (1.0.1).
+PROVEN: RustFS 1.0.1 rejects every unsigned header case (p2 to p8) with AccessDenied, on three nodes and on one node, while the 1.0.0-beta.8 image
+accepted all of them on one node. The difference is caused by the version (same topology comparison for 1.0.1, same single node setup for the two
+versions). Not examined: which change in the source of RustFS did this (the release notes of 1.0.1 mention the handling of presigned requests, this was
+not matched to the test).
+CONSEQUENCE for the thesis: the RustFS result of 2 October (unsigned headers accepted) belongs to 1.0.0-beta.8 and must be labelled with that
+version. The VM runs and every later RustFS result are for 1.0.1.
+The ACL 403 on the VMs is consistent with the curl 7.88.1 artifact found for Garage and SeaweedFS (valueless ?acl signed wrongly, the laptop with
+curl 8.5.0 answers 200 for the same request). NOT PROVEN for RustFS on the VMs: the test with ?acl= was not run on ceph0 for RustFS (settling test:
+signed GET with ?acl= on ceph0, as for SeaweedFS). Until then the ACL lines of the VM presign file carry no information about RustFS.

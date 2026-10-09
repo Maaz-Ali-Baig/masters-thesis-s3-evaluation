@@ -2067,3 +2067,17 @@ Image `docker.io/rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded53890
 - The erasure layout (data and parity shards, the docs say EC:3 for 6 drives and a minimum of 4 servers). Not read from the system yet.
 - That the pinned 1.0.1 never executes an AVX2 instruction: only the paths used so far ran (writes up to 1 MiB, reads). Larger objects, multipart, healing and the scanner were not run.
 - Everything else of the test list (compat probe, presigned PUT, multipart, restart, open endpoints) on 1.0.1, and the repeat of the laptop runs of beta.8 on 1.0.1.
+
+## RustFS 1.0.1 on the VMs: compatibility probe and presigned PUT (9 October 2026)
+
+Full record in `results/rustfs-vm-compat-and-presign-2026-10-09.txt`. Wrapper `deploy/rustfs/rustfs-tests.sh` (commit e56d666, sha256 bad8f129...6c24), run on ceph0 against `http://localhost:9000`, pinned test scripts (hash checked by the wrapper on the VM, both runs).
+
+**Compat probe:** 19 PASS, 3 FAIL (C18, C19, C21), summary.tsv sha256 fff93eca987be3d720ea470b6e25659f0234996b11a32ed5b843dfd5c8eeb648. The same sha256 comes out of RustFS 1.0.1 as a single node on the laptop (same image digest, run id s3c-rustfs101-la-1009131301, archive `results/compat-rustfs101-laptop-20261009-131301.tar.gz`). So the three node cluster does not change the result. The earlier laptop run with beta.8 (`compat-rustfs-20260930-210446`, 18 PASS 4 FAIL) differs at exactly three lines (per line md5 prefixes): C08 beta.8 FAIL (`list_uploads` did not list the upload), 1.0.1 PASS; C18 beta.8 PASS, 1.0.1 FAIL; C20 beta.8 FAIL (`wrong_md5_refused` rc 254 InternalError), 1.0.1 PASS. The other 19 lines are byte identical. Those differences come from the version.
+
+**C18 on 1.0.1 (SSE-S3):** the VM deployment sets no key, and the server answers `InvalidRequest ... SSE-S3 requires RUSTFS_SSE_S3_MASTER_KEY to be set to a base64-encoded 32-byte key when KMS is not configured`. Laptop test (single node 1.0.1, throwaway base64 32 byte key in `RUSTFS_SSE_S3_MASTER_KEY`, `s3-compat.sh --only C18`): PASS, all four sub checks ok (`results/compat-rustfs101-laptop-ssekey-C18-20261009.tsv`, sha256 in the .gitattributes note). PROVEN for one node on the laptop. NOT PROVEN on the three nodes (same key on all three needed), and not proven that data is encrypted at rest (the probe tests the API).
+
+**Presigned PUT with unsigned headers:** on 1.0.1 the cases p2 to p8 are refused (HTTP 403 AccessDenied), on three nodes and as a single node on the laptop; the earlier laptop run with beta.8 accepted all of them (200) and stored the unsigned meta header and the tagging header. The two 1.0.1 views differ at exactly four lines (the ACL reads, 403 on the VM with curl 7.88.1, 200 on the laptop with curl 8.5.0). So the security result of 2 October for RustFS belongs to beta.8 and has to be labelled. Open: the `?acl=` test for RustFS on ceph0.
+
+**Evidence on ceph0:** archives `compat-rustfs-vm-20261009-130337.tar.gz` (20980 bytes, sha256 4c8b8465...c474) and `presign-rustfs-vm-20261009-130903.tar.gz` (1151 bytes, sha256 b99ed2ea...c6e1), hashes checked on the VM, key scan 0 for both runs.
+
+**Method note:** the VM session wrote an unrequested remark about an inexact line in its screen copy of the compat tail. Because of that, the results were compared only by hash and per line md5, and the wording of the three differing lines was checked with `grep -cF` on the VM.
