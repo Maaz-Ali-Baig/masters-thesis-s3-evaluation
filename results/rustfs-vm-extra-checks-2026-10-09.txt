@@ -1,0 +1,80 @@
+RustFS 1.0.1, three nodes on the university VMs: four further checks (9 October 2026)
+======================================================================================
+
+Cluster:  ceph0 (hostname debian, 192.168.1.72), ceph1 (192.168.1.71), ceph2 (192.168.1.70), one container each, rustfs 1.0.1
+          (image sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c), one volume list of six drives (two per node), S3 on
+          port 9000, console on port 9001 (setup_notes.md, sections "RustFS on the three VMs").
+Method:   commands typed into the Claude sessions on the three VMs, output read from the screen and checked, where it carries a hash, against a
+          second value on the VM itself (sha256sum -c). The hostname is printed first in every output.
+Times:    the VM clock shows local time (UTC+2) in the date lines and the file names.
+Objects:  bucket ecbucket with ec6.bin (6291456 bytes, sha256 2f9ead59f6b4c63533322575c1fa0aa4c90af5e2d86a59b80ac0802bee7b0bc8) and ec100.bin
+          (104857600 bytes, sha256 69464dead370cf6d731b6227ed10c7db770d555565fdd4e4b9539487082717ef). Both hashes and the sizes of the originals on
+          ceph0 were checked with sha256sum -c and stat on ceph0 (OK). The objects are kept for the next checks.
+
+R1. Erasure coding layout
+-------------------------
+The format file /srv/s3/disk1/rustfs/.rustfs.sys/format.json on ceph0 has 420 bytes. It has the keys distributionAlgo, format, id, sets, this, version and
+xl, "format":"xl", "distributionAlgo":"SIPMOD+PARITY", and one set that lists 6 drive ids (counted with grep -o on the sets array).
+Test: a 6 MiB random object (ec6.bin, key above) was written through the endpoint of ceph0. Afterwards each of the three VMs holds, under
+<drive>/rustfs/ecbucket/ec6.bin/ on both of its drives, one file xl.meta of 555 bytes and one shard <data dir id>/part.1 of 2097348 bytes (find -printf
+on ceph0, ceph1 and ceph2, same data directory id 0feee77a-e02c-4ad7-871a-c31b80018e6a on all). That is six shards of the same size, one per drive.
+6291456 / 3 = 2097152, and the shard is 196 bytes larger, so every shard carries one third of the data plus a small overhead.
+The xl.meta on ceph2 (disk1, printable characters and the hex of the values) lists EcAlgo = 01, EcM = 03, EcN = 03, EcBSize = 0x00100000 (1048576
+bytes), EcIndex = 04 (the position of this drive), and further keys (EcDist, CSumAlgo, PartNums, PartSizes, MTime, MetaSys with an
+x-minio-internal-actual-size entry of 6291456, MetaUsr with content-type and etag).
+PROVEN: the cluster of three nodes with six drives forms one erasure set of six drives, every object is cut into 3 data shards of equal size and 3
+more shards (six shards, one on each drive, two on each node), with blocks of 1 MiB. The raw size on the drives is 6 x 2097348 = 12584088 bytes for
+6291456 bytes of data, so about 2.0 times, against 3 times for Ceph, Garage and SeaweedFS.
+READ, NOT PROVEN: that EcM is the number of data shards and EcN the number of parity shards (the names follow the MinIO format that RustFS copies,
+the RustFS source was not read; the shard size agrees with 3 data shards). That one lost node (2 of 6 shards) leaves the object readable and two lost
+nodes (4 of 6) do not, and the write quorum with one node away: this follows from 3 parity shards, but it was not tested (fault tolerance phase).
+PROVEN: RustFS 1.0.1 starts and serves data with 3 servers. Not examined: what the current documentation says about the number of servers (the
+design note of 6 October quoted a minimum of 4 servers), and whether any log line warns about it (the container logs at warn level showed nothing).
+
+R2. Large object, multipart, default client settings
+----------------------------------------------------
+aws s3 cp of a 100 MiB random file (ec100.bin) into ecbucket through the endpoint of ceph0, AWS CLI 2.36.8 with its default settings (no
+AWS_REQUEST_CHECKSUM_CALCULATION): rc 0, "Completed 100.0 MiB/100.0 MiB (157.2 MiB/s)". head-object: 104857600 bytes, ETag
+"5646499dbeee32ac95e93bbcfbd549fa-13" (13 parts, so it was a multipart upload). Download through the endpoint of ceph2: rc 0, sha256 equal to the
+upload (69464dea...17ef on both), cmp prints IDENTICAL.
+PROVEN: RustFS 1.0.1 stores a 13 part multipart object written through one node and returns it unchanged through another node, with the default
+settings of AWS CLI 2.36.8. Like SeaweedFS (S2 of 8 October), unlike Garage v1.0.0 (finding F1: "invalid checksum algorithm" until
+when_required was set). So the checksum setting of the load tool for the performance phase is still open: Garage needs it, SeaweedFS and RustFS 1.0.1 do not.
+
+R3. Restart persistence
+-----------------------
+The containers were removed with rustfs-stop.sh (podman rm -f, data and config kept) on ceph2 at 23:23:52, on ceph1 at 23:24:12 and on ceph0 at 23:24:31.
+On all three the command finished in the same second and printed no "StopSignal SIGTERM failed" message (SeaweedFS needed 10 seconds and a
+kill on 8 October). Before the stop the containers had been Up for 12 hours without a kernel trap.
+rustfs-node.sh was then run again, unchanged, on ceph2 (23:25:02), ceph1 (23:25:04) and ceph0 (23:25:05): rc 0, "rustfs Up", version 1.0.1, port 9000
+answered 503 on ceph2 and 403 on ceph1 and ceph0 in the first seconds.
+After 20 seconds, from ceph0: ec6.bin read through the endpoint of ceph1 and ec100.bin read through the endpoint of ceph2 are identical to the
+originals (cmp, EC6-IDENTICAL and EC100-IDENTICAL, rc 0 for both downloads). The bucket lists both objects (104857600 and 6291456 bytes). All three
+addresses answer 403 to an unsigned request. New kernel traps today: 0.
+PROVEN: a RustFS cluster whose containers were removed and recreated on all three nodes comes back with the stored data readable through other
+nodes and all three nodes serving.
+NOT TESTED: a restart with a node down longer than the others, power loss (an unclean shutdown), writes while a node is away (fault tolerance
+phase). The stop was clean in the sense that the process ended at once on SIGTERM, the integrity of the data after that was tested only by the reads above.
+
+R4. Endpoints without credentials
+---------------------------------
+GET requests from ceph0 to ceph1 (192.168.1.71), no credentials, no signature (status, bytes downloaded):
+  :9000/                           403   110  S3 error XML (AccessDenied)
+  :9000/health                     200   119  {"status":"ok","service":"rustfs-endpoint","timestamp":"2026...
+  :9000/minio/health/live          200   119  the same health JSON
+  :9000/rustfs/health              403   110
+  :9000/metrics                    403   110
+  :9000/rustfs/admin/v3/info       403   118
+  :9000/ecbucket                   403   110
+  :9000/ecbucket/ec6.bin           403   110
+  :9001/                           403   110
+  :9001/rustfs/console/index.html  200  34536 HTML page of the console (<!DOCTYPE html>)
+  :9001/api/v1/login               403   110
+Listening TCP ports on ceph0 (ss -ltn, all ports): 22, 631, 9000, 9001. The RustFS ports are 9000 and 9001, there is no separate management,
+volume or inter node port (the nodes talk over port 9000, not checked further).
+PROVEN: with this configuration an unauthenticated client on the network reads only the health status (port 9000) and the static page of the
+console (port 9001); the bucket, the object, the admin info and the metrics path answer 403. This differs from SeaweedFS, where the master, volume
+and filer ports returned topology and the stored object without credentials (S4 of 8 October).
+NOT TESTED: the paths were chosen by me, others may exist; the console login and what it exposes after a login; anonymous access through a bucket
+policy; TLS; the metrics path with other names. The console is on because rustfs-node.sh sets RUSTFS_CONSOLE_ENABLE=true (a deliberate setting of this
+deployment). Belongs to the security phase, with the same question for the other systems.
