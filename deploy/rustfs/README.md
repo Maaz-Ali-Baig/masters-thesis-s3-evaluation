@@ -10,6 +10,7 @@ Order (all run as root on the VM named in the first column):
 | VM | Script | What it does |
 |---|---|---|
 | ceph0 | `rustfs-secret.sh create` | makes `/root/rustfs-config/` (root key as env file), never printed |
+| ceph0 | `rustfs-secret.sh sse` (optional) | adds `sse.env` with the SSE-S3 master key, needed for SSE-S3 without KMS, copy it to the other VMs like the rest |
 | ceph0 | copy the directory to ceph1 and ceph2 | `scp -r` typed by the user, then `rustfs-secret.sh fingerprint` must give the same sha256 on all three |
 | all | `rustfs-node.sh` | starts one container per node, run on the three VMs within a minute |
 | ceph0 | `rustfs-roundtrip.sh` | writes through each node, reads through the other two, sha256 compared |

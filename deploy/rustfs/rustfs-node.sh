@@ -59,12 +59,21 @@ done
 
 echo "== node: $HOST $IP"
 echo "== image: $IMAGE"
+# Optional SSE-S3 master key (rustfs-secret.sh sse), the same file on all three nodes. Not printed.
+SSE_ARGS=()
+if [ -s "$CFG/sse.env" ]; then
+    SSE_ARGS=(--env-file "$CFG/sse.env")
+    echo "== sse.env: present, passed to the container"
+else
+    echo "== sse.env: absent"
+fi
 
 mkdir -p "$D1" "$D2"
 chown 10001:10001 "$D1" "$D2"
 podman rm -f rustfs >/dev/null 2>&1 || true
 podman run -d --name rustfs --network host --restart no \
     --env-file "$CFG/rustfs.env" \
+    "${SSE_ARGS[@]}" \
     -e RUSTFS_VOLUMES="$VOLUMES" \
     -e RUSTFS_ADDRESS=":9000" \
     -e RUSTFS_CONSOLE_ENABLE=true \
