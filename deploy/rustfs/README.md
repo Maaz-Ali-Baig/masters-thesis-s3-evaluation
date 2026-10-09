@@ -13,6 +13,7 @@ Order (all run as root on the VM named in the first column):
 | ceph0 | copy the directory to ceph1 and ceph2 | `scp -r` typed by the user, then `rustfs-secret.sh fingerprint` must give the same sha256 on all three |
 | all | `rustfs-node.sh` | starts one container per node, run on the three VMs within a minute |
 | ceph0 | `rustfs-roundtrip.sh` | writes through each node, reads through the other two, sha256 compared |
+| ceph0 | `rustfs-tests.sh compat` or `presign` | runs the 22 test compatibility probe or the presigned PUT test from the pinned repository commit, script hashes checked |
 | all | `rustfs-stop.sh` | stops and removes the container, data is kept |
 
 The volume list names all six drives (`http://192.168.1.{70...72}:9000/srv/s3/disk{1...2}/rustfs`). The vendor
