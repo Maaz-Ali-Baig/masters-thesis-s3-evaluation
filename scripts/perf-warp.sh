@@ -6,7 +6,8 @@
 #   bash perf-warp.sh <system> <mode> [op size concurrency]
 #
 #   system   rustfs | seaweedfs | garage | ceph
-#   mode     preflight   tools, key file, endpoints, Warp flags, bucket, a short smoke test (not a measurement)
+#   mode     nodes       sar, iperf3, memory and free space on the storage nodes (no load)
+#            preflight   tools, key file, endpoints, Warp flags, bucket, a short smoke test (not a measurement)
 #            controls    dd on every data disk and iperf3 from ceph2 to the other nodes (before and after a system)
 #            size        series 1: object size 50 KiB, 1 MiB, 16 MiB, 100 MiB, concurrency 8, PUT and GET
 #            conc        series 2: concurrency 1, 4, 16, 64 at 1 MiB, PUT and GET (PERF_EXTRA128=1 adds 128)
@@ -39,7 +40,7 @@ case "$SYSTEM" in
     seaweedfs) KEYFILE=/root/seaweedfs-config/s3_credentials.txt; AKL="Access key"; SKL="Secret key"; PORT=8333; REGION=us-east-1 ;;
     garage)    KEYFILE=/root/garage-key.txt;                      AKL="Key ID";     SKL="Secret key"; PORT=3900; REGION=garage ;;
     ceph)      KEYFILE=/root/ceph-s3-credentials.txt;             AKL="Access key"; SKL="Secret key"; PORT=80;   REGION=us-east-1 ;;
-    *) die "usage: $0 rustfs|seaweedfs|garage|ceph preflight|controls|size|conc|mixed|all|one [op size concurrency]" ;;
+    *) die "usage: $0 rustfs|seaweedfs|garage|ceph nodes|preflight|controls|size|conc|mixed|all|one [op size concurrency]" ;;
 esac
 KEYFILE="${PERF_KEYFILE:-$KEYFILE}"
 HOSTS="${PERF_HOSTS:-192.168.1.72:$PORT,192.168.1.71:$PORT,192.168.1.70:$PORT}"
@@ -127,12 +128,23 @@ clean_bucket() {
     echo "bucket $BUCKET objects left after cleaning: $n"
     reclaim
 }
+NODEINFO=$(cat <<'EOS'
+hostname
+echo "sar: $(command -v sar || echo MISSING)  iperf3: $(command -v iperf3 || echo MISSING)  cores: $(nproc)"
+free -m | awk '/Mem:/{print "memory MB total " $2 ", available " $7}'
+df -h --output=target,size,used,pcent /srv/s3/disk1 /srv/s3/disk2 | tail -n +2
+EOS
+)
+nodes_info() { echo "== storage nodes ($(date '+%T'))"; on_nodes "$NODEINFO"; }
+MON=0
 monitor_start() {
     [ -n "$NODES" ] || return 0
+    MON=1
     on_nodes "mkdir -p $OUT; S_TIME_FORMAT=ISO nohup sar -u -r -d -n DEV 1 > $OUT/sar-\$(hostname).txt 2>&1 < /dev/null & echo \$! > $OUT/sar.pid; echo sar started" || true
+    nodes_info | tee -a "$OUT/header.txt"
 }
 monitor_stop() {
-    [ -n "$NODES" ] || return 0
+    [ "$MON" = 1 ] || return 0
     on_nodes "kill \$(cat $OUT/sar.pid) 2>/dev/null; echo sar stopped; ls -l $OUT/sar-*.txt" || true
 }
 
@@ -279,10 +291,10 @@ controls() {
     echo "== disk reference: 2 GiB dd with oflag=direct and conv=fsync on a scratch file on /srv/s3/disk1 of each node"
     on_nodes 'hostname; dd if=/dev/zero of=/srv/s3/disk1/perf-ref.bin bs=1M count=2048 oflag=direct conv=fsync 2>&1 | tail -1; rm -f /srv/s3/disk1/perf-ref.bin; ls /srv/s3/disk1/perf-ref.bin 2>&1 | head -1'
     echo "== network: iperf3 10 s from this node to the other storage nodes"
-    command -v iperf3 >/dev/null || { echo "iperf3 missing"; return 0; }
+    command -v iperf3 >/dev/null || { echo "iperf3 missing on this node"; return 0; }
     for ip in $NODES; do
         [ "$ip" = "$SELF" ] && continue
-        printf 'iperf3 -s -1 -D\n' | node_sh "$ip" >/dev/null 2>&1 || { echo "$ip: could not start iperf3 server"; continue; }
+        printf 'iperf3 -s -1 -D\n' | node_sh "$ip" >/dev/null 2>&1 || { echo "$ip: could not start iperf3 server (iperf3 missing there? see nodes)"; continue; }
         sleep 2
         echo "-- to $ip"
         iperf3 -c "$ip" -t 10 2>&1 | tail -4
@@ -291,7 +303,8 @@ controls() {
 
 case "$MODE" in
     preflight) monitor_start; preflight; finish ;;
-    controls)  controls 2>&1 | tee "$OUT/controls.txt"; finish ;;
+    nodes)     nodes_info | tee "$OUT/nodes.txt"; finish ;;
+    controls)  nodes_info; controls 2>&1 | tee "$OUT/controls.txt"; finish ;;
     size)      monitor_start; series_size; summarize; finish ;;
     conc)      monitor_start; series_conc; summarize; finish ;;
     mixed)     monitor_start; series_mixed; summarize; finish ;;
