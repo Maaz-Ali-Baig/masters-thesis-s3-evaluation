@@ -11,7 +11,11 @@ in transit and at rest, and can a failed attack be seen in the logs?
 
 Already known (and kept, not repeated here): the presigned URL and unsigned header test (results/security-presign-*),
 the 22 case compatibility probe with its encryption and ACL cases, and the unauthenticated port checks done on the VMs for
-Garage (G4), SeaweedFS (S4) and RustFS (R4). No Ceph port check on the VMs is recorded in the files used for this draft (to be confirmed in the Ceph notes; Ceph runs again in Phase 4). The checks below put all four
+Garage (G4), SeaweedFS (S4) and RustFS (R4). No Ceph port check is recorded in setup_notes.md, the context file or the memory notes (searched on 10 October 2026 for
+ports, dashboard, ss and the usual Ceph port numbers). What the notes do record: cephadm bootstrap on ceph0 printed a
+dashboard URL and a generated password (setup_notes.md, bootstrap step 2), so the Ceph dashboard exists on the cluster, and
+the RGW is placed on several nodes on port 80 (ceph orch ps --daemon-type rgw). Which other ports Ceph exposes (monitor,
+manager, dashboard, metrics) is OPEN and is checked in Phase 4 with SEC1 and SEC7. The checks below put all four
 into one table and add what is missing.
 
 ## 2. The checks (each has a pass condition written before the run)
