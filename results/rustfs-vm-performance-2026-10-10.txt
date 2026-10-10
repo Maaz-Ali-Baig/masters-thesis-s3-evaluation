@@ -89,3 +89,8 @@ L5. The control measurements before the series (dd of 2 GiB with direct writes a
     checked by hash. iperf3 is not installed on ceph1, so the network to ceph1 was not measured. The controls AFTER the series are not done.
 L6. The laptop results for RustFS (beta.8) are not comparable with this series (different version, one node, laptop).
 L7. The sar logs of the three nodes exist but are not analysed yet (H1 to H4 depend on them).
+
+UPDATE (10 October 2026, later): limit L7 (sar logs not analysed) is answered in results/rustfs-vm-performance-sar-2026-10-10.txt. The status of H1 to H4 is
+stated there: H2 is supported for 1 MiB and 50 KiB GET (most data came from memory) and not for 16 and 100 MiB; H4 is open (large GET: the receive side of the
+load node was at 8.35 Gbit/s, consistent with a network limit but not proven); PUT plateau at 1 MiB is not explained by CPU, iowait or network; three
+configurations (PUT 100 MiB, PUT 16 MiB, GET 50 KiB) had the load node above 80 percent CPU and are flagged as client limited by the rule of the method.

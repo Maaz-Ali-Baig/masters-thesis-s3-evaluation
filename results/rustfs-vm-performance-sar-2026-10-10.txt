@@ -1,0 +1,76 @@
+RustFS 1.0.1, three nodes on the VMs: resource use during the performance series (10 October 2026)
+==================================================================================================
+
+Follows results/rustfs-vm-performance-2026-10-10.txt (same series, same output folder name /root/perf-rustfs-20261010-163409 on the three nodes).
+It tests the four hypotheses H1 to H4 of that record against the sar logs (sar -u -r -d -n DEV, one sample per second, recorded on each node
+during the whole series by scripts/perf-warp.sh).
+
+Method:    scripts/perf-sar.sh at commit a3d6602b1eae6b544f449e6be77397916d105ebe, sha256
+           404aa31d7733e57a05ae2960f776d858ff6e2c6d7d32cfc45cd4279c6a23c2b1 (checked on ceph0 with sha256sum -c: OK; copied to ceph1 and ceph2 with scp).
+           For every recorded run (51) it averages the sar samples between the start and the end of the Warp process (start and end epoch from runs.tsv).
+           The window is the whole Warp process, which is a little longer than the measured window Warp quotes, so the ratios below are approximate (about 10 percent).
+           Columns: cpu_busy (100 minus idle, percent), iowait (percent), rd_MiBs and wr_MiBs (disk read and write rate summed over all block devices except
+           the system disk, MiB/s), net_rx_MiBs and net_tx_MiBs (the interface that is not lo, MiB/s). The OSD disks of Ceph are idle (Ceph is stopped).
+           Per run tables on the nodes: sar-runs-debian.tsv (sha256 b521daf0940ac1e57eba8c56fa41cf5a1ca0834b346f5b9f045a497a52f6b114), sar-runs-ceph1.tsv
+           (7fb4511e8580fe900f3bc140cdc594323589c922aa13b84b431371c26e7552a1), sar-runs-ceph2.tsv (0b9281adebb17644057fd68f35268a72ab65ba8a6be57c336f7c24a44366128e),
+           the three hashes were read from the screen. The per run tables were not read here.
+           Merged table (mean of the three runs of a configuration, one line per configuration and node): sar-configs.tsv on ceph0,
+           results/perf-rustfs-vm-3node-20261010-sar-configs.tsv here, sha256 10cb92cf95f2c6d6af999ee7f151b5747c26190067024b9f2f3eff792b8ef7c3. My copy was typed from
+           the screen and its sha256 equals the one printed by the VM (compared, equal).
+Node names: debian is ceph0 (192.168.1.72), ceph1 (.71), ceph2 (.70). ceph2 is the load node (Warp) and also a storage node.
+
+PROVEN (read from the table, arithmetic mine)
+---------------------------------------------
+S1. Disk write volume against client throughput (sum of wr_MiBs over the three nodes divided by the client MiB/s of the record):
+      100 MiB 403.0 / 216.17 = 1.86;  16 MiB 351.8 / 200.30 = 1.76;  1 MiB at concurrency 1: 39.6 / 19.54 = 2.03;  c4 1.75;  c8 1.65;  c16 1.39;  c64 1.37
+      50 KiB: 44.4 / 7.49 = 5.93
+    So for large objects and for one client the drives write about 2 times the client data (erasure set of 3+3 gives 2.0 times, record R1), and for
+    50 KiB objects the drives write almost 6 times the client data. The values below 2.0 at higher concurrency are within the window uncertainty or
+    not explained (not examined).
+S2. Disk read volume against client throughput for GET (sum of rd_MiBs over the three nodes divided by client MiB/s):
+      100 MiB 1662.6 / 933.10 = 1.78;  16 MiB 1694.7 / 922.29 = 1.84;  50 KiB 31.6 / 80.52 = 0.39
+      1 MiB: c1 68.5 / 90.35 = 0.76;  c4 76.8 / 359.15 = 0.21;  c8 77.0 / 592.05 = 0.13;  c16 77.5 / 708.01 = 0.11;  c64 76.4 / 720.96 = 0.11
+    So at 1 MiB and 50 KiB the drives deliver only 11 to 39 percent of what the client receives, which means most of the data was not read from the
+    drives in the run window (it came from memory). At 16 MiB and 100 MiB the drives read about 1.8 times the client volume.
+S3. Network at the load node: ceph2 received 995.7 MiB/s (8.35 Gbit/s) during GET 100 MiB and 968.8 MiB/s (8.13 Gbit/s) during GET 16 MiB. The client
+    throughput of those configurations is 933.10 and 922.29 MiB/s. At 1 MiB and concurrency 64 ceph2 received 716.8 MiB/s (6.01 Gbit/s).
+S4. CPU at the load node ceph2 (mean over the three runs): above 80 percent busy in PUT 100 MiB (90.9), PUT 16 MiB (84.7) and GET 50 KiB (83.2); between 68 and
+    79 percent in the other large and high concurrency configurations; the other two nodes are at 14 to 72 percent in all configurations. ceph2 is the busiest
+    node in every one of the 17 configurations. By the rule of the method (load node above 80 percent busy: client limited, not used for a ranking)
+    these three configurations are flagged. The flag is by configuration mean here; the single run values are in sar-runs-ceph2.tsv on the node.
+S5. PUT at 1 MiB, concurrency 16 and 64: no node is saturated by CPU (storage nodes 55 to 57 percent, ceph2 63 percent), iowait is 0.8 to 1.9 percent and the
+    disk write rate is 50 to 60 MiB/s per node, while the throughput grows little between 16 and 64 users (109.36 to 130.29 MiB/s) and the average latency grows from 144.8 to 150.5 ms
+    (c16) to 467.0 to 511.3 ms (c64). So the plateau is not explained by CPU, iowait or network of any node.
+S6. PUT at low concurrency: iowait is highest at concurrency 1 and 4 (4.2 and 4.0 percent on the storage nodes), lower at 64 (0.8 to 1.3 percent).
+
+STATUS OF THE HYPOTHESES OF THE FIRST RECORD
+--------------------------------------------
+H2 (GET partly from page cache): SUPPORTED for 1 MiB and 50 KiB (S2: drives deliver 11 to 39 percent of the client volume), NOT the case for 16 MiB and
+   100 MiB (drives read 1.8 times the client volume). The cache was emptied before each run; why 1 MiB objects are cached and 16 MiB objects are not, although the
+   datasets have the same size (about 8 GiB), is not known (untested ideas: a read path that bypasses the cache for large objects; the cache size per node of
+   about 5.8 GiB available memory). So the 1 MiB and 50 KiB GET numbers must be labelled as measurements with a large cache share.
+H4 (plateau caused by the load node): for large GET the load node network is a candidate limit (S3: 8.35 Gbit/s received, close to the 8.64 Gbit/s that iperf3 gave
+   between nodes on 23 September for Ceph; today one iperf3 stream from ceph2 to ceph0 gave 5.05 Gbit/s), CONSISTENT WITH, NOT PROVEN; a test with
+   parallel iperf3 streams into ceph2 would show the ceiling of the receive side.
+   For PUT at high concurrency no resource of the three nodes is saturated (S5): the plateau cause is OPEN.
+H3 (erasure coding cost makes PUT slow): NOT SUPPORTED as a CPU limit for PUT at 1 MiB (storage nodes about 55 percent busy); for 100 MiB PUT the load node is above 80
+   percent (S4), so a CPU limit at ceph2 cannot be excluded there. Still OPEN.
+H1 (fixed cost of about 50 ms per PUT from the write path): the drives write about 6 times the client data for 50 KiB (S1), so per object work on the drives is large;
+   that the latency comes from synchronous flushes is NOT PROVEN. Settles: the RustFS documentation or source for its sync behaviour, and sar -d await and %util (not in
+   this table).
+
+NEW FINDINGS FOR THE THESIS
+---------------------------
+F-A. RustFS 1.0.1 on this setup writes about 6 times the client volume to the drives for 50 KiB objects (about 297 KiB on the drives per 50 KiB object: 44.4 MiB/s / 153.37
+     objects per second), against about 2 times for large objects. (Ceph showed 1.73 times for 50 KiB, record of 24 September, a different mechanism.) Cause not examined.
+F-B. For large objects (16 and 100 MiB) GET reads about 1.8 times the client volume from the drives, which is close to reading all six shards of the erasure set for each
+     GET instead of the three that are needed. This is a read of the numbers, NOT proven (hypothesis: all shards are requested; settles: shard level read counters or a
+     test with one node stopped).
+F-C. 1 MiB GET at concurrency 4 and above is mostly served from memory (S2) and therefore says little about the drives.
+
+LIMITS
+------
+L1. The load node is also a storage node, and in three configurations it is above 80 percent CPU (S4).
+L2. sar %util, await and queue depth are not in the table (only rates), so a drive saturation cannot be excluded or shown here.
+L3. The windows are the whole Warp process, so rates and ratios are approximate.
+L4. Means of three runs per configuration; single run values are only in the per run tables on the nodes.
