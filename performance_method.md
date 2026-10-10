@@ -73,9 +73,10 @@ record of 23 September). The Ceph point stays as a Ceph only data point.
 GET dataset: prepared once per configuration (not counted in the timing) and read by the warm up and the three recorded
 runs. Size of the dataset: about 8 GiB, so that it is not smaller than the RAM of one node (7.7 GiB): 50 KiB 50000 objects
 (2.4 GiB, the object count is the limit here), 1 MiB 8192 objects, 16 MiB 512 objects, 100 MiB 80 objects.
-Page cache on the storage nodes is emptied before each GET series (echo 3 > /proc/sys/vm/drop_caches on the three
-storage nodes). This is a deliberate step and it is written in the record. How much of the GET result still comes from
-cache is not known and is a stated limit.
+Page cache on the storage nodes is emptied before every GET run (sync, then echo 3 > /proc/sys/vm/drop_caches on the three
+storage nodes, done by the script over key based ssh from ceph2). This is a deliberate step and it is written in the record.
+How much of the GET result still comes from cache is not known and is a stated limit. Without the ssh key the script does not
+do this and the record says so.
 
 PUT: Warp writes new objects for 60 seconds and removes them at the end. Space on the data disks is checked with df on
 the three nodes before every run, and a run does not start below 50 percent free (deletes are not instantly reclaimed:
@@ -138,5 +139,15 @@ Each step is a script with a pinned hash (like deploy/*/ *-tests.sh), run on the
 
 1. Load node: settled on 10 October, Warp on ceph2, nobody asked (section 3).
 2. Series and sizes as in section 5 (16 configurations of 3.5 minutes plus the mixed run)?
-3. drop_caches before GET series on the storage nodes: yes or no?
+3. drop_caches before every GET run on the storage nodes: yes (needs decision 5).
 4. ossperf as small secondary set at the end: yes, or only if time remains?
+5. Key based ssh from ceph2 to ceph0 and ceph1 (two commands typed by Maaz, the key pair is removed at the end of the VM
+   work): needed for the free space check, the cache drop and sar on the storage nodes. The script scripts/perf-warp.sh also runs
+   without it, but then only ceph2 is monitored and the record says so.
+
+## 12. Script (written 10 October 2026)
+
+scripts/perf-warp.sh <system> <preflight|controls|size|conc|mixed|all|one>, run on ceph2. Tested on the laptop against a throwaway
+RustFS 1.0.1 single node container (Warp v1.5.0): the preflight and the mixed series ran. That test found that the flag for
+reading existing objects is spelled --list-existing in Warp v1.5.0 (the script now detects the spelling) and that Warp draws a
+progress bar that has to be stripped from the saved text. The laptop test says nothing about performance and uses no VM.
