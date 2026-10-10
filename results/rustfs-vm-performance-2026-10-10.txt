@@ -1,0 +1,91 @@
+RustFS 1.0.1, three nodes on the university VMs: performance series (10 October 2026)
+====================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one container each, rustfs 1.0.1 (image
+           sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c), one erasure set over six drives (3 data and 3
+           parity shards, record R1 of 9 October), SSE master key present, console on. 4 vCPU and 7.7 GiB RAM per node.
+Load:      Warp v1.8.0 (13c3b89) on ceph2, requests spread by Warp over the S3 endpoints of all three nodes (port 9000), AWS CLI 2.36.8
+           for bucket handling. ceph2 is also a storage node, so it carries the client cost (limit L1 below).
+Method:    performance_method.md (draft of 10 October 2026, commit bf82f88 and later), script scripts/perf-warp.sh at commit e35fd90,
+           sha256 91a8078c2c4b19cd158194f7b6e09ee05d339a4d16d952be3ab0dbcc68dc32b0 (checked on ceph2 with sha256sum -c: OK), mode "all"
+           (size series, concurrency series, mixed). Tables made with scripts/perf-table.sh at commit e30defc, sha256
+           797afb36c44de6a99df4be39d543e4d8b1b383bef21a1da555dd0190587cd644 (checked on ceph2: OK).
+Times:     VM clock, local time (UTC+2). First run start 16:34:12, last run end 18:29:14, 68 runs (17 configurations of one discarded
+           warm up and three recorded runs; the table covers the 51 recorded runs). Duration 60 s per recorded run, 30 s warm up.
+Output:    on ceph2 /root/perf-rustfs-20261010-163409/ (console text per run, Warp benchdata, runs.tsv, header.txt, sar of ceph2) and
+           /root/perf-rustfs-20261010-163409.tar.gz (1794415 bytes; sha256 9322568c47406fce5c4b39ed481a18c43a68a9e5773572e5bcdcbd3c393b8949,
+           read from the screen, not checked a second time). sar logs of ceph0 and ceph1 are in the same folder name on those nodes.
+           Access key and secret key found in the output files: 0 and 0 (grep -rlF in the script).
+Tables:    results/perf-rustfs-vm-3node-20261010-table-runs.tsv   (sha256 79efdebc85fb0924d2125dc6bc0317f8b59397517126aba363bc936469acdcc0)
+           results/perf-rustfs-vm-3node-20261010-table-configs.tsv (sha256 6d428ab2e30e01250156c13d182cdc0adeca146e6fd61fae6bfd10d3ed532736)
+           Both were read from the VM screen and typed into these files by me; the sha256 of both files equals the sha256 printed
+           by the VM for its own files (compared one by one, equal). So the two tables are exact copies.
+
+Settings of the series
+----------------------
+Object size series, concurrency 8, PUT and GET: 50 KiB, 1 MiB, 16 MiB, 100 MiB. Concurrency series, 1 MiB, PUT and GET: 1, 4, 16, 64.
+Mixed workload (Warp default mix of GET, PUT, STAT, DELETE), 1 MiB, concurrency 16. GET datasets: 50000 objects of 50 KiB, 8192 of 1 MiB,
+512 of 16 MiB, 80 of 100 MiB, prepared in the warm up run and read with --list-existing (Warp v1.8.0 spelling as detected by the script).
+Before every GET run the script emptied the page cache on the three nodes over ssh (nodes handled: all three, see header; the success of each
+drop was not logged, so it is set, not proven, for every run). Before every run the script checked the free space on all data disks
+(limit 50 percent used; the script prints a "space:" line when it waits, not yet searched for in the log). The bucket was emptied after every
+configuration.
+
+Results (median, minimum and maximum of three recorded runs, MiB/s; full list with latencies in the two tables)
+------------------------------------------------------------------------------------------------------------
+Object size series (concurrency 8)         PUT median (min, max)       GET median (min, max)
+  50 KiB                                    7.49 (6.76, 7.50)           80.52 (79.63, 81.61)
+  1 MiB                                     86.70 (80.83, 87.35)        592.05 (585.18, 595.23)
+  16 MiB                                    200.30 (198.82, 204.52)     922.29 (919.63, 925.42)
+  100 MiB                                   216.17 (214.66, 218.18)     933.10 (931.41, 934.04)
+Concurrency series (1 MiB)                 PUT median (min, max)       GET median (min, max)
+  1                                         19.54 (18.87, 19.66)        90.35 (85.34, 92.07)
+  4                                         58.32 (55.90, 58.66)        359.15 (347.61, 364.10)
+  8 (from the size series)                  86.70 (80.83, 87.35)        592.05 (585.18, 595.23)
+  16                                        109.36 (108.47, 110.75)     708.01 (690.93, 718.93)
+  64                                        130.29 (128.95, 136.93)     720.96 (685.32, 787.00)
+Mixed, 1 MiB, concurrency 16 (Total)        225.18 (213.06, 237.24) MiB/s and 375.02 objects/s (355.21 to 395.41)
+Objects per second at 50 KiB: PUT 153.37 (runs: 153.54, 153.37, 138.39), GET 1648.97 (1671.38, 1630.76, 1648.97).
+Errors: the error_lines column is 0 in all 51 recorded runs and every run ended with exit code 0 (68 of 68 including the warm ups).
+Free space after the series: data disks 387 to 496 MB used of 32 G on all three nodes, as before the series (cleaning worked).
+
+PROVEN (read from the tables)
+-----------------------------
+P1. Every recorded run finished without errors. The three runs of a configuration lie close together for most configurations
+    (largest spread: GET 1 MiB at concurrency 64, 685.32 to 787.00 MiB/s; PUT 1 MiB at concurrency 8, 80.83 to 87.35).
+P2. Latency and throughput agree with the concurrency (Little's law, concurrency divided by average latency, my own arithmetic
+    on the table values): PUT 1 MiB concurrency 1: 1 MiB / 53.0, 51.2, 51.0 ms = 18.9, 19.5, 19.6 MiB/s against 18.87, 19.54, 19.66;
+    PUT 1 MiB concurrency 64: 64 / 467.0 ms = 137.0 against 136.93; GET 1 MiB concurrency 64: 64 / 87.7 ms = 729.7 against 720.96;
+    GET 100 MiB concurrency 8: 800 MiB / 0.8491 s = 942 against 933.10. The values are consistent, so the tool measures what it says.
+P3. PUT is slower than GET in every configuration: at the median 4.3 times at 100 MiB (216.17 against 933.10), 4.6 times at 16 MiB, 6.8
+    times at 1 MiB and concurrency 8, and 10.8 times at 50 KiB (7.49 against 80.52 MiB/s, 153 against 1649 objects per second).
+P4. The average PUT latency is about 51 to 58 ms for one 1 MiB object at concurrency 1 and for a 50 KiB object at concurrency 8 (52 ms
+    average), while the average GET latency is 5 to 6 ms for 50 KiB and 11 ms for 1 MiB at concurrency 1.
+P5. PUT throughput at 1 MiB grows with concurrency from 19.54 (1) to 109.36 (16) and 130.29 (64) MiB/s; GET grows from 90.35 (1) to
+    708.01 (16) and 720.96 (64). Between 16 and 64 the median gain is 19 percent for PUT and 2 percent for GET (the GET ranges overlap).
+P6. At 16 MiB and 100 MiB objects PUT is about 200 to 216 MiB/s and GET about 922 to 933 MiB/s at concurrency 8.
+
+NOT PROVEN, hypotheses with the test that settles them (not to be written as findings)
+-------------------------------------------------------------------------------------
+H1. The fixed cost of about 50 ms per PUT comes from the write path of the erasure set (writes to six drives, flush before the
+    acknowledgement). Settles: the sar data of the three nodes (disk wait and write rate per run, already recorded) and a read of the
+    RustFS configuration and documentation for its sync behaviour; the durability settings of the four systems are still open.
+H2. The GET results are partly served from the page cache. Reason: each GET run reads far more data than the dataset (about 56 GiB in 60 s
+    at 930 MiB/s against a dataset of about 8 GiB), and the cache was emptied only at the start of a run. Settles: disk read rate per run in
+    the sar logs of the three nodes against the client throughput.
+H3. The PUT to GET ratio comes from erasure coding work (encoding on a CPU without AVX2) and write amplification (about 2.0 times raw,
+    record R1). Settles: CPU use per node during PUT and GET runs in the sar logs.
+H4. The GET curve flattens above concurrency 16 because of a limit in the nodes or the client node (ceph2 is both). Settles: sar CPU of
+    ceph2 and of the other nodes at concurrency 64.
+
+LIMITS OF THIS SERIES (to be repeated in the thesis)
+----------------------------------------------------
+L1. The load node ceph2 is also a storage node (decision of 10 October, nobody asked for an extra VM). The client CPU cost falls on ceph2.
+L2. Redundancy differs between the systems (RustFS erasure coding 3+3 against three copies in the others), so write costs differ by design.
+L3. Three runs per configuration: ranges only, no statistical test. One cluster, one day.
+L4. Durability and flush settings of RustFS are not read yet (H1).
+L5. The control measurements before the series (dd of 2 GiB with direct writes and fsync on the first data disk: ceph0 1.33831 s, ceph1
+    1.54475 s, ceph2 0.768667 s; iperf3 from ceph2 to ceph0 5.05 Gbit/s over 10 s with 495 retransmits) were read from the screen, not
+    checked by hash. iperf3 is not installed on ceph1, so the network to ceph1 was not measured. The controls AFTER the series are not done.
+L6. The laptop results for RustFS (beta.8) are not comparable with this series (different version, one node, laptop).
+L7. The sar logs of the three nodes exist but are not analysed yet (H1 to H4 depend on them).

@@ -12,3 +12,5 @@ results/rustfs-roundtrip-vm-*.txt -text
 results/security-presign-unsigned-header-rustfs101-laptop-*.txt -text
 results/security-presign-unsigned-header-rustfs-vm-*.txt -text
 results/compat-rustfs101-laptop-ssekey-C18-*.tsv -text
+
+results/perf-rustfs-vm-3node-20261010-table-*.tsv -text
