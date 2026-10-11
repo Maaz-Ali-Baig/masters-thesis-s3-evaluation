@@ -35,7 +35,7 @@ Timeline (read from the console of the script)
 15:02:08  the script saw 192.168.1.71:9000 silent (waited 39 s for the user).
 15:02:36  the probe recorded 192.168.1.71 as SILENT and head_object READ_FAIL (first probe sample after the stop; see O3).
 15:03 to 15:09  during the outage the seed set and everything acknowledged so far was read through the surviving endpoint 192.168.1.72:9000:
-          217 objects, all OK (45 seed objects and 172 probe objects).
+          217 objects, all OK (45 seed objects and 172 probe objects; 167 of the 172 had been acknowledged before the stop, see the CORRECTION at the end).
 15:14:08  "ACTION NOW": ceph1 powered on by the user in Proxmox (outage of 720 s counted from 15:02:08).
 15:15:05  ssh answers on ceph1.
 15:15:08  probe: 192.168.1.71 live ANSWERS and head_object READ_OK again.
@@ -55,21 +55,24 @@ Own check afterwards (read only, read from the screen, about 16:05): on each of 
 (ceph0 disk1 and disk2, ceph1 disk1 and disk2, ceph2 disk1 and disk2), 2358 files and 412824929 bytes, identical on all six drives. Arithmetic (mine):
 1179 objects times 349526 bytes (a third of 1 MiB rounded up) is 412091154 bytes, the remaining 733775 bytes (about 622 per object) are consistent with
 one small metadata file per object next to the shard (two files per object: 2 times 1179 is 2358). The file layout itself was not inspected.
+NOTE (added later): this check does NOT show that the shards missed by ceph1 were repaired, see the CORRECTION at the end.
 
 PROVEN (read from the output above)
 -----------------------------------
 S1-P1. No acknowledged write was lost in this run: all 1179 acknowledged probe objects and all 45 seed objects are readable through every endpoint, including
        the restarted node, with the recorded sha256.
-S1-P2. With one of three nodes (two of six drives) stopped, writes and reads through the other nodes continued: 172 probe objects were acknowledged and the
-       seed set read back OK through ceph0 during the outage.
+S1-P2. With one of three nodes (two of six drives) stopped, writes and reads through the other nodes continued: 104 probe objects (index 168 to 271) were
+       acknowledged between 15:02:08 and 15:15:08 (ledger, read afterwards; 167 had been acknowledged before the stop) and the seed set and the 172
+       objects acknowledged so far read back OK through ceph0 during the outage.
 S1-P3. Client visible interruptions were short and limited to the moments around the stop and the restart: 34 failed write attempts in 12 minutes and a longest
        gap of 26.8 s between acknowledged writes. The 34 failures lie between 15:02:47 and 15:14:55 (the node was down from about 15:02 to 15:15); that they
        are attempts to the stopped node is consistent with the script logic (rotating first endpoint, next endpoint after a failure) but the error text of the
        ledger rows was not read here.
 S1-P4. The restarted node serves S3 requests again 60 s after the power on signal (ssh 57 s after the signal, S3 answer at 15:15:08, with the start command run by the script).
        The user pressed Start some seconds after the signal, so the boot itself took a little less than this.
-S1-P5. After the run each of the six drives holds the same number of files and bytes for the probe objects, including the 172 objects written while ceph1 was down.
-       So the shards that ceph1 missed during the outage are present on its drives at about 16:05.
+S1-P5. RETRACTED (11 October, later). It claimed that equal file counts and bytes on the six drives show that the shards ceph1 missed during the outage are present
+       on its drives. That does not follow: the objects of the aborted attempt of 10 October (750 objects, keys probe/1 to probe/750) were already on all six drives and
+       the keys written during the outage (probe/168 to probe/271) are among them, so the counts would be the same with or without a repair. See the CORRECTION.
 
 FINDINGS FOR THE THESIS
 -----------------------
@@ -91,17 +94,42 @@ O2. Whether the equal state of the six drives came from background healing or fr
     RustFS) is open. Settles: the per drive count before the full verification, in a repeat or in S2.
 O3. Cause of the 26.8 s gap and of the 28 s between "silent" at 15:02:08 (script) and 15:02:36 (probe): hypothesis that a write in flight to the stopping node waited
     for a timeout and delayed the probe loop (the first probe sample after the stop is also at 15:02:36). Settles: the ledger and probe rows around 15:02 (not read).
-O4. Two nodes stopped (S2) has not been run. The hypothesis of the method (with two of three nodes down the cluster cannot write and may not read) is untested.
+O4. Two nodes stopped (S2): run later the same day, see results/rustfs-vm-fault-tolerance-S2-2026-10-11.txt.
+O6. Whether ceph1 was repaired after the outage, and how long it took, is open (see the CORRECTION). Settles: a repeat with unique probe keys and a per drive count of the
+    probe objects of that run every 20 s (scripts/ft.sh now uses one key prefix per run).
 O5. Planned restart of a node (S3) is optional and not run.
 
 LIMITS
 ------
-L1. Light load: one 1 MiB write every 2 s (about 0.5 MiB/s of client data); 172 MiB were written while ceph1 was down. The time and effort of restoring
+L1. Light load: one 1 MiB write per probe loop (about 2.5 s per loop over the whole run, 1179 acknowledged loops in about 49 minutes; about 0.4 MiB/s of client data); 104 MiB were written while ceph1 was down (ledger). The time and effort of restoring
     shards depend on this volume, so the result is not a statement about heavy write loads.
 L2. One run, one day, one node, one outage length (12 minutes). No repetition and no statistics.
 L3. The script printed "D: unbound variable" once at its end. The exit handler uses the variable D, which is local to the scenario function (hypothesis; the line
-    was read in ft.sh). All results had been written before. The script was not changed, so the cited commit is the script that ran.
+    was read in ft.sh). All results had been written before. The script was changed after S1 and S2 (key prefix per run, exit handler, see the CORRECTION);
+    the commit cited above (d3b23b8) is the script that ran in both.
 L4. The stop and the power on are done by a person in Proxmox. The reaction time is inside the numbers (39 s between the signal and the silence of the endpoint).
 L5. Reads during the outage were checked through the surviving endpoint 192.168.1.72 only (script design), not through ceph2.
 L6. Redundancy differs between the systems (erasure coding 3+3 against three copies in the others), so a result for RustFS is not comparable one to one.
 L7. The archive and the tsv files stay on the VM (ceph0) and in the archive, the numbers here are read from the screen.
+
+CORRECTION (11 October 2026, later the same day, found while evaluating S2)
+---------------------------------------------------------------------------
+Flaw: the probe of scripts/ft.sh at d3b23b8 names its objects probe/1, probe/2, ... and starts at 1 in every run. The bucket ftbucket was not emptied between runs.
+Evidence (read from the ledgers on ceph0 and from the data size readings):
+ - the aborted attempt of 10 October (folder /root/ft-rustfs-S1-20261010-220924) acknowledged 750 probe objects, last index 750 (ledger, read on 11 October);
+ - the data size of ceph0 grew from 184796532 bytes (10 October 22:09) to 710017982 bytes (11 October 14:56), 525221450 bytes; one probe object occupies about
+   700296 bytes on one node (2 drives times 350148 bytes, from 412824929 bytes per drive for 1179 objects); 525221450 divided by 700296 is 750.0 (arithmetic mine),
+   which matches the 750 objects;
+ - S1 itself acknowledged 167 objects before the stop (index 1 to 167) and 104 objects between 15:02:08 and 15:15:08 (index 168 to 271), 1179 in total (ledger).
+Consequences for this record:
+ 1. The keys written while ceph1 was down (probe/168 to probe/271) already existed from the aborted attempt on all six drives, with older content. So the identical file
+    counts and bytes on the six drives do not show that ceph1 received the new shards (S1-P5 is retracted above).
+ 2. The statements "172 probe objects written while ceph1 was down" and "172 MiB" were wrong. 172 objects were acknowledged when the read test during the outage ran; 104
+    were acknowledged inside the outage window.
+ 3. S1-P1 stands. The full verification compares the content read through each endpoint with the sha256 of THIS run's ledger, so every key returned this run's content (also
+    for the keys that had older content before). That the old content was never served is therefore shown for these 1224 reads; how RustFS decides between a stale and a
+    current copy on the restarted node is not examined.
+ 4. Whether and when ceph1 was repaired is open (O6). The S1 result stays: no acknowledged write lost, short interruption, node serves again 60 s after the power on signal.
+Fix: scripts/ft.sh now writes every run under its own prefix (probe-<scenario>-<time>/<n>, stored in <folder>/prefix) and the exit handler no longer uses the local variable D.
+The change was tested on the laptop with a throwaway RustFS 1.0.1 container (two probe runs with different prefixes, both verified OK, and run 1 verified OK again after run 2); it
+has not been run on the VMs. The scenario code itself was not run on the laptop for this change.
