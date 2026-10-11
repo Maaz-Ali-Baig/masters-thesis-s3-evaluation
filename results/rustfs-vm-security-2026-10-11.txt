@@ -1,0 +1,81 @@
+RustFS 1.0.1, three nodes on the university VMs: security checks (11 October 2026)
+==================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one container each, rustfs 1.0.1 (image
+           sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c), one erasure set over six drives (3 data and 3 parity shards),
+           S3 on port 9000, web console on port 9001, SSE-S3 master key present (record of 9 October). Plain http, no TLS configured.
+Method:    security_method.md (draft of 10 October 2026), script scripts/sec.sh at commit 73b28e8d3786813d5bb69dd6326869d41815215d, sha256
+           6b263b03ee3e9db86bf8e823cc0247fe596895d1f5445667a8e3d2dee4450684 (fetched on ceph0 by commit hash, checked there with sha256sum -c: OK, syntax ok).
+           Run on ceph0 as "bash /root/sec-deploy/sec.sh rustfs all" at 18:09 (VM clock, UTC+2), about 30 s for all checks.
+Checks:    sec1 (ports and anonymous answers), sec2 (anonymous write through non S3 ports), sec3 (authentication), sec5 (transport, NOT TESTED, see below), sec6
+           (encryption at rest), sec8 (visibility of failed attempts in the container logs). NOT run: sec4 (scoped key, needs a key made with the admin tool) and
+           SEC7 of the method (admin interfaces, manual).
+Output:    on ceph0 /root/sec-rustfs-20261011-180911/ (sec1.txt, sec1.tsv, sec2.txt, sec3.txt, sec5.txt, sec6.txt, sec8.txt, summary.txt, SHA256SUMS) and
+           /root/sec-rustfs-20261011-180911.tar.gz (2687 bytes, sha256 20f531a259b03b25c8b6e29943c4e23128ef29a36a25d5d2b914d70b971434cc, read from the
+           screen; checked by a second command on ceph0 that searched the real sha256sum output for this string: found, count 1). Secret key found in the output
+           files: 0, access key found in the output files: 0. The numbers below were read from the console of the VM session.
+Cleanup:   all test objects are removed by the script; checked afterwards: no entry named secprobe* on the data drives of ceph0, ceph1 and ceph2 (count 0 each).
+
+Results (read from the output files)
+------------------------------------
+SEC1 ports and anonymous answers
+  Listening TCP ports on every node: 22, 631, 9000 and 9001 (identical on the three nodes). Port 631 gave no HTTP answer (it is not RustFS and was not examined).
+  Without credentials these paths answered 200 with a body, on every node: on port 9000 /health (119 bytes), /minio/health/live (119 bytes) and /minio/health/cluster
+  (374 to 375 bytes); on port 9001 the same three and /rustfs/console/index.html (34536 bytes). The other paths of the list (15 per port) did not answer 200 or 3xx.
+  Anonymous PUT and DELETE of a bucket path on port 9000: HTTP 403 (110 bytes) on all three nodes.
+  Bodies read once from 192.168.1.72 (GET without credentials):
+    /health                  {"status":"ok","service":"rustfs-endpoint","timestamp":"2026-10-11T16:12:38...","version":"1.0.1"}
+    /minio/health/cluster    {"status":"ok","service":"rustfs-endpoint",...,"version":"1.0.1","ready":true,"details":{"storage":{"status":"connected","ready":true,
+                             "readinessScope":"write_quorum_and_pool_metadata","source":"storage_inventory"},"iam":{"status":"connected","ready":true},"lock":{"status":
+                             "connected","ready":true}},"degradedReasons":[]}
+    console index.html       static HTML of the web console (first 250 bytes read: doctype, meta tags, stylesheet link)
+SEC2 anonymous write through non S3 ports
+  No non S3 port answered 200 or 3xx on "/", so the script tested nothing (the check was written for the SeaweedFS master and volume ports). The status code of "/" on
+  port 9001 was not read.
+SEC3 authentication (all against 192.168.1.72:9000, fake access key SECPROBE1791734951FAKE, made up for the test)
+  right access key, wrong secret: SignatureDoesNotMatch (list objects).
+  fake access key, wrong secret: InvalidAccessKeyId (list objects); fake key, list buckets: InvalidAccessKeyId.
+  no signature: GET bucket 403 (110 bytes), GET object 403 (110 bytes), PUT object 403 (110 bytes).
+SEC5 transport
+  tcpdump is not installed on ceph0: NOT TESTED (installing it is the user's decision). Every request of this run used http:// and was answered, so the S3 port serves
+  plain http in this deployment; whether RustFS can serve TLS and how it is configured is not examined.
+SEC6 encryption at rest (marker objects of 400 lines, about 27.6 KB: 400 times 69 bytes, arithmetic mine from the script)
+  Plain upload, SSE-S3 upload (--sse AES256) and SSE-C upload (own 32 character key) were all accepted (no error text; the SSE-C answer shows ETag, ServerSideEncryption
+  AES256 and SSECustomerAlgorithm AES256, cut at 150 characters in the file).
+  Marker search with grep -rlF in /srv/s3/disk1/rustfs and /srv/s3/disk2/rustfs on each node, plain, SSE-S3 and SSE-C objects together: 1 file on each node, always the
+  file of the PLAIN object: /srv/s3/disk1/rustfs/ftbucket/secprobe-plain.txt/xl.meta on ceph0, the same path on ceph1, and /srv/s3/disk2/rustfs/ftbucket/secprobe-plain.txt/xl.meta
+  on ceph2. No file of the SSE-S3 object or the SSE-C object contained the marker.
+SEC8 visibility of failed attempts
+  Log lines with the fake access key in the container logs: 0 on ceph0, 0 on ceph1, 0 on ceph2 (the logs of the running container at its default log level).
+
+PROVEN (read from the output above)
+-----------------------------------
+SE-P1. The S3 port refuses requests without a valid signature: anonymous GET, PUT and DELETE return 403; a wrong secret gives SignatureDoesNotMatch; an unknown access key
+       gives InvalidAccessKeyId.
+SE-P2. Without credentials the nodes answer with information: /health shows the service name and the exact version (1.0.1), /minio/health/cluster shows readiness details of
+       storage, IAM and lock and the list of degraded reasons, and port 9001 serves the web console page to anyone who can reach it (on every node).
+SE-P3. An object stored without server side encryption is readable in clear in a file on the data drives (the marker text was found in xl.meta of the plain object on one
+       drive of each node, so on three of the six drives).
+SE-P4. For the SSE-S3 and the SSE-C object the marker text was not found in any file under the data folders of the three nodes.
+SE-P5. A failed authentication attempt with a made up access key leaves no line in the container log of any node at the default log level.
+SE-P6. The S3 port is plain http here (all requests of the run used http://).
+
+NOT PROVEN, hypotheses and open points (not to be written as findings)
+----------------------------------------------------------------------
+SE-O1. Why the marker is on three drives and in xl.meta: hypothesis that small objects are stored inline in xl.meta and that the three data shards hold the plain text while the
+       three parity shards hold coded bytes. Settles: the RustFS documentation or source and a look at the files (not done).
+SE-O2. The absence of the marker in the SSE objects shows only that the text is not stored in clear in the searched folders (a clear copy would have left 400 copies of the
+       marker). It says nothing about the strength of the encryption or about where the keys are kept.
+SE-O3. The web console login and what the console allows without credentials are not tested (SEC7 of the method): only the static page is shown to be public.
+SE-O4. Whether the exposed health and cluster paths can be switched off, and whether the failed attempts can be logged at a higher log level, is not examined.
+SE-O5. Transport encryption on the wire (SEC5) is not tested: tcpdump is missing. The result of plain http is read from the endpoint URLs only.
+SE-O6. A scoped key (SEC4) is not tested, so nothing is stated about bucket level permissions.
+SE-O7. The comparison with the other three systems follows when they are run with the same script.
+
+LIMITS
+------
+L1. Everything was run from ceph0 against its own S3 endpoint (192.168.1.72:9000) for sec3 and sec6; port scans and the anonymous path list were run against all three nodes.
+L2. The anonymous path list is fixed (15 paths in the script); other paths may answer too.
+L3. The marker search covers /srv/s3/disk1/rustfs and /srv/s3/disk2/rustfs on each node, not the system disk and not other folders.
+L4. One run, one day, one version (1.0.1), default log level, plain http, SSE-S3 master key present.
+L5. The script was only tested on the laptop before (sec1, sec3, sec6; tcpdump was missing there too); sec2 and sec8 are trivially empty for RustFS in both places.
