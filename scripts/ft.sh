@@ -102,7 +102,8 @@ seed() {
 
 # ---------------------------------------------------------------- probe
 probe() {
-    local d="$1" i=0 n ep idx k rc sha err c0 ep_list acked
+    local d="$1" i=0 n ep idx k rc sha err c0 ep_list acked pfx
+    pfx="$(cat "$d/prefix" 2>/dev/null || echo probe)"   # one key prefix per run: runs never overwrite each other's objects
     set -- $HOSTLIST; n=$#
     mkdir -p "$d"
     printf 'epoch\tendpoint\tlive_code\thead_object\n' > "$d/probe.tsv"
@@ -123,7 +124,7 @@ probe() {
         for k in $(seq 0 $((n-1))); do
             idx=$(( ((i-1) + k) % n + 1 ))
             ep="$(echo $HOSTLIST | cut -d' ' -f$idx)"
-            if err="$(s3ep "$ep" s3 cp "$d/obj.tmp" "s3://$B/probe/$i" --only-show-errors 2>&1)"; then rc=0; else rc=1; fi
+            if err="$(s3ep "$ep" s3 cp "$d/obj.tmp" "s3://$B/$pfx/$i" --only-show-errors 2>&1)"; then rc=0; else rc=1; fi
             if [ "$rc" = 0 ]; then
                 printf '%s\t%s\t%s\tACK\t%s\t\n' "$(now)" "$i" "$ep" "$sha" >> "$d/ledger.tsv"; acked=1; break
             fi
@@ -148,7 +149,7 @@ export -f verify_one
 verify() {
     local d="$1" ep list="$1/verify-keys.tsv" eps="${2:-$HOSTLIST}"
     [ -s "$SEED/seed.tsv" ] || die "no seed set, run seed first"
-    { cut -f1,3 "$SEED/seed.tsv"; awk -F'\t' '$4=="ACK"{print "probe/" $2 "\t" $5}' "$d/ledger.tsv" 2>/dev/null; } > "$list"
+    { cut -f1,3 "$SEED/seed.tsv"; awk -F'\t' -v p="$(cat "$d/prefix" 2>/dev/null || echo probe)" '$4=="ACK"{print p "/" $2 "\t" $5}' "$d/ledger.tsv" 2>/dev/null; } > "$list"
     : > "$d/verify.tsv"
     for ep in $eps; do
         echo "verify through $ep: $(wc -l < "$list") objects"
@@ -197,8 +198,9 @@ scenario() {
     esac
     BASE="${FT_BASE:-300}"
     D="/root/ft-$SYSTEM-$sc-$TS"; mkdir -p "$D"
+    echo "probe-$sc-$TS" > "$D/prefix"
     exec > >(tee -a "$D/console.txt") 2>&1
-    trap 'touch "$D/stop"' EXIT
+    trap "touch '$D/stop'" EXIT
     echo "host: $(hostname)  system: $SYSTEM  scenario: $sc  time: $(date '+%F %T %z')  output: $D"
     echo "targets: $TARGETS  baseline: $BASE s  outage: $OUTAGE s  hosts: $HOSTLIST"
     echo "aws: $(aws --version 2>&1 | head -1)  checksum setting: when_required, retries off"
