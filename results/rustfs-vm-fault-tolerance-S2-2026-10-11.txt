@@ -1,0 +1,89 @@
+RustFS 1.0.1, three nodes on the university VMs: fault tolerance scenario S2, two nodes hard stopped (11 October 2026)
+=====================================================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one container each, rustfs 1.0.1 (image
+           sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c), one erasure set over six drives (3 data and 3
+           parity shards, record R1 of 9 October), SSE master key present. 4 vCPU and 7.7 GiB RAM per node.
+Method:    fault_tolerance_method.md (draft of 10 October 2026), script scripts/ft.sh at commit d3b23b8d292490a970aa946251a2854642f53c59,
+           sha256 691566859bd9783204e83d2288159aa0f111d517ffa7cf3850a7925c7d6f294f, run on ceph0 as "bash /root/ft-deploy/ft.sh rustfs scenario S2".
+           Same seed set as S1 (45 objects). The script version that ran has the flaw described in the CORRECTION of the S1 record (probe keys restart at 1 in every run).
+Scenario:  S2. Nodes ceph1 and ceph2 are hard stopped by the user in Proxmox (Stop, power off, not shutdown) and powered on again after 6 minutes. Only ceph0 stays up.
+Clock:     all times are the clock of ceph0 (local time, UTC+2).
+Output:    on ceph0 /root/ft-rustfs-S2-20261011-161345/ (console.txt, ledger.tsv, probe.tsv, watch.tsv, verify.tsv, verify-keys.tsv, verify-during-outage.tsv, start logs,
+           SHA256SUMS) and /root/ft-rustfs-S2-20261011-161345.tar.gz (281306 bytes, sha256 33f5502120ea1327a6763325654e9c5b5385a92246acfd92040ffb0ed23d7748, read from
+           the screen; checked by a second command on ceph0 that searched the real sha256sum output for this string: found, count 1). Secret key found in the output
+           files: 0. The numbers below were read from the console of the VM session; the tsv files are in the archive and not copied here.
+
+State before the run
+--------------------
+Preflight at 16:13:18: all three S3 endpoints answer 403 to an unsigned request, ssh from ceph0 to ceph1 and ceph2 works, node scripts present, bucket ftbucket present, seed
+set present. The container lists of ceph1 and ceph2 showed only "rustfs". The user had disabled the autostart of the cephadm target on ceph2 by hand before the run
+(output on ceph2: "enabled: disabled", one container), as done for ceph1 on the day before this run (see the S1 record).
+
+Timeline (read from the console of the script)
+----------------------------------------------
+16:13:45  S2 started, baseline 300 s with the probe running (same probe as S1).
+16:18:48  "ACTION NOW": ceph1 and ceph2 hard stopped by the user in Proxmox.
+16:19:12  last acknowledged write before the outage (index 162, through 192.168.1.70).
+16:19:18  the script saw both endpoints silent (waited 30 s for the user).
+16:19:37  probe: head_object of the fixed object READ_FAIL on 192.168.1.72, .71 (READ_FAIL since 16:19:15) and .70.
+16:19:56  probe: 192.168.1.70 and 192.168.1.71 live SILENT.
+16:21 to 16:24  read test during the outage through the only surviving endpoint 192.168.1.72:9000: 207 objects (45 seed and 162 probe objects), result ERROR_OR_EMPTY 207
+          (every read failed or returned nothing, no OK).
+16:25:18  "ACTION NOW": ceph1 and ceph2 powered on by the user in Proxmox (outage of 360 s counted from 16:19:18, the read test took until 16:25).
+16:27:57  ssh answers on ceph1.  16:28:00  start command of RustFS finished on ceph1; probe: 192.168.1.71 live ANSWERS and head_object READ_OK.
+16:28:01  ssh answers on ceph2.  16:28:04  start command finished on ceph2.
+16:28:06  first acknowledged write after the outage (index 195, through 192.168.1.70).
+16:28:07  probe: 192.168.1.70 live ANSWERS and head_object READ_OK.
+16:28:15  write attempt of index 196 through 192.168.1.72 FAILED (error text begins "An error occurred (ServiceUnavai", cut at 150 characters in the ledger); the
+          same object was acknowledged through 192.168.1.71 at 16:28:16; index 197 through .71 at 16:28:18; index 198 through .70 at 16:28:19.
+16:28:17  probe: head_object READ_OK on 192.168.1.72 again.
+16:28 to ~16:58  recovery watch every 20 s, ended by its 30 minute limit.
+~16:58 to ~17:20  full verification through all three endpoints, summary, archive (found finished at 17:23:09).
+
+Result of the script (summary printed at the end, read from the screen)
+-----------------------------------------------------------------------
+Acknowledged writes 1065, failed attempts 97. First failed attempt 16:19:42, last failed attempt 16:28:15.
+Longest gap between acknowledged writes 534.4 s (after 16:19:12).
+Full verification: 1110 objects (45 seed objects and 1065 acknowledged probe objects) read through each of the three endpoints and compared with the recorded
+sha256: status OK 1110 for 192.168.1.70, 1110 for 192.168.1.71 and 1110 for 192.168.1.72; no other status line was printed.
+At the end the script printed once "/root/ft-deploy/ft.sh: line 1: D: unbound variable" after the archive hash (same as in S1).
+After the run (about 17:25): the container lists of ceph1 and ceph2 show only "rustfs" (no Ceph container).
+
+PROVEN (read from the output above)
+-----------------------------------
+S2-P1. With two of the three nodes down (two of six drives left), RustFS served neither reads nor writes through the surviving node. Reads: all 207 reads of the test
+       during the outage failed (ERROR_OR_EMPTY 207, no OK), and the fixed object could not be read through 192.168.1.72 from 16:19:37 to 16:28:17. Writes: not one
+       write was acknowledged between 16:19:12 and 16:28:06; the 97 failed attempts equal 32 loops (index 163 to 194) times 3 endpoints plus the one failure at 16:28:15
+       (my arithmetic, it matches the number printed by the script), so every attempt on every endpoint failed during the outage.
+S2-P2. Together with S1 this brackets the behaviour on this setup at node granularity: with four of six drives up (S1) reads and writes continued; with two of six up
+       (S2) neither worked. Three of six drives cannot be tested with whole nodes (a node holds two drives).
+S2-P3. The service returned without any repair command after the nodes were back and RustFS was started on them: first acknowledged write at 16:28:06, 5 s after the
+       start command finished on ceph2 and 6 s after ceph1 answered; the surviving node's own endpoint served reads again at 16:28:17.
+S2-P4. No acknowledged write was lost: all 1110 objects (45 seed and 1065 acknowledged) are readable through every endpoint with the recorded sha256 after the recovery.
+S2-P5. Nothing was acknowledged during the outage, so there were no writes to repair afterwards; S2 therefore says nothing about the repair of missed writes (see S1, O6).
+S2-P6. After the reboot no Ceph container ran on ceph1 and ceph2 (container lists at about 17:25), consistent with the disabled cephadm target.
+
+NOT PROVEN, hypotheses and open points (not to be written as findings)
+----------------------------------------------------------------------
+O1. Why two drives are not enough (hypothesis: reading needs at least the three data shards and writing needs a quorum of at least four of six drives, as usual for
+    erasure coding 3+3). Not read in the RustFS documentation or source here. Settles: the RustFS documentation or source on read and write quorum.
+O2. Why the first failed attempt comes 30 s after the last acknowledged write (16:19:12 and 16:19:42; S1 had a similar 26.8 s gap): hypothesis that a write in flight to a
+    stopping node waits for a timeout. Settles: the ledger rows and the client timeouts (the script sets a read timeout of 25 s and a connect timeout of 3 s, from the code).
+O3. The failure of ceph0's own endpoint at 16:28:15 (ServiceUnavailable) and its first successful read at 16:28:17, although ceph1 had answered since 16:28:00 and ceph2
+    since 16:28:07 and an acknowledged write went through ceph2 at 16:28:06: cause unknown (hypothesis: the node re-establishes its connections to the peers after an
+    interval). Settles: the RustFS log of ceph0 for that time (not read).
+O4. The drive level check used in S1 is not informative here: the probe keys were reused (S2 overwrote probe/1 to about probe/1097, the objects of S1; see the CORRECTION of
+    the S1 record). The counts read after S2 (about 17:30: 1179 entries, 2358 files and 412824929 bytes on each of the six drives) are the same as after S1 and show nothing
+    about S2.
+O5. The data size reading of the recovery watch is noisy, as in S1; it was not evaluated for S2.
+O6. Planned restart (S3) and a repeat with unique probe keys and a per drive count (S1 repeat) are not run.
+
+LIMITS
+------
+L1. Light load (one 1 MiB write per probe loop). One run, one day, one outage length (6 minutes), two nodes. No repetition and no statistics.
+L2. The stop and the power on are done by a person in Proxmox; reaction time is inside the numbers (30 s between the signal and the silence of both endpoints). The user
+    stopped ceph1 and ceph2 one after the other, not at the same instant.
+L3. The read test during the outage went through ceph0 only (script design) and ran from about 16:20 to 16:24; the outage lasted from 16:19:18 to the power on.
+L4. The script printed "D: unbound variable" once at its end (see L3 of the S1 record); the script at d3b23b8 ran; it was changed afterwards (key prefix per run).
+L5. Redundancy differs between the systems (erasure coding 3+3 against three copies in the others): "two nodes down" leaves two of six shards here and one of three copies elsewhere.
