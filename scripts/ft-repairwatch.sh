@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 # ft-repairwatch.sh : per drive count of the probe objects of one fault tolerance run (repair after an outage)
 #
-# usage: bash ft-repairwatch.sh <run dir of ft.sh>        (start it while the scenario runs, it stops by itself)
+# usage: bash ft-repairwatch.sh <run dir of ft.sh> [rustfs|seaweedfs]   (start it while the scenario runs, it stops by itself)
+#
+# Mode seaweedfs (second argument): SeaweedFS keeps data in volumes, not in one folder per object, so the counts come from
+# the volume server status of every node (http://<node>:8080/status, read from ceph0, no ssh): per disk id the number of
+# volumes, the sum of FileCount and the sum of Size of the volumes of the collection ftbucket (the bucket of the run; it
+# holds the seed set and every earlier run, so only the differences between the nodes and over time matter). A node
+# whose status does not answer is written as DOWN. Columns then mean: data dir = disk<id>, object folders = volumes.
+# Settings: RW_PORT (default 8080), RW_COLLECTION (default ftbucket).
 #
 # Reads the key prefix of the run from <run dir>/prefix (written by scripts/ft.sh from commit f330983 on), and every
 # RW_INTERVAL seconds (default 20) counts, on every node and every data directory, the object folders, the files and the
@@ -14,8 +21,27 @@
 set -u
 D="${1:-}"
 [ -n "$D" ] && [ -d "$D" ] || { echo "usage: $0 <run dir of ft.sh>" >&2; exit 1; }
+SYS="${2:-rustfs}"
+case "$SYS" in rustfs|seaweedfs) ;; *) echo "second argument: rustfs or seaweedfs" >&2; exit 1 ;; esac
 [ -s "$D/prefix" ] || { echo "no $D/prefix (run made with a script older than f330983?)" >&2; exit 1; }
 P="$(cat "$D/prefix")"
+PORT="${RW_PORT:-8080}"
+COLL="${RW_COLLECTION:-ftbucket}"
+PYSW='
+import sys, json
+d = json.load(sys.stdin)
+a = {}
+for v in d.get("Volumes", []):
+    if v.get("Collection") == sys.argv[1]:
+        t = a.setdefault(v.get("DiskId", 0), [0, 0, 0])
+        t[0] += 1
+        t[1] += v.get("FileCount", 0)
+        t[2] += v.get("Size", 0)
+if not a:
+    print("none 0 0 0")
+for k in sorted(a):
+    print("disk%s %d %d %d" % (k, a[k][0], a[k][1], a[k][2]))
+'
 NODES="${RW_NODES:-192.168.1.72 192.168.1.71 192.168.1.70}"
 DIRS="${RW_DIRS:-/srv/s3/disk1/rustfs/ftbucket /srv/s3/disk2/rustfs/ftbucket}"
 INTERVAL="${RW_INTERVAL:-20}"
@@ -42,7 +68,12 @@ sample() {
     now="$(date +%s)"; t="$(date +%T)"
     acked="$(awk -F'\t' '$4=="ACK"' "$D/ledger.tsv" 2>/dev/null | wc -l)"
     for n in $NODES; do
-        if out="$(rx "$n" "$REMOTE" 2>/dev/null)" && [ -n "$out" ]; then
+        if [ "$SYS" = seaweedfs ]; then
+            out="$(curl -s -m 5 "http://$n:$PORT/status" 2>/dev/null | python3 -c "$PYSW" "$COLL" 2>/dev/null)" || out=""
+        else
+            out="$(rx "$n" "$REMOTE" 2>/dev/null)" || out=""
+        fi
+        if [ -n "$out" ]; then
             while read -r line; do
                 set -- $line
                 printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$now" "$t" "$n" "$1" "$2" "$3" "$4" "$acked" >> "$OUT"
@@ -54,7 +85,7 @@ sample() {
 }
 
 printf 'epoch\ttime\tnode\tdata_dir\tobject_folders\tfiles\tbytes\tacked_so_far\n' > "$OUT"
-echo "repairwatch: run dir $D, prefix $P, nodes $NODES, every $INTERVAL s, output $OUT"
+echo "repairwatch: system $SYS, run dir $D, prefix $P, nodes $NODES, every $INTERVAL s, output $OUT"
 while :; do
     sample
     [ -e "$D/stop" ] && break
