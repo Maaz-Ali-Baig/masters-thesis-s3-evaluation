@@ -103,3 +103,17 @@ NOT PROVEN: that the data is encrypted at rest (the probe tests the API only, at
 other tests: the other 21 lines are byte identical to the first run except C18, so it had none in this probe.
 Result summary for RustFS 1.0.1 on the VMs: 20 PASS and 2 FAIL (C19 ACLs, C21 awkward object keys) with the SSE-S3 key, 19 PASS and 3 FAIL without it.
 The first run stays in this record as the default deployment.
+
+5. ACL read with ?acl and ?acl= on ceph0 (12 October 2026), settles the open point of section 3
+Run on ceph0 (hostname debian) against 192.168.1.72:9000, RustFS 1.0.1, one command given to the VM session, numbers read from the screen (no archive was made). A temporary
+bucket (aclprobe<pid>) with one object k.txt (content "hi") was made, every request signed by curl 7.88.1 with --aws-sigv4 (x-amz-content-sha256 of the empty body), then the
+object and the bucket were removed (the bucket removal was printed). Keys were read inside the command from the key file and not printed.
+  curl GET of the key, no query          HTTP 200
+  curl GET <key>?acl                     HTTP 403, error code SignatureDoesNotMatch
+  curl GET <key>?acl=                    HTTP 200, body AccessControlPolicy
+  aws s3api get-object-acl (CLI 2.36.8)  answered, number of grants 1 (length(Grants))
+PROVEN: RustFS 1.0.1 answers the ACL read correctly. The 403 of the VM presign file comes from curl 7.88.1 signing a valueless ?acl wrongly: the same request with ?acl= is
+accepted, and so is the AWS CLI. The three node cluster is not the cause, and the ACL lines of the VM presign file for RustFS are a client artefact of ceph0. This is the same
+pattern as for SeaweedFS (?acl 403, ?acl= 200) and as for Garage (403 on ?acl, 501 on ?acl=).
+NOT PROVEN: that curl 8.5.0 signs ?acl correctly (the laptop answering 200 is consistent with it, the curl source was not read); the cause of the Ceph case (record O6) until the
+same test is run on Ceph. The compatibility probe C19 (ACLs) failure of RustFS is a separate result and is not explained by this test.
