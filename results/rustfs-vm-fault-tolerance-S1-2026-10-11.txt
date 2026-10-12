@@ -133,3 +133,9 @@ Consequences for this record:
 Fix: scripts/ft.sh now writes every run under its own prefix (probe-<scenario>-<time>/<n>, stored in <folder>/prefix) and the exit handler no longer uses the local variable D.
 The change was tested on the laptop with a throwaway RustFS 1.0.1 container (two probe runs with different prefixes, both verified OK, and run 1 verified OK again after run 2); it
 has not been run on the VMs. The scenario code itself was not run on the laptop for this change.
+
+ADDENDUM 12 October 2026: repair after the outage measured in a repeat
+======================================================================
+The repair question of this record (O1, O2, O6 and the retracted S1-P5) was answered by a repeat with a key prefix of its own and a per drive count every 20 s, see
+results/rustfs-vm-fault-tolerance-S1-repeat-2026-10-12.txt: the objects ceph1 had missed (about 105) were on its drives within 26 s of the restart, all six drives equal at the end, and
+the catch up did not come from the full read-back. The mechanism is not known (open point O1 of the repeat record). The numbers of this record (11 October) stay as they are.
