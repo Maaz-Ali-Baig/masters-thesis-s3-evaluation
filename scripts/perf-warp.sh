@@ -113,13 +113,21 @@ wait_space() {
         u="$(used_pct)"; u="${u:-0}"
         [ "$u" -le "$limit" ] && return 0
         i=$((i+1)); [ "$i" -gt 20 ] && die "data disks still ${u} percent used after 10 minutes, stopping"
-        echo "space: ${u} percent used, waiting 30 s for reclaim ($i/20)"; sleep 30
+        echo "space: ${u} percent used, waiting 30 s for reclaim ($i/20)"
+        [ "$SYSTEM" = seaweedfs ] && reclaim
+        sleep 30
     done
 }
 drop_caches() { [ -n "$NODES" ] || return 0; on_nodes 'sync; echo 3 > /proc/sys/vm/drop_caches' >/dev/null 2>&1 || true; }
 reclaim() {
     if [ "$SYSTEM" = ceph ] && [ "$SSH_OK" = 1 ]; then
         printf 'cephadm shell -- radosgw-admin gc process --include-all >/dev/null 2>&1; echo gc done\n' | node_sh 192.168.1.72 || true
+    fi
+    if [ "$SYSTEM" = seaweedfs ]; then
+        # deleted objects only free disk space when the master vacuums the volumes; ask for it (garbage threshold 1 percent)
+        # and let the nodes settle, never called inside a measured run
+        echo "seaweedfs vacuum: $(curl -s -L -m 300 -o /dev/null -w 'http %{http_code} in %{time_total} s' "http://${FIRST%%:*}:9333/vol/vacuum?garbageThreshold=0.01")"
+        sleep 10
     fi
 }
 clean_bucket() {
