@@ -87,3 +87,21 @@ L2. The stop and the power on are done by a person in Proxmox; reaction time is 
 L3. The read test during the outage went through ceph0 only (script design) and ran from about 16:20 to 16:24; the outage lasted from 16:19:18 to the power on.
 L4. The script printed "D: unbound variable" once at its end (see L3 of the S1 record); the script at d3b23b8 ran; it was changed afterwards (key prefix per run).
 L5. Redundancy differs between the systems (erasure coding 3+3 against three copies in the others): "two nodes down" leaves two of six shards here and one of three copies elsewhere.
+
+ADDENDUM 12 October 2026: read and write quorum from the RustFS source (settles O1 only as far as the source reading goes)
+============================================================================================================================
+Source:    github.com/rustfs/rustfs, tag 1.0.1 (the version string of the running image is 1.0.1; that the image was built from exactly this tag was not checked), read as
+           text from raw.githubusercontent.com (nothing was saved), files crates/ecstore/src/set_disk/metadata.rs (function object_quorum_from_meta, lines 408 to 470 at that
+           tag), crates/ecstore/src/set_disk/core/metadata_quorum.rs (function default_write_quorum, lines 329 to 338). Web search of the documentation
+           (docs.rustfs.com, pages on erasure coding and on cold start) gave no quorum numbers; the cold start page names only lock quorum and storage quorum as health reasons.
+What the code says (read, not tested):
+           - object_quorum_from_meta computes data_blocks = number of drives minus parity_blocks and returns (data_blocks, write_quorum) with
+             "write_quorum = if data_blocks == parity_blocks { data_blocks + 1 } else { data_blocks }".
+           - default_write_quorum (same rule from the default parity): "if data_blocks == self.default_parity_count { data_blocks + 1 } else { data_blocks }".
+           - The first reading of object metadata asks for n / 2 replies (expected_rquorum = parts_metadata.len() / 2 when parity is not zero).
+Applied to this deployment (6 drives, 3 data and 3 parity from record R1, my arithmetic): data_blocks 3 equals parity_blocks 3, so the write quorum is 4 drives and the
+read quorum (data blocks) is 3 drives.
+PROVEN (about the code, and consistent with the tests): the source defines a write quorum of 4 of 6 drives for this layout, which fits S1 (four drives up: writes continued) and
+S2 (two drives up: no write acknowledged). The read failures of S2 (two drives up) fit a read need of at least 3 drives.
+NOT PROVEN: that the running binary behaves as this source reading says at exactly three of six drives (prediction from the code: reads work, writes fail with three drives up;
+it cannot be tested with whole nodes because a node holds two drives); that the documentation says the same; the cause of the 30 s delay (O2) and of the failure at 16:28:15 (O3).

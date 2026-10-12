@@ -2142,3 +2142,6 @@ The user installed `tcpdump` on ceph0 (version 4.99.3; it was absent at 10:08). 
 
 ### RustFS ACL read with ?acl and ?acl= on ceph0 (12 October 2026)
 Signed GET with curl 7.88.1 on ceph0 against RustFS 1.0.1 (temporary bucket and object, removed afterwards): no query 200, `?acl` 403 SignatureDoesNotMatch, `?acl=` 200 AccessControlPolicy, `aws s3api get-object-acl` answered with 1 grant. So the 403 in the VM presign file is the curl 7.88.1 artefact seen with Garage and SeaweedFS, not a RustFS or cluster effect. Added as section 5 of `results/rustfs-vm-compat-and-presign-2026-10-09.txt`. Ceph (O6) remains open until the same test runs there.
+
+### RustFS read and write quorum from the source (12 October 2026)
+Read from the RustFS source at tag 1.0.1 (raw.githubusercontent.com, text only, nothing saved): write quorum is data_blocks, plus 1 when data_blocks equals parity_blocks (`object_quorum_from_meta` in `crates/ecstore/src/set_disk/metadata.rs`, `default_write_quorum` in `set_disk/core/metadata_quorum.rs`). With 6 drives and 3+3 that is 4 for writes and 3 for reads. This fits S1 (4 of 6 up works) and S2 (2 of 6 up does not). The documentation pages found give no quorum numbers. Prediction not tested: with exactly 3 of 6 drives up reads work and writes fail. Added as an ADDENDUM to `results/rustfs-vm-fault-tolerance-S2-2026-10-11.txt`.
