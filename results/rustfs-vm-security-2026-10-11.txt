@@ -7,7 +7,7 @@ Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one 
 Method:    security_method.md (draft of 10 October 2026), script scripts/sec.sh at commit 73b28e8d3786813d5bb69dd6326869d41815215d, sha256
            6b263b03ee3e9db86bf8e823cc0247fe596895d1f5445667a8e3d2dee4450684 (fetched on ceph0 by commit hash, checked there with sha256sum -c: OK, syntax ok).
            Run on ceph0 as "bash /root/sec-deploy/sec.sh rustfs all" at 18:09 (VM clock, UTC+2), about 30 s for all checks.
-Checks:    sec1 (ports and anonymous answers), sec2 (anonymous write through non S3 ports), sec3 (authentication), sec5 (transport, NOT TESTED, see below), sec6
+Checks:    sec1 (ports and anonymous answers), sec2 (anonymous write through non S3 ports), sec3 (authentication), sec5 (transport, NOT TESTED in this run, done on 12 October: see the ADDENDUM), sec6
            (encryption at rest), sec8 (visibility of failed attempts in the container logs). NOT run: sec4 (scoped key, needs a key made with the admin tool) and
            SEC7 of the method (admin interfaces, manual).
 Output:    on ceph0 /root/sec-rustfs-20261011-180911/ (sec1.txt, sec1.tsv, sec2.txt, sec3.txt, sec5.txt, sec6.txt, sec8.txt, summary.txt, SHA256SUMS) and
@@ -37,7 +37,7 @@ SEC3 authentication (all against 192.168.1.72:9000, fake access key SECPROBE1791
   fake access key, wrong secret: InvalidAccessKeyId (list objects); fake key, list buckets: InvalidAccessKeyId.
   no signature: GET bucket 403 (110 bytes), GET object 403 (110 bytes), PUT object 403 (110 bytes).
 SEC5 transport
-  tcpdump is not installed on ceph0: NOT TESTED (installing it is the user's decision). Every request of this run used http:// and was answered, so the S3 port serves
+  (Run of 11 October; tested later on 12 October, see the ADDENDUM at the end.) tcpdump was not installed on ceph0 then: NOT TESTED (installing it is the user's decision). Every request of this run used http:// and was answered, so the S3 port serves
   plain http in this deployment; whether RustFS can serve TLS and how it is configured is not examined.
 SEC6 encryption at rest (marker objects of 400 lines, about 27.6 KB: 400 times 69 bytes, arithmetic mine from the script)
   Plain upload, SSE-S3 upload (--sse AES256) and SSE-C upload (own 32 character key) were all accepted (no error text; the SSE-C answer shows ETag, ServerSideEncryption
@@ -68,7 +68,8 @@ SE-O2. The absence of the marker in the SSE objects shows only that the text is 
        marker). It says nothing about the strength of the encryption or about where the keys are kept.
 SE-O3. The web console login and what the console allows without credentials are not tested (SEC7 of the method): only the static page is shown to be public.
 SE-O4. Whether the exposed health and cluster paths can be switched off, and whether the failed attempts can be logged at a higher log level, is not examined.
-SE-O5. Transport encryption on the wire (SEC5) is not tested: tcpdump is missing. The result of plain http is read from the endpoint URLs only.
+SE-O5. Transport encryption on the wire (SEC5) was not tested in the run of 11 October (tcpdump missing); it was tested on 12 October, see the ADDENDUM below. Open
+       there: why the capture shows 264 marker lines for 200 uploaded, and whether RustFS can be configured for TLS.
 SE-O6. A scoped key (SEC4) is not tested, so nothing is stated about bucket level permissions.
 SE-O7. The comparison with the other three systems follows when they are run with the same script.
 
@@ -79,3 +80,29 @@ L2. The anonymous path list is fixed (15 paths in the script); other paths may a
 L3. The marker search covers /srv/s3/disk1/rustfs and /srv/s3/disk2/rustfs on each node, not the system disk and not other folders.
 L4. One run, one day, one version (1.0.1), default log level, plain http, SSE-S3 master key present.
 L5. The script was only tested on the laptop before (sec1, sec3, sec6; tcpdump was missing there too); sec2 and sec8 are trivially empty for RustFS in both places.
+
+ADDENDUM 12 October 2026: SEC5 transport (wire test)
+====================================================
+Setup:     tcpdump was installed on ceph0 by the user on 12 October (checked at 10:08 CEST: absent; at 10:23: /usr/bin/tcpdump, version 4.99.3). Same script as above
+           (scripts/sec.sh at commit 73b28e8, same sha256), run on ceph0 as "bash /root/sec-deploy/sec.sh rustfs sec5" at 10:23:51 (VM clock, UTC+2).
+Method:    the script writes a file of 200 lines of one marker text (SECPROBE-WIRE-MARKER-<time>-ABCDEFGHIJKLMNOP), starts tcpdump on ceph0 (interface any, filter host and
+           port of the target), uploads the file with the AWS CLI to 192.168.1.71:9000 (ceph1, over http), stops the capture after 2 s and counts with grep -c -a the lines of the
+           capture file that contain the marker. The test object and the capture are deleted afterwards (the capture holds the access key id in the Authorization header).
+Result (read from the console of the VM session, the same text is in sec5.txt, which the second command printed):
+           "marker lines found in the capture: 264  (above 0 means the content crossed the network in clear)". Secret key found in the output files: 0, access key found: 0.
+Output:    on ceph0 /root/sec-rustfs-20261012-102351/ (sec5.txt, summary.txt, SHA256SUMS) and /root/sec-rustfs-20261012-102351.tar.gz (643 bytes, sha256
+           650e32acb968dca3daebc1aeca3391b39c83d64b7fa3c4542d50e15f4800dc85, typed from the screen and checked by a second command on ceph0: sha256sum of the archive piped to
+           grep -c with this string gave 1).
+
+PROVEN
+SE-P7. The content of an object uploaded without server side encryption to the S3 port of a RustFS 1.0.1 node (port 9000, plain http) is visible in clear in the network
+       traffic between two nodes: the marker text was found in the capture taken on the sending node (count 264, above 0).
+
+NOT PROVEN
+SE-O8. Why the count (264) is higher than the 200 uploaded lines. grep -c counts lines of the binary capture file that contain the marker, not lines sent; hypothesis: the
+       count of a binary file depends on packet splitting and on duplicates (retransmissions or the interface any), not examined. The result "above 0" does not depend on it.
+SE-O9. Whether RustFS can serve TLS on port 9000 and what it takes to configure it; the test shows only the state of this deployment (no TLS configured). Settles: the RustFS
+       documentation and a test with a certificate (not done).
+SE-O10. The test used the default upload (no SSE header); whether an SSE-S3 upload is encrypted on the wire is not the question here (SSE protects the stored object, the
+        transport is plain http either way as far as SE-P6 shows), and it was not captured.
+SE-O11. Only one direction was captured (ceph0 to ceph1, on ceph0), one upload of about 13.8 KB (200 lines of 69 bytes, arithmetic mine), one run.
