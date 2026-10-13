@@ -1,0 +1,96 @@
+SeaweedFS 4.25, three nodes on the university VMs: security checks (13 October 2026)
+=====================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one "weed server -filer -s3" container per node (master 9333, volume server 8080, filer 8888, S3 8333), SeaweedFS 4.25,
+           replication 002, plain http, no TLS configured. S3 identity from /etc/seaweedfs/s3_config.json (one identity, setup_notes.md); /etc/seaweedfs/security.toml: setup_notes.md records a random signing key under
+           [jwt.filer_signing] (setup_notes.md, fix of the first start; the file was not read again on 13 October). The VMs have just been through the fault tolerance runs of the same day (all three nodes up).
+Method:    security_method.md (draft of 10 October 2026), scripts/sec.sh run on ceph0, same checks as for RustFS (results/rustfs-vm-security-2026-10-11.txt). Three runs, three script versions (all fetched on ceph0
+           by the full commit hash, sha256 checked there: equal):
+           Run 1  14:57:54  commit 73b28e8d3786813d5bb69dd6326869d41815215d (sha256 6b263b03ee3e9db86bf8e823cc0247fe596895d1f5445667a8e3d2dee4450684, the same file as for RustFS):
+                  "bash sec.sh seaweedfs all" (sec1, sec2, sec3, sec5, sec6, sec8). Folder /root/sec-seaweedfs-20261013-145754, archive 3642 bytes, sha256
+                  d69aa9af94cc3e3acb367331a8937cc1e4d6501a32b4ca8dd2a163487ff9c86a (read from the screen). Secret key found in the output files: 0, access key found: 0.
+           Run 2  16:04:04  commit 9b05b2820632a3cf82d63e26aa7860196e4f4d8a (sha256 62f21a1f4ad893efcfd8fa938d3a5b52e7f3132177af0e1edd0c96870d98f508): "bash sec.sh seaweedfs sec2" (now with the anonymous read test of
+                  the filer) and "SEC_EXT=bin bash sec.sh seaweedfs sec6" (object names end in .bin). Both wrote into the same folder /root/sec-seaweedfs-20261013-160404 (same second); the archive
+                  (1532 bytes, sha256 15d6ca7995e70c171da66121142c0b7f0c6704604b9fed182347d1571f9cc8d7, read from the screen) holds sec2.txt and sec6.txt. Keys in the output files: 0 and 0.
+           Run 3  16:13:12  commit 9f66e4ee235de29c5c7ff89d996030b98d498074 (sha256 cfd02df0b12b783cc7211523a69167f4568d2fdeace3e73df743eaaab5364608): "SEC_EXT=bin SEC_PAD=random bash sec.sh seaweedfs sec6"
+                  (content: 16 KiB random bytes, 4 marker lines, 16 KiB random bytes). Folder /root/sec-seaweedfs-20261013-161312, archive 1186 bytes, sha256
+                  562bb7382915f4f970ce4ced82399723737b7c123d6c1212f4248fc9e987fecb (read from the screen). Keys in the output files: 0 and 0.
+           By hand (read only, no credentials on purpose, own test cluster): anonymous GET of a seed object and an anonymous listing through the filer port, anonymous master lookup (see SW-P4),
+           the container log of ceph0 (see SW-P8). NOT run: sec4 (scoped key, needs an identity made with the admin tool, not done) and SEC7 of the method beyond what sec1 shows.
+Numbers read from the console of the VM sessions; the files are in the folders and archives on ceph0 (not copied here).
+
+Results
+-------
+SEC1 ports and anonymous answers (run 1)
+  Listening TCP ports on every node (identical): 22, 631, 8080, 8181, 8333, 8888, 9333, 18080, 18333, 18888, 19333. 631 and 8181 were not examined; the 18xxx and 19333 ports are the usual gRPC ports
+  (the S3 gateway, the filer and the volume server talk to the master and filer over them, the log of the fault tolerance run shows "dial tcp 192.168.1.71:18888"); they were not tested for anonymous access.
+  Without credentials these paths answered 200 with a body, on every node: volume server 8080 /status (12416 to 12418 bytes), filer 8888 / (11467 bytes), master 9333 / (4218 bytes), 9333 /cluster/status
+  (115 to 131 bytes) and 9333 /dir/status (1028 bytes) (15 rows, 5 per node). Anonymous PUT and DELETE of a bucket path on the S3 port 8333: 403 (268 bytes) on all three nodes.
+SEC2 anonymous write through non S3 ports (run 1 and run 2, same result)
+  Filer 8888: PUT 401 (21 bytes), GET back 404, DELETE 401, on all three nodes. Master 9333: PUT, GET and DELETE 404 (19 bytes) on all three nodes. Anonymous /dir/assign on the master answered with a file
+  id on 192.168.1.71:8080; an upload with that id to the volume server was refused (401), the anonymous read back 401 and the delete 401 (21 bytes).
+SEC2 extension: anonymous READ through the filer (new in run 2 and by hand)
+  Run 2: anonymous GET of ftbucket/fixed/head.bin through port 8888: 200 and 1024 bytes on all three nodes. By hand (15:09:25): anonymous GET of ftbucket/seed/1MiB-1 through 8888 on ceph0, ceph1 and ceph2:
+  200 and 1048576 bytes on each, and the sha256 of the downloaded file equals the stored hash of the seed object (397ad1b05c07d4d09a7d9d5ee763fcfa064f26c49b39f162e2691fa0ef1978fc, printed by the VM,
+  compared on the screen: equal on all three). Anonymous listing of /buckets as JSON on ceph0: answered with the entry of ftbucket (path, times, mode, owner, the extended attribute s3-identity-id), the
+  script counts 3 entries. Anonymous master lookup of volume 66 (/dir/lookup?volumeId=66): the three volume server URLs. Anonymous GET /status on the volume server 8080: 200.
+SEC3 authentication (run 1, against 192.168.1.72:8333, fake access key SECPROBE1791896274FAKE made up for the test)
+  right access key, wrong secret: SignatureDoesNotMatch (list objects). fake access key, wrong secret: InvalidAccessKeyId (list objects); fake key, list buckets: InvalidAccessKeyId.
+  no signature: GET bucket 403 (222 bytes), GET object 403 (262 bytes), PUT object 403 (270 bytes).
+SEC5 transport (run 1): upload of a marker file of 200 lines to 192.168.1.71:8333 over plain http, capture on ceph0: "marker lines found in the capture: 199" (above 0 means the content crossed the network in clear).
+SEC6 encryption at rest (marker objects, search with grep -rlF in /srv/s3/disk1/seaweedfs and /srv/s3/disk2/seaweedfs on each node)
+  Run 1 (names .txt, 400 identical lines of 68 characters): SSE-S3 upload (--sse AES256) REFUSED (InternalError, text cut at 150 characters), SSE-C upload accepted (ETag and
+  SSECustomerAlgorithm AES256 returned); files containing the marker: 0 on each node. Run 2 (names .bin, same content): the same, 0 files on each node.
+  Run 3 (names .bin, random padding with 4 marker lines): SSE-S3 refused again (InternalError), SSE-C accepted; files containing the marker: 1 on each node, always /srv/s3/disk2/seaweedfs/ftbucket_69.dat
+  (the volume file of the bucket). Occurrences of the marker in ftbucket_69.dat (grep -a -o -F, then wc -l): 4 on ceph1 and 4 on ceph2; the same number in all .dat files of both disks of those nodes (4).
+  The count on ceph0 was not read (the command used ssh to ceph0 itself, which failed on host key verification; the script found 1 file there).
+SEC8 visibility of failed attempts (run 1, container logs of the three nodes at the default log level, the script counts log lines with the fake access key)
+  ceph0 (the endpoint used by the script): 2 lines, ceph1: 0, ceph2: 0. (The script prints the fixed sentence "0 on every node: the failed attempt is not visible"; that sentence is wrong for this run and was
+  rewritten in commit 9b05b28.) The two lines on ceph0, read from the log by hand (the log time stamps are UTC, the VM clock is UTC+2): "W1013 12:57:59.071862 auth_signature_v4.go:254 InvalidAccessKeyId:
+  attempted key 'SECPROBE1791896274FAKE' not found. Available keys: 1, Auth enabled: true" and the same text at 12:57:59.687210. No source address in these two lines (as read).
+
+PROVEN (read from the output above)
+-----------------------------------
+SW-P1. The S3 port 8333 refuses requests without a valid signature: anonymous GET, PUT and DELETE return 403, a wrong secret gives SignatureDoesNotMatch, an unknown access key InvalidAccessKeyId.
+SW-P2. Without credentials, every node answers with information on the master, volume server and filer ports: the master page, the cluster status (leader and peers) and the topology (/dir/status), the volume
+       server status page, the filer root page, and a lookup of the volume servers of a volume.
+SW-P3. Writes without credentials are refused on the filer (401), on the volume server (401) and on the master (404); the master hands out file ids to anonymous requests (assign), but an upload with such an
+       id was refused (401).
+SW-P4. The content of stored objects can be read WITHOUT any credential through the filer port 8888 of every node: the seed object 1MiB-1 (1 MiB) was downloaded anonymously from all three nodes with a sha256 equal
+       to the stored one, and fixed/head.bin (1024 bytes) answered 200 on all three; the buckets and their metadata are listed anonymously (JSON). So the S3 authentication does not protect the data
+       in this deployment against a client that can reach port 8888 (the filer read does not need the S3 key; setup_notes.md records a signing key under [jwt.filer_signing] in security.toml, the file was not re-read).
+SW-P5. The S3 traffic is plain http, and the content of an uploaded object is visible in the network traffic between two nodes (marker found in the capture, count 199 for 200 lines).
+SW-P6. An object stored without server side encryption is readable in clear in the volume file on the data drives: with random padding around the marker (run 3) the marker text was found in
+       /srv/s3/disk2/seaweedfs/ftbucket_69.dat on all three nodes (4 occurrences on ceph1 and ceph2, one file per node), so the data of the replicas (three copies) is in clear.
+SW-P7. The SSE-C object was not found in clear (4 occurrences in the volume file of ceph1 and ceph2, 4 are the 4 marker lines of the one plain object; arithmetic mine: an SSE-C object in clear would add
+       4 more). SSE-S3 (--sse AES256) is refused with InternalError on this deployment, in all three runs.
+SW-P8. A failed authentication with a made up access key IS written to the container log of the node that served it, at the default log level (2 lines on ceph0, "InvalidAccessKeyId: attempted key ... not
+       found", level W), not on the two other nodes (they did not serve the request). The log is not empty: this also corrects the statement "the logs of the containers were empty" in the fault tolerance
+       records of 13 October (see the correction there).
+
+NOT PROVEN, hypotheses and open points (not to be written as findings)
+----------------------------------------------------------------------
+SW-O1. Why run 1 and run 2 found the marker in no file although the plain object was stored: hypothesis that SeaweedFS compresses repetitive data before it writes it (the marker of run 3 appears as
+       it is when the data is random around it). Not shown (no look at the volume server code or a size comparison).
+SW-O2. Why writes through the filer need a token (401) but reads do not: hypothesis that only the write signing key is set (setup_notes.md records [jwt.filer_signing]) and that a read signing key is not
+       set. Not tested (a test needs a changed security.toml and a restart of the three containers). Whether a hardened configuration (read signing key, filer not reachable from the network) closes the
+       anonymous read is open.
+SW-O3. Why SSE-S3 is refused with InternalError (missing KMS or key configuration, a limit of 4.25 with this configuration?). Not examined. Where the SSE-C key is kept and how it is checked is not examined.
+SW-O4. The anonymous reads through the filer were tested for two objects of ftbucket (1 MiB seed object, 1 KiB fixed object). Other buckets and objects were not read; the list of buckets shows what
+       exists. Whether an anonymous client can also change or delete data through other filer paths (for example the filer admin, the master /vol and /col paths or the shell ports) is NOT tested on purpose
+       (a destructive test on the data of the other runs); the master answers anonymous /cluster/status and /dir/status.
+SW-O5. The ports 631 and 8181 and the gRPC ports 18080, 18333, 18888, 19333 were not tested for anonymous access.
+SW-O6. SEC4 (a scoped key that may read only one bucket) is not tested; nothing is said about bucket level permissions. SEC7 (admin interfaces) is limited to the unauthenticated answers listed above.
+SW-O7. Whether SeaweedFS can serve TLS on the S3 and the filer ports and what it takes (level 2 of SEC5, time box) is not tested.
+SW-O8. Why the capture shows 199 and not 200 marker lines (the RustFS run counted 264): packet boundaries; same hypothesis as for RustFS (SE-O8 there). Not examined.
+
+LIMITS
+------
+L1. All checks ran from ceph0 against its own endpoint 192.168.1.72 (sec3, sec6 against 8333; the anonymous list and the filer reads against all three nodes). One day, one version (4.25), default log level, the
+    deployment of 12 October (security.toml with the write signing key only), after the fault tolerance runs of the same day.
+L2. The test objects are deleted at the end of each check, but the marker text of the plain object stays in ftbucket_69.dat on the three nodes until a vacuum or compaction removes it (the data of
+    deleted objects is not erased at once; not examined). The data in the bucket ftbucket is test data of this thesis only.
+L3. The anonymous path list of sec1 is fixed (15 paths per node); other paths may answer too. In run 2 sec2 printed "sec1.tsv missing" because it ran alone, so the loop over the non S3 ports was skipped there; the SeaweedFS part ran (run 1 has the loop).
+L4. The marker search covers /srv/s3/disk1/seaweedfs and /srv/s3/disk2/seaweedfs on each node only, not the system disk.
+L5. No comparison between systems is made in this record. For RustFS see results/rustfs-vm-security-2026-10-11.txt: there the S3 port was the only data port and the plain object was found in clear (xl.meta), the
+    SSE-S3 and SSE-C objects were not.

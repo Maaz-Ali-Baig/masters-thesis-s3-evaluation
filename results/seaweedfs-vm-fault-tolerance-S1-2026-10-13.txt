@@ -72,7 +72,7 @@ NOT PROVEN, open questions with the test that settles them (not to be written as
 Q1. Why were 24 writes acknowledged and not stored? Candidates: (a) the S3 gateway or filer acknowledges before the chunk write to the volume server is done or has failed (replication 002 needs three
     volume servers; with ceph1 gone the master may find no writable volume), (b) the entry is written to the filer store of one node and lost, (c) a fault of this run. Settles: repeat S1 with a capture
     of the HTTP response of one PUT per round (curl -v: status, ETag, headers) and a read of the same key directly after the acknowledgement through the same endpoint, the SeaweedFS log of the three
-    containers with a log level that writes to the container log (the logs of the containers were empty in this run, so no log evidence exists), and the master volume layout (writable volumes) during
+    containers with a log level that writes to the container log (CORRECTION of 13 October, 15:08: the container logs are not empty, they hold the S3 gateway errors of the outage window, see results/seaweedfs-vm-fault-tolerance-S1-repeat-2026-10-13.txt; the log time stamps are UTC, the first read of the log used the local time and found nothing), and the master volume layout (writable volumes) during
     the outage. Also read the SeaweedFS source for the S3 PUT path when no volume can be assigned.
 Q2. Why did writes become storable again at about 10:10 (725 is readable, acknowledged 10:10:27, and the files grow from 10:10:09 on) while ceph1 was still DOWN (last DOWN row 10:10:54, start command
     finished 10:11:22)? Not examined.
