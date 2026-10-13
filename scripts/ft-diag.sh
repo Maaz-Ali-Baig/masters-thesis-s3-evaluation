@@ -13,6 +13,8 @@
 #   assign                 answer of the master of ceph0 to /dir/assign for the collection and replication of the bucket (error text or "fid"), cut to 80 characters
 #   writable               number of writable volumes of the collection in the master layout (from /dir/status), or "n/a"
 # Output: <folder>/diag.tsv, <folder>/headers-<i>.txt (response headers of the PUT) and the same table on the screen, with its sha256.
+# The PUT sends the header x-amz-content-sha256 with the real payload hash (without it curl 7.88.1 gets 403 SignatureDoesNotMatch from SeaweedFS, tested on 13 October on the healthy cluster:
+# no header 403, real hash 200, UNSIGNED-PAYLOAD 200). The key is passed to curl with --user, so it is visible in the process list of ceph0 while the script runs.
 # Keys are read from /root/seaweedfs-config/s3_credentials.txt (override: DG_KEYFILE) and never printed. It writes only keys under diag-<time>/ in the bucket.
 # Settings by environment: DG_BUCKET (ftbucket), DG_EPS (live endpoints, default "192.168.1.72:8333 192.168.1.70:8333"), DG_MASTER (192.168.1.72:9333),
 # DG_COLLECTION (the bucket name), DG_REPL (002), DG_REGION (us-east-1).
@@ -52,7 +54,7 @@ for i in $(seq 1 "$N"); do
     head -c 1048576 /dev/urandom > "$OUT/obj.tmp"
     sha="$(sha256sum "$OUT/obj.tmp" | cut -d' ' -f1)"
     t0="$(date +%T)"
-    res="$(signed PUT "http://$ep/$B/$PFX/$i" --data-binary "@$OUT/obj.tmp" -D "$OUT/headers-$i.txt" -o "$OUT/put-body-$i.txt" -w '%{http_code} %{time_total}')"
+    res="$(signed PUT "http://$ep/$B/$PFX/$i" -H "x-amz-content-sha256: $sha" --data-binary "@$OUT/obj.tmp" -D "$OUT/headers-$i.txt" -o "$OUT/put-body-$i.txt" -w '%{http_code} %{time_total}')"
     pcode="${res%% *}"; ptime="${res#* }"
     etag="$(grep -i '^etag:' "$OUT/headers-$i.txt" 2>/dev/null | head -1 | tr -d '\r\n' | cut -d' ' -f2-)"
     g="$(signed GET "http://$ep/$B/$PFX/$i" -o "$OUT/get-same.tmp" -w '%{http_code}')"
