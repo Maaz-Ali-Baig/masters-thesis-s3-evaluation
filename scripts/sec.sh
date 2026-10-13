@@ -125,6 +125,11 @@ sec2() {
             del="$(code DELETE "http://$url/$fid" 6)"
             log "volume server upload $put, anonymous read back $get, delete $del"
         fi
+        log "== SeaweedFS: anonymous READ of an existing object through the filer port 8888 (http code and bytes; a 200 with the object size means the S3 login is bypassed for reads) and anonymous listing of /buckets"
+        for ip in $NODES; do
+            log "filer read of $B/fixed/head.bin on $ip:8888: $(curl -s -m 10 -o /dev/null -w '%{http_code} %{size_download}' "http://$ip:8888/buckets/$B/fixed/head.bin" 2>/dev/null || echo 000)"
+        done
+        log "filer listing of /buckets as json on $SELF:8888: $(curl -s -m 10 -H 'Accept: application/json' "http://$SELF:8888/buckets/?limit=100" 2>/dev/null | grep -o '"FullPath":"[^"]*"' | wc -l) entries"
     fi
     rm -f "$OUT/marker.tmp"
 }
@@ -190,12 +195,13 @@ sec5() {
 # ------------------------------------------------------------------ sec6
 sec6() {
     CUR=sec6; header
-    local marker="SECPROBE-REST-MARKER-$(date +%s)-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" ip hits sse_c_key
+    local marker="SECPROBE-REST-MARKER-$(date +%s)-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" ip hits sse_c_key ext="${SEC_EXT:-txt}"
+    log "object names end in .$ext (SEC_EXT; SeaweedFS compresses objects with a text name, so a control with SEC_EXT=bin is needed there)"
     for _ in $(seq 1 400); do echo "$marker"; done > "$OUT/rest.tmp"
     sse_c_key="$(openssl rand -hex 16)"
-    aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest.tmp" "s3://$B/secprobe-plain.txt" --only-show-errors | cut150 | sed 's/^/plain upload: /' | tee -a "$OUT/sec6.txt" || true
-    log "SSE-S3 upload: $(aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest.tmp" "s3://$B/secprobe-sse.txt" --sse AES256 --only-show-errors | cut150)"
-    log "SSE-C upload: $(aws_as "$AK" "$SK" "$S3HOST" s3api put-object --bucket "$B" --key secprobe-ssec.txt --body "$OUT/rest.tmp" --sse-customer-algorithm AES256 --sse-customer-key "$sse_c_key" | cut150)"
+    aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest.tmp" "s3://$B/secprobe-plain.$ext" --only-show-errors | cut150 | sed 's/^/plain upload: /' | tee -a "$OUT/sec6.txt" || true
+    log "SSE-S3 upload: $(aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest.tmp" "s3://$B/secprobe-sse.$ext" --sse AES256 --only-show-errors | cut150)"
+    log "SSE-C upload: $(aws_as "$AK" "$SK" "$S3HOST" s3api put-object --bucket "$B" --key secprobe-ssec.$ext --body "$OUT/rest.tmp" --sse-customer-algorithm AES256 --sse-customer-key "$sse_c_key" | cut150)"
     log "(an empty text after an upload line means the upload was accepted; an error text means it was refused)"
     sleep 3
     if [ -z "$DATA" ]; then
@@ -208,9 +214,9 @@ sec6() {
         done
         log "(each uploaded object that is NOT encrypted at rest leaves at least one file with the marker on some node; compare the number of files with the number of objects that were stored in clear)"
     fi
-    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-plain.txt" >/dev/null || true
-    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-sse.txt" >/dev/null || true
-    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-ssec.txt" >/dev/null || true
+    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-plain.$ext" >/dev/null || true
+    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-sse.$ext" >/dev/null || true
+    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-ssec.$ext" >/dev/null || true
     rm -f "$OUT/rest.tmp"
     echo "$marker" > "$OUT/sec6-marker.txt"
 }
@@ -225,7 +231,7 @@ sec8() {
         n="$(rx "$ip" "for c in \$(podman ps --format '{{.Names}}' | grep -E '$CONT'); do podman logs \$c 2>&1 | grep -c '$key'; done | paste -sd' '" 2>/dev/null || echo ssh-failed)"
         log "log lines containing the fake access key on $ip (one number per matching container): ${n:-none}"
     done
-    log "(0 on every node: the failed attempt is not visible in the container log at the default log level)"
+    log "(0 on every node would mean: the failed attempt is not visible in the container log at the default log level; a number above 0 is the count of log lines with the fake key. Only the node that served the request (the S3 endpoint used) is expected to show it. The log time stamps are UTC, the VM clock is UTC+2)"
 }
 
 case "$CHECK" in
