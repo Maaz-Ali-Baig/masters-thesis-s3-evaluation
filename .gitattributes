@@ -17,3 +17,4 @@ results/perf-rustfs-vm-3node-20261010-table-*.tsv -text
 results/perf-rustfs-vm-3node-20261010-sar-configs.tsv -text
 results/perf-seaweedfs-vm-3node-20261012-table-*.tsv -text
 results/perf-seaweedfs-vm-3node-20261012-sar-configs.tsv -text
+results/ft-seaweedfs-vm-S1-*-filecounts.txt -text
