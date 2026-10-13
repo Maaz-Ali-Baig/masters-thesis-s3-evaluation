@@ -1,0 +1,103 @@
+SeaweedFS 4.25, three nodes on the university VMs: fault tolerance scenario S1 repeated with a write diagnostic, one node hard stopped (13 October 2026, second run)
+=====================================================================================================================================================================
+
+Cluster:   as in results/seaweedfs-vm-fault-tolerance-S1-2026-10-13.txt (ceph0 = debian 192.168.1.72, ceph1 .71, ceph2 .70, one "weed server -filer -s3" container per node, replication 002,
+           three masters with peers, leader ceph0). Starting condition: the same cluster as after S1 and S2 of the same day, without a clean up. At 13:39:35 ceph1 was 28 files behind ceph0 and
+           ceph2 5 files behind (leftovers of S1 and S2, see the file counts).
+Method:    scripts/ft.sh (same file as in the first S1, sha256 5cbefc42e1cf6c52941865c0ad21c9c067e5d3a27ef3354dd4d8a8decec66788) run on ceph0 as "bash ft.sh seaweedfs scenario S1" (outer log
+           /root/ft-sw-S1b-outer.log); scripts/ft-repairwatch.sh in mode seaweedfs (sha256 88ede9ef...4397); NEW in this run: scripts/ft-diag.sh at commit
+           08df590700f91d880b7f02a802657fd1ddc2f5b8 (sha256 213cb1a0da969902000f6eb233953775b72098594fb349ba0529b9bb74ef8207, fetched on ceph0 by the commit hash, sha256 checked there: equal;
+           tested on the healthy cluster before the run with 3 writes: put 200, read back OK; the first version of the script, in commit 31bb1e3, was broken: curl 7.88.1 got 403 without the
+           header x-amz-content-sha256). ft-diag.sh was started in the background on ceph0 at 13:46:21 with 100 writes. Per write it records with plain curl (SigV4): put_code and put_time of one
+           1 MiB PUT through ceph0 or ceph2 (alternating, 30 s time out), the ETag, a GET of the key through the same endpoint right after (get_same), the status of the filer entry on that node
+           (port 8888), a GET through the other endpoint 5 s later (get_other), the answer of the master to /dir/assign for the collection (cut to 80 characters) and the number of writable
+           volumes of the collection in /dir/status. Probe key prefix of the run: probe-S1-20261013-133927 (bucket ftbucket), diagnostic prefix diag-<time> in the same bucket.
+Scenario:  S1. Node ceph1 (192.168.1.71) hard stopped by the user in Proxmox after the signal and powered on after the planned 12 minutes; ceph0 and ceph2 stay up. Times are the clock of ceph0.
+Output:    on ceph0 /root/ft-seaweedfs-S1-20261013-133927/ (console.txt, ledger.tsv, probe.tsv, watch.tsv, repairwatch.tsv, verify.tsv, verify-keys.tsv, verify-during-outage.tsv, start log,
+           prefix, SHA256SUMS, summary.txt) and /root/ft-seaweedfs-S1-20261013-133927.tar.gz (301920 bytes, sha256 c2994331d972fcaae4942b923b645b492e2cde4bcbec37306d3dace42ebba85a, read from the
+           screen, not checked a second time). Diagnostic: /root/ft-diag-S1b-134621/ (diag.tsv, sha256 5704a7375f99d4096c0135ceb77ee9d8830e88ffa1bddbe4965629324b2bda62 as printed by the VM,
+           headers-<i>.txt) and /root/ft-diag-S1b.log; both are NOT in the archive of the run. Secret key found in the output files of the run: 0 (diagnostic: 0 in the test run before; for
+           this run the line of the script was not read). File count timeline (one row in eight of repairwatch.tsv, 19 rows, no header, columns: time, files of the volumes of the bucket on
+           ceph0 disk0 and disk1, ceph1 disk0 and disk1, ceph2 disk0 and disk1, acknowledged writes so far; DOWN = volume server does not answer):
+           results/ft-seaweedfs-vm-S1b-20261013-133927-filecounts.txt, sha256 a6062afe42b3a2aec75dc6a62a96ba2dbbdd38158490f6b8daa281c0d4abd348 (typed from the screen, equals the hash printed
+           by the VM, compared, equal). Numbers read from the console of the VM sessions.
+
+Timeline (VM clock, 13 October 2026)
+------------------------------------
+13:39:27  scenario start; probe and repair watcher running; baseline 300 s.
+13:44:29  script signal: hard stop ceph1 (192.168.1.71). The user stopped it at about 13:45:30.
+13:45:34  head_object of the fixed object through the ceph1 endpoint READ_FAIL; 13:45:36 the script saw all targets silent (waited 67 s for the user); 13:46:28 the probe marked the endpoint SILENT.
+13:46:22  first diagnostic write (ft-diag.sh). 13:50:56 read of the master status (see P4). 13:52:04 one aws cli write test (see P6).
+13:57:36  script signal: power on ceph1. 13:59:15 ssh answers on ceph1, 13:59:36 the start command finished, 13:59:32 endpoint ceph1 answers (head_object READ_OK).
+14:29:49  end of the 30 minute recovery watch (the rule "bytes stable" cannot fire with a running probe). 14:29 to 14:39 full verification (3 endpoints x 1156 objects). 14:39 archive.
+
+Results
+-------
+Ledger:  acknowledged writes 1111, failed attempts 14 (1125 rows). First failed attempt 13:45:56, last 13:59:28. Longest gap between acknowledged writes 67.5 s (after 13:46:21).
+         During the outage the probe made one acknowledged write about every 30 s (a round with the stopped endpoint takes about 25 s); each round that was sent first to ceph1 failed and was
+         repeated through ceph0 or ceph2 with success. Of the 14 failed attempts, 13 were read from the screen (keys 182 to 209): eleven through 192.168.1.71 (keys 182, 183, 185, 188, 191, 194, 197,
+         200, 203, 206, 209) and the two other attempts for key 183 (13:46:36 through ceph2, 13:46:54 through ceph0); the 14th was not read.
+Verification after the recovery watch (status per endpoint): 192.168.1.72, .71 and .70 each OK 1133, ERROR_OR_EMPTY 23 (1156 objects: 1111 acknowledged writes and 45 seed objects).
+         The 23 unreadable objects through the endpoint of ceph0 are the probe keys 182, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205
+         (the list of the other two endpoints was not read, only their count, 23 each). Their acknowledgements (ledger): 182 at 13:46:21 through ceph2; 184 to 205 between 13:47:29 and 13:58:31,
+         15 through ceph2 (182, 185, 186, 188, 189, 191, 192, 194, 195, 197, 198, 200, 201, 203, 204) and 8 through ceph0 (184, 187, 190, 193, 196, 199, 202, 205). Key 183 was never acknowledged (all
+         three endpoints failed at 13:46:36, 13:46:54, 13:46:56). Readable and acknowledged right before: 181 at 13:45:30 through ceph0; right after: 206 at 13:59:05 through ceph2, 207 at 13:59:19,
+         208 at 13:59:21, 209 at 13:59:23. So EVERY acknowledgement between 13:46:21 and 13:58:31 (23 of 23) is lost, and none before or after. No seed object failed.
+File counts of the volumes of the bucket (timeline file, sums of disk0 and disk1, my arithmetic):
+         13:39:35 before: ceph0 1963 + 1033 = 2996, ceph1 1943 + 1025 = 2968 (28 behind), ceph2 1961 + 1030 = 2991 (5 behind).
+         13:44:56 (acknowledged 163): ceph0 2067 + 1090 = 3157. 13:47:56 to 13:56:47 (acknowledged 183 to 200, 17 writes): ceph0 stays 2078 + 1097 = 3175 and ceph2 2076 + 1094 = 3170, unchanged
+         over the 4 samples (9 minutes), ceph1 DOWN. 13:59:43 after the return: ceph0 2084 + 1107 = 3191, ceph1 2057 + 1092 = 3149, ceph2 2082 + 1104 = 3186 (ceph1 42 behind, ceph2 5 behind).
+         14:29:09 end: ceph0 2575 + 1577 = 4152, ceph1 2548 + 1562 = 4110 (42 behind), ceph2 2573 + 1574 = 4147 (5 behind). The lag of ceph1 is the same (42) at every sample from 13:59:43 to 14:29:09
+         (30 minutes; the 14:29:49 sample read on the screen gives 4167, 4125 and 4162, also 42 and 5). In this outage ceph1 fell 14 files further behind (28 to 42), ceph2 did not.
+Diagnostic (ft-diag.sh, 100 writes, one row about every 45 s during the outage and every 5 s after it):
+         rows 1 to 16 (13:46:22 to 13:58:20, alternating ceph0 and ceph2): put_code 000 in all 16 (no answer within the 30 s time out, put_time 30.0 s), etag none, get_same 500 (11 rows) or 404
+         (5 rows), get_other 404 (11) or 500 (5), the filer entry on the node 404 in the 14 rows read (rows 1 to 14), assign answer "none" (no answer in 10 s) and writable volumes 0 in all 16.
+         row 17 (13:59:09, through ceph0): put_code 200 after 10.4 s, read back OK through the same and the other endpoint, filer 200, writable 5. Rows 18 to 100 (13:59:24 to 14:06:31): put_code 200
+         in 0.02 to 0.04 s (rows 41 to 44 read), get_same OK, filer 200, get_other OK, writable 5. Counts of the table: 84 rows with 200 / OK / OK, 16 rows with 000.
+Master status read during the outage (13:50:56, /dir/status on ceph0): Free 34, Max 116, two data nodes only (192.168.1.70:8080 and 192.168.1.72:8080, 41 volumes each), layouts 002 (default),
+         s1bucket7958, perfbench and ftbucket with 0 writable volumes each.
+Write test with the aws cli (13:52:04, ceph0, one 1 MiB put-object, one attempt, read time out 25 s): the call ended at 13:52:30 with the retry handler event (the answer or a time out was not
+         captured by the filter, only the "needs-retry" events were printed); the filer entry of the key answered 404 and head-object answered 500 Internal Server Error.
+
+PROVEN (read from the console, the ledger and the timeline)
+-----------------------------------------------------------
+P1. The loss of the first S1 is reproduced: in this run 23 writes were acknowledged by a surviving S3 endpoint and are not readable afterwards through any of the three endpoints (23 per endpoint).
+    They are exactly the acknowledgements between 13:46:21 and 13:58:31, i.e. while ceph1 was stopped (the head_object test saw ceph1 fail at 13:45:34, 47 s before the first lost
+    acknowledgement; in the first S1 the first lost acknowledgement was 29 s after the head_object failure). Acknowledgements before (181, 13:45:30) and from 13:59:05 (206) are readable.
+P2. The file counts of ceph0 and ceph2 did not grow from 13:47:56 to 13:56:47 (9 minutes) although 17 writes were acknowledged (183 to 200 counted by the timeline): acknowledged, but no stored file
+    (a read of the counts, not a proof of the mechanism). Same picture as in the first S1.
+P3. While ceph1 was down, the master of ceph0 listed only two data nodes and no writable volume for any layout (13:50:56). With replication 002 (three copies) it could assign no volume for a new
+    write. All 16 diagnostic writes by curl in that time got no answer within 30 s and nothing was stored (the read back failed, the assign answer was empty, writable volumes 0). From the first
+    write after the return (13:59:09, 10.4 s) all 84 writes were stored and readable through two endpoints, with 5 writable volumes.
+P4. After the return of ceph1 the lag stays: ceph1 42 files behind ceph0 and ceph2 5 files behind, constant for 30 minutes; no repair of the missed writes was seen. The lag grew from 28 to 42
+    during this outage; in the earlier runs it was 19 for ceph1 (first S1, 10:12 to 11:33), 28 for ceph1 and 5 for ceph2 after S2 (12:01 to 13:39). So over the day it only grew in the
+    outages and never shrank at the sample times of the records (10:12 to 14:29).
+P5. The same client behaves differently in the same minutes: the probe (aws s3 cp, 1 MiB objects) got an ACKNOWLEDGEMENT for each round that did not go to ceph1, while ft-diag.sh (curl) got no
+    answer at all within 30 s, and one test with aws s3api put-object ended after 26 s without a stored object. So the acknowledgement of the probe cannot be a stored write, and an S3 PUT through
+    another client or another command did not get any acknowledgement.
+
+NOT PROVEN, open questions (not to be written as findings)
+-----------------------------------------------------------
+Q1. Why does "aws s3 cp" get a success answer for a write that cannot be stored, while curl and "aws s3api put-object" get none? Candidates: a different request (for example the header
+    Expect: 100-continue, the checksum or the payload signing mode) that makes the S3 gateway answer before the chunk is written; a different path in the gateway. Settles: in an outage capture
+    the full HTTP exchange of one "aws s3 cp --debug" write (status line and headers) and of one curl write with and without the Expect header; tcpdump on port 8333 of ceph0 (tcpdump is installed
+    on ceph0); and the log of the containers started with a log level that writes (the logs were empty in all runs). Also read the SeaweedFS source of the S3 PUT path when no volume can be assigned.
+Q2. Was the acknowledgement of the probe really an HTTP 200 of SeaweedFS or a client side success without an answer from the server? Not captured (the probe records only the exit code of the
+    aws cli). Settles: same capture as Q1.
+Q3. Why did the loss start about 50 s after the stop and not at the stop? Candidates: the master lists ceph1 for some seconds until its heartbeat times out. Settles: master /dir/status and
+    /cluster/status with time stamps right after a stop.
+Q4. Will the lag of ceph1 (42 files) and of ceph2 (5 files) be repaired by a vacuum or by "weed shell volume.fix.replication"? Not tested.
+Q5. Writes were storable again from 13:59:05/13:59:09. The start command finished at 13:59:36 and ssh answered at 13:59:15. Which component was back when the first write succeeded (the volume
+    server of ceph1 may have started by itself) is not known. Same open point as Q2 of the first S1 (writes storable from 10:10:09 while the script's status port row of ceph1 was still DOWN
+    until 10:10:54): both runs are consistent with "writable again once ceph1 is back", the mechanism is not shown.
+
+LIMITS
+------
+L1. Two runs of S1 and one of S2 on the same cluster without a clean up; the lag of ceph1 and ceph2 from the earlier runs is the starting condition.
+L2. The user stopped ceph1 about 67 s after the signal and the diagnostic was started at 13:46:21 (45 s after the script saw the silence), so the first 51 s after the stop have no diagnostic
+    rows. The power on was done after the signal at 13:57:36; the exact click time is not known.
+L3. The diagnostic uses curl and one test used the aws cli s3api; neither equals the probe command (aws s3 cp). Only the probe produced acknowledgements in the outage.
+L4. The diagnostic writes (84 objects after the return, 16 failed attempts during) are in the same bucket and in the file counts of the recovery watch (the counts of the watch include them).
+L5. The key list of the unreadable objects (ceph0 endpoint) was read from the screen of the VM session; the counts per endpoint are from the console. Rows of the diagnostic are partly read from the
+    screen (rows 1 to 17 and 41 to 44; the counts per column pattern are from an awk summary of the whole file).
+L6. No comparison between systems is made in this record. For RustFS see results/rustfs-vm-fault-tolerance-S1-repeat-2026-10-12.txt (there every acknowledged write was readable afterwards).
