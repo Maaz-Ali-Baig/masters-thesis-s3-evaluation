@@ -51,7 +51,7 @@ printf 'run\tcpu_busy\tiowait\trd_MiBs\twr_MiBs\tnet_rx_MiBs\tnet_tx_MiBs\tsampl
 awk -F'\t' 'NR>1 && $2=="run"{print $1 "\t" $6 "\t" $7}' "$RUNS" | while IFS=$'\t' read -r label s e; do
     s_t="$(date -d "@$s" +%T)"; e_t="$(date -d "@$e" +%T)"
     awk -F'\t' -v a="$s_t" -v b="$e_t" -v lab="$label" '
-        $1>=a && $1<=b {
+        (a<=b && $1>=a && $1<=b) || (a>b && ($1>=a || $1<=b)) {   # a>b: the run crosses midnight (times compared as hh:mm:ss text)
             if ($2=="cpu") { idle+=$4; iow+=$5; n++ }
             else if ($2=="disk") { rd+=$4; wr+=$5 }
             else if ($2=="net") { rx+=$4; tx+=$5 }
