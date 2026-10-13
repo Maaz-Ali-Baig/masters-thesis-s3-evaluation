@@ -197,7 +197,13 @@ sec6() {
     CUR=sec6; header
     local marker="SECPROBE-REST-MARKER-$(date +%s)-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" ip hits sse_c_key ext="${SEC_EXT:-txt}"
     log "object names end in .$ext (SEC_EXT; SeaweedFS compresses objects with a text name, so a control with SEC_EXT=bin is needed there)"
-    for _ in $(seq 1 400); do echo "$marker"; done > "$OUT/rest.tmp"
+    if [ "${SEC_PAD:-}" = random ]; then
+        # control for stores that compress repetitive data (SeaweedFS): 16 KiB random bytes, 4 marker lines, 16 KiB random bytes (about 33 KB, not compressible)
+        { head -c 16384 /dev/urandom; for _ in 1 2 3 4; do echo "$marker"; done; head -c 16384 /dev/urandom; } > "$OUT/rest.tmp"
+        log "object content: random padding with 4 marker lines (SEC_PAD=random)"
+    else
+        for _ in $(seq 1 400); do echo "$marker"; done > "$OUT/rest.tmp"
+    fi
     sse_c_key="$(openssl rand -hex 16)"
     aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest.tmp" "s3://$B/secprobe-plain.$ext" --only-show-errors | cut150 | sed 's/^/plain upload: /' | tee -a "$OUT/sec6.txt" || true
     log "SSE-S3 upload: $(aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest.tmp" "s3://$B/secprobe-sse.$ext" --sse AES256 --only-show-errors | cut150)"
