@@ -1,0 +1,35 @@
+Garage v1.0.0 on the three university VMs: predictions written BEFORE the fault tolerance runs
+Date: 13 October 2026 (VM clock about 20:35), written by the thesis author with the assistant.
+
+These are predictions, not findings. They are written down before S1 and S2 so that the result can be compared
+with what was expected, as was not done for RustFS and SeaweedFS. A prediction that turns out wrong stays here
+unchanged and is reported as wrong in the run record.
+
+Basis (documentation as remembered, NOT verified against the Garage 1.0.0 documentation or source yet):
+- replication_factor 3 with three zones: every object block and every metadata entry has three copies, one per zone.
+- consistency mode "consistent" (default): a write is acknowledged after 2 of 3 nodes stored it (write quorum 2),
+  a read asks 2 of 3 nodes (read quorum 2).
+
+Prediction S1 (ceph1 stopped for 12 minutes, ceph0 and ceph2 up):
+- P-S1-1 writes and reads through the endpoints of ceph0 and ceph2 keep working (2 of 3 nodes is a quorum).
+- P-S1-2 every write that was acknowledged is readable afterwards (no lost acknowledged write, as for RustFS).
+- P-S1-3 the endpoint of ceph1 does not answer during the outage; the probe rotates endpoints, so about a third of
+  the attempts fail and are retried against the next endpoint.
+- P-S1-4 after ceph1 is back, the resync copies the missing blocks and the block counts of ceph1 reach the counts of
+  the other two nodes within the 30 minute watch. This one is the least certain: how long the resync needs is not known.
+
+Prediction S2 (ceph1 and ceph2 stopped, only ceph0 up):
+- P-S2-1 writes through ceph0 are refused (no write quorum), so no write is acknowledged during the outage.
+- P-S2-2 reads of objects written before the outage are refused or fail too (read quorum 2), which differs from
+  SeaweedFS where ceph0 alone could still read the seed set.
+- P-S2-3 no acknowledged write is lost after the return of both nodes.
+
+Prediction for the encryption at rest check (sec6):
+- P-SEC-1 Garage 1.0.0 has no server side encryption for SSE-S3, so an SSE-S3 upload is refused (NotImplemented
+  or similar); SSE-C is supported (to be checked in the run, not known).
+- P-SEC-2 Garage compresses blocks with zstd by default, so the marker file must be random padded (SEC_PAD=random)
+  and a positive control with a plain object is mandatory.
+
+Prediction for the open ports (sec2/sec7):
+- P-SEC-3 the admin API on port 3902 answers /health without a token (seen on 8 October); /metrics answered
+  without a token too on 8 October. Whether other admin endpoints need the admin token is to be tested.

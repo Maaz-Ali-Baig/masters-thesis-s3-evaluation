@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 # ft-repairwatch.sh : per drive count of the probe objects of one fault tolerance run (repair after an outage)
 #
-# usage: bash ft-repairwatch.sh <run dir of ft.sh> [rustfs|seaweedfs]   (start it while the scenario runs, it stops by itself)
+# usage: bash ft-repairwatch.sh <run dir of ft.sh> [rustfs|seaweedfs|garage]   (start it while the scenario runs, it stops by itself)
+#
+# Mode garage: Garage splits objects into blocks named by their hash, so the blocks of one run cannot be found by the key
+# prefix. The counts are therefore the whole data directories of Garage on every node (default
+# /srv/s3/disk1/garage/data and /srv/s3/disk2/garage/data, override with RW_DIRS): per data dir the number of first level
+# folders, the number of files and the bytes. The seed set and every earlier run are included, so only the differences
+# between the nodes and over time matter (a node that was down stays behind until the Garage resync has copied the
+# missing blocks). A node that does not answer ssh is written as DOWN. Nothing is written to the directories.
 #
 # Mode seaweedfs (second argument): SeaweedFS keeps data in volumes, not in one folder per object, so the counts come from
 # the volume server status of every node (http://<node>:8080/status, read from ceph0, no ssh): per disk id the number of
@@ -22,7 +29,7 @@ set -u
 D="${1:-}"
 [ -n "$D" ] && [ -d "$D" ] || { echo "usage: $0 <run dir of ft.sh>" >&2; exit 1; }
 SYS="${2:-rustfs}"
-case "$SYS" in rustfs|seaweedfs) ;; *) echo "second argument: rustfs or seaweedfs" >&2; exit 1 ;; esac
+case "$SYS" in rustfs|seaweedfs|garage) ;; *) echo "second argument: rustfs, seaweedfs or garage" >&2; exit 1 ;; esac
 [ -s "$D/prefix" ] || { echo "no $D/prefix (run made with a script older than f330983?)" >&2; exit 1; }
 P="$(cat "$D/prefix")"
 PORT="${RW_PORT:-8080}"
@@ -43,7 +50,13 @@ for k in sorted(a):
     print("disk%s %d %d %d" % (k, a[k][0], a[k][1], a[k][2]))
 '
 NODES="${RW_NODES:-192.168.1.72 192.168.1.71 192.168.1.70}"
-DIRS="${RW_DIRS:-/srv/s3/disk1/rustfs/ftbucket /srv/s3/disk2/rustfs/ftbucket}"
+if [ "$SYS" = garage ]; then
+    DIRS="${RW_DIRS:-/srv/s3/disk1/garage/data /srv/s3/disk2/garage/data}"
+    SUB=""
+else
+    DIRS="${RW_DIRS:-/srv/s3/disk1/rustfs/ftbucket /srv/s3/disk2/rustfs/ftbucket}"
+    SUB="/$P"
+fi
 INTERVAL="${RW_INTERVAL:-20}"
 SELF="${RW_SELF:-192.168.1.72}"
 SSHOPT="-o BatchMode=yes -o ConnectTimeout=3 -o StrictHostKeyChecking=accept-new"
@@ -51,7 +64,7 @@ OUT="$D/repairwatch.tsv"
 
 # one remote command prints, per data dir: dir, object folders, files, bytes
 REMOTE='for d in '"$DIRS"'; do
-  p="$d/'"$P"'"
+  p="$d'"$SUB"'"
   if [ -d "$p" ]; then
     echo "$d $(find "$p" -mindepth 1 -maxdepth 1 -type d | wc -l) $(find "$p" -type f | wc -l) $(du -sb "$p" | cut -f1)"
   else

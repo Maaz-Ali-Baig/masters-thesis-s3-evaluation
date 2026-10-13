@@ -107,12 +107,15 @@ used_pct() {
     done | sort -n | tail -1
 }
 wait_space() {
-    local limit=50 i=0 u
+    local limit=50 i=0 u max=20
+    # Garage gives the space of deleted objects back late (13 October 2026: 57 percent used 10 minutes after the
+    # cleaning of the first PUT configuration, 23 to 27 percent about 20 minutes later, resync queue 0), so it may wait 60 minutes
+    [ "$SYSTEM" = garage ] && max=120
     [ -n "$NODES" ] || return 0
     while :; do
         u="$(used_pct)"; u="${u:-0}"
         [ "$u" -le "$limit" ] && return 0
-        i=$((i+1)); [ "$i" -gt 20 ] && die "data disks still ${u} percent used after 10 minutes, stopping"
+        i=$((i+1)); [ "$i" -gt "$max" ] && die "data disks still ${u} percent used after $((max / 2)) minutes, stopping"
         echo "space: ${u} percent used, waiting 30 s for reclaim ($i/20)"
         [ "$SYSTEM" = seaweedfs ] && reclaim
         sleep 30
