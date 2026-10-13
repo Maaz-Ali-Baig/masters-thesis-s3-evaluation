@@ -1,0 +1,121 @@
+SeaweedFS 4.25, three nodes on the university VMs: performance series (12 to 13 October 2026)
+==============================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one "weed server" per node (master, volume server, filer and
+           S3 gateway, S3 on port 8333, master on 9333, volume server on 8080), SeaweedFS 4.25, replication 002 (three copies of every
+           volume, one on each node), leader ceph0. Data disks: XFS /srv/s3/disk1 and /srv/s3/disk2 (32 GB each) on every node.
+           4 vCPU and 7.7 GiB RAM per node. The setup of the three nodes is in setup_notes.md (section SeaweedFS preparation, 12 October).
+Load:      Warp v1.8.0 (13c3b89) on ceph2, requests spread by Warp over the S3 endpoints of all three nodes (192.168.1.72:8333, .71:8333,
+           .70:8333, region us-east-1, bucket perfbench), AWS CLI 2.36.8 for bucket handling, checksum setting for the aws cli:
+           when_required (finding F1). ceph2 is also a storage node, so it carries the client cost (limit L1 below).
+Method:    performance_method.md, script scripts/perf-warp.sh at commit c116f33c379f8d371ab9cac6f483bbb840770857, sha256
+           7142257fd6ef3a31ede7be11c9ab119f3e341b9b24e21c40afd6f6a8e7ad315d (hash of the file on ceph2 /root/perf-deploy2/perf-warp.sh,
+           read from the screen, equal to the hash recorded at the commit), mode "all" (size series, concurrency series, mixed). New in
+           this script: before every run on SeaweedFS the script frees disk space by a master vacuum call (see section SPACE below).
+           Tables made with scripts/perf-table.sh (commit e30defc, sha256 797afb36...; the preflight on ceph2 on 12 October printed the same
+           script hash 797afb36 as for RustFS, whole hash read in the RustFS record: 797afb36c44de6a99df4be39d543e4d8b1b383bef21a1da555dd0190587cd644).
+Times:     VM clock, local time (UTC+2). Header time 22:33:13 on 12 October, last run end 01:35:09 on 13 October (the series crossed
+           midnight, see the sar record), 68 runs (17 configurations of one discarded warm up and three recorded runs; the table covers the
+           51 recorded runs). Duration 60 s per recorded run, 30 s warm up.
+Output:    on ceph2 /root/perf-seaweedfs-20261012-223312/ (console text per run, Warp benchdata, runs.tsv, header.txt, sar of ceph2,
+           sar-runs-*.tsv and sar-configs.tsv from the analysis of 13 October) and /root/perf-seaweedfs-20261012-223312.tar.gz (2110478
+           bytes, made again on 13 October 08:40 after the sar tables were added; sha256 e1ae2e1ef0b438259899c3c627e756a97e7e97d77651ddd2bfc28ebaae2fc2b4,
+           read from the screen, not checked a second time; the hash of the first archive was not recorded). sar logs of ceph0 and ceph1
+           are in the same folder name on those nodes. Access key and secret key found in the output files: 0 and 0 (grep in the script).
+Tables:    results/perf-seaweedfs-vm-3node-20261012-table-runs.tsv    (sha256 321c283abb182adef897391b372464e09bd4a4dff16bae9e5c11177a4014b579)
+           results/perf-seaweedfs-vm-3node-20261012-table-configs.tsv (sha256 7bef6987cd224be33eb395477d26cb19c14ed78b1e3c169c3dbddd03f12588b3)
+           Both were read from the VM screen and typed into these files; the sha256 of both files equals the sha256 printed by the VM for
+           its own files (compared, equal). Committed in 4ba78311001783d2c0b8a521caebfa807da6ddba and read back from origin (hash equal).
+Resources: results/seaweedfs-vm-performance-sar-2026-10-12.txt (same series, sar of the three nodes).
+
+Settings of the series
+----------------------
+Object size series, concurrency 8, PUT and GET: 50 KiB, 1 MiB, 16 MiB, 100 MiB. Concurrency series, 1 MiB, PUT and GET: 1, 4, 16, 64.
+Mixed workload (Warp default mix of GET, PUT, STAT, DELETE), 1 MiB, concurrency 16. Same dataset sizes as the RustFS series: GET datasets
+50000 objects of 50 KiB, 8192 of 1 MiB, 512 of 16 MiB, 80 of 100 MiB, prepared in the warm up run and read with --list-existing.
+Before every GET run the script emptied the page cache on the three nodes over ssh (header: ssh to storage nodes 1, nodes handled .72 .71 .70; the
+success of each drop was not logged, so it is set, not proven, for every run). Before every run the script checked the free space on all data disks
+(limit 50 percent used); the outer log has 8 lines that start with "space". The bucket was emptied after every configuration.
+
+Results (median, minimum and maximum of three recorded runs, MiB/s; full list with latencies in the two tables)
+------------------------------------------------------------------------------------------------------------
+Object size series (concurrency 8)         PUT median (min, max)       GET median (min, max)
+  50 KiB                                    46.14 (46.11, 47.28)        193.46 (193.30, 194.10)
+  1 MiB                                     183.46 (177.46, 185.21)     1125.51 (1123.07, 1156.43)
+  16 MiB                                    233.67 (227.86, 236.00)     1302.95 (1298.19, 1306.60)
+  100 MiB                                   231.81 (227.31, 234.69)     1302.15 (1277.36, 1313.76)
+Concurrency series (1 MiB)                 PUT median (min, max)       GET median (min, max)
+  1                                         34.88 (34.08, 36.14)        182.12 (179.14, 190.93)
+  4                                         120.96 (120.11, 122.49)     705.61 (694.19, 711.43)
+  8 (from the size series)                  183.46 (177.46, 185.21)     1125.51 (1123.07, 1156.43)
+  16                                        212.12 (212.03, 213.10)     1283.49 (1275.37, 1306.02)
+  64                                        210.75 (209.89, 216.07)     1240.18 (1054.96, 1285.79)
+Mixed, 1 MiB, concurrency 16 (Total)        580.94 (577.62, 583.23) MiB/s
+Objects per second at 50 KiB: PUT about 945 to 968 (runs: 968.24, 944.34, 944.86), GET about 3959 to 3975 (3975.27, 3958.69, 3962.02).
+Errors: the error_lines column is 0 in all 51 recorded runs and every run ended with exit code 0 (68 of 68 including the warm ups).
+Free space after the series (df on 13 October 08:4x, ceph2 not read): ceph0 and ceph1 data disks 1.6 G and 1.5 G used of 32 G (5 percent),
+before the series 1.4 G and 1.3 G (header). So the disks were cleaned (see section SPACE).
+
+PROVEN (read from the tables, arithmetic mine)
+----------------------------------------------
+P1. Every recorded run finished without errors. The three runs of a configuration lie close together for most configurations. Largest
+    spreads: GET 1 MiB at concurrency 64, 1054.96 to 1285.79 MiB/s (p99 latency 147 to 367 ms), PUT 1 MiB at concurrency 8, 177.46 to 185.21.
+P2. Latency and throughput agree with the concurrency (Little's law, concurrency divided by average latency):
+    PUT 1 MiB concurrency 1: 1 MiB / 28.5, 27.8, 29.1 ms = 35.1, 36.0, 34.4 MiB/s against 34.88, 36.14, 34.08;
+    PUT 1 MiB concurrency 64: 64 / 294.3, 303.3, 292.6 ms = 217.5, 211.0, 218.7 against 209.89, 210.75, 216.07;
+    GET 100 MiB concurrency 8: 800 MiB / 0.6381, 0.6062, 0.6172 s = 1253.7, 1319.7, 1296.2 against 1277.36, 1313.76, 1302.15;
+    GET 1 MiB concurrency 64: 64 / 55.7, 50.2, 62.3 ms = 1149, 1275, 1027 against 1240.18, 1285.79, 1054.96 (first run 7 percent off).
+    The values agree within 8 percent, so the tool measures what it says.
+P3. PUT is slower than GET in every configuration, at the median: 5.6 times at 100 MiB (231.81 against 1302.15), 5.6 times at 16 MiB,
+    6.1 times at 1 MiB and concurrency 8, 5.2 times at 1 MiB and concurrency 1, 4.2 times at 50 KiB (46.14 against 193.46 MiB/s;
+    945 against 3962 objects per second).
+P4. Average latency of one request: PUT 1 MiB at concurrency 1 about 28 ms (27.8 to 29.1), GET 1 MiB at concurrency 1 about 5.5 ms (5.3 to
+    5.6); at 50 KiB and concurrency 8: PUT 8.3 to 8.7 ms, GET 2.1 to 2.2 ms. GET 100 MiB at concurrency 8: 606 to 638 ms, PUT 100 MiB:
+    3400 to 3494 ms.
+P5. PUT throughput at 1 MiB grows with concurrency from 34.88 (1) to 120.96 (4), 183.46 (8) and 212.12 (16) MiB/s and does not grow
+    above 16 (210.75 at 64, a change of -0.6 percent, ranges overlap). GET grows from 182.12 (1) to 705.61 (4), 1125.51 (8) and
+    1283.49 (16) and is 1240.18 at 64 (-3 percent, the ranges overlap).
+P6. At 16 MiB and 100 MiB PUT is about 232 to 234 MiB/s and GET about 1302 to 1303 MiB/s at concurrency 8, which is near the 1 MiB values at
+    concurrency 16 and above (PUT 212, GET 1283). PUT 1 MiB at 16 users is about 9 percent below the large object PUT.
+
+SPACE (observations about SeaweedFS disk space, made while preparing and running the series)
+---------------------------------------------------------------------------------------------
+Deletes free no disk space in SeaweedFS until the master runs a vacuum: after the bucket is emptied the data stay in the volume files. Therefore
+the script was changed (commit c116f33): before the wait for free space it calls on the first node "curl -s -L -m 300 -o /dev/null -w
+'http %{http_code} in %{time_total} s' 'http://<node>:9333/vol/vacuum?garbageThreshold=0.01'" and sleeps 10 s. Outer log of the series: 19 calls
+answered "http 200" and 14 calls ended after 300 s without an answer ("http 000"); 33 calls in total, the first 19 answered, the later 14 did not.
+Why the later calls did not answer is NOT known (not examined). The series was not affected: free space was checked by the script before every run
+and the later runs started. Earlier, on an idle cluster, one call took about 120 s. Also not examined: SeaweedFS used about 1.3 to 1.5 times the
+logical data size per node in the first tests of 12 October, empty folders for the prefixes remain in the filer after deletes (0 objects).
+
+NOT PROVEN, hypotheses with the test that settles them (not to be written as findings)
+-------------------------------------------------------------------------------------
+H1. The fixed cost per PUT (28 ms for 1 MiB at concurrency 1) comes from synchronous writing of three copies through the filer and the volume
+    servers. Settles: the SeaweedFS documentation or source for the write path (filer chunking, volume server fsync default) and the sar
+    results (resource record, S1 shows disk write volume below three times the client volume).
+H2. The GET results are partly served from the page cache. The resource record S2 supports this for every GET configuration (disks delivered
+    15 to 17 percent of the client volume at 1 MiB, concurrency 8 and above). Not a hypothesis any more for 1 MiB, see the resource record.
+H3. The PUT plateau of about 210 to 234 MiB/s (1 MiB from 16 users, 16 and 100 MiB at 8) has one common cause. The load node ceph2 is the busiest node in 16 of 17
+    configurations (resource record S4) and above 90 percent CPU for 16 and 100 MiB, but at 69 to 73 percent for 1 MiB. Settles: a run with
+    the load generator on a fifth VM (not available) or the per core CPU of ceph2 (sar -P ALL, not recorded).
+H4. The replication to three copies is done synchronously by the filer or volume server before the acknowledgement (the setting 002). Settles:
+    the source or a read back test with a node stopped right after an acknowledged write (planned fault tolerance run S1).
+
+LIMITS OF THIS SERIES (to be repeated in the thesis)
+----------------------------------------------------
+L1. The load node ceph2 is also a storage node (decision of 10 October). The client CPU cost falls on ceph2, and part of the GET data of ceph2 is read
+    locally and does not pass its network card (resource record S3).
+L2. Redundancy differs between the systems (SeaweedFS three copies by replication 002, RustFS erasure coding 3+3, Garage three copies, Ceph as it will be configured), so write
+    costs differ by design. This record contains no comparison between systems and no ranking.
+L3. Three runs per configuration: ranges only, no statistical test. One cluster, one series, three hours on one night.
+L4. The disk space handling (vacuum calls, 14 of 33 timed out) is part of the series protocol for SeaweedFS and changed the timing between runs;
+    its effect on the results was not measured.
+L5. Control measurements BEFORE the series (12 October, read from the screen, no hash): dd of 2 GiB with direct writes on disk1 of each node 662 MB/s
+    (ceph0), 1.1 GB/s (ceph1), 905 MB/s (ceph2); iperf3 from ceph2 to ceph0 8.80 Gbit/s (10 October: 5.05 Gbit/s with 495 retransmits, so one stream
+    varies between days); iperf3 is not installed on ceph1, so the network to ceph1 was not measured. The dd numbers differ from the ones of 10 October
+    (1.34 s, 1.54 s and 0.77 s for 2 GiB, which is about 1.6, 1.4 and 2.8 GB/s, my arithmetic; whether the two dd commands were identical was not
+    compared here). If they were identical, the disk speed of the VMs varied between days, which would be a limit for every comparison between systems
+    (to check by repeating the controls on the day of each system). The controls AFTER the series are not done.
+L6. The laptop results for SeaweedFS (earlier versions) are not comparable with this series (different version, one node, laptop).
+L7. The series crossed midnight; the script perf-sar.sh had a bug for windows across midnight (fixed in 4ba7831, the resource record uses the fixed
+    version); the Warp tables do not use the sar windows and are not affected.
