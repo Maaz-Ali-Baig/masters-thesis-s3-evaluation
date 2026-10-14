@@ -37,6 +37,10 @@ if [ "$SYS" = garage ]; then
 else
     KEYFILE="${DG_KEYFILE:-/root/seaweedfs-config/s3_credentials.txt}"; AKL="Access key"
 fi
+# Garage answers a GET without the header x-amz-content-sha256 with 400 InvalidRequest (tested on 14 October 2026 on the healthy cluster:
+# no header 400, sha256 of the empty body 200, UNSIGNED-PAYLOAD 200), so for Garage every GET sends the hash of the empty body.
+GH=""
+[ "$SYS" = garage ] && GH="-H x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 [ -s "$KEYFILE" ] || { echo "ft-diag: $KEYFILE missing" >&2; exit 1; }
 AK="$(awk -F': *' -v k="$AKL" '$1==k{print $2}' "$KEYFILE")"
 SK="$(awk -F': *' '$1=="Secret key"{print $2}' "$KEYFILE")"
@@ -65,7 +69,7 @@ for i in $(seq 1 "$N"); do
     res="$(signed PUT "http://$ep/$B/$PFX/$i" -H "x-amz-content-sha256: $sha" --data-binary "@$OUT/obj.tmp" -D "$OUT/headers-$i.txt" -o "$OUT/put-body-$i.txt" -w '%{http_code} %{time_total}')"
     pcode="${res%% *}"; ptime="${res#* }"
     etag="$(grep -i '^etag:' "$OUT/headers-$i.txt" 2>/dev/null | head -1 | tr -d '\r\n' | cut -d' ' -f2-)"
-    g="$(signed GET "http://$ep/$B/$PFX/$i" -o "$OUT/get-same.tmp" -w '%{http_code}')"
+    g="$(signed GET "http://$ep/$B/$PFX/$i" $GH -o "$OUT/get-same.tmp" -w '%{http_code}')"
     if [ "$g" = 200 ] && [ "$(sha256sum "$OUT/get-same.tmp" | cut -d' ' -f1)" = "$sha" ]; then gs=OK; elif [ "$g" = 200 ]; then gs=BAD; else gs="$g"; fi
     fnode="${ep%%:*}"
     if [ "$SYS" = garage ]; then fc="n/a"; asg="n/a"; wr="n/a"; else
@@ -85,7 +89,7 @@ except Exception:
 ' "$COLL" "$REPL" 2>/dev/null)"
     fi
     sleep 5
-    go="$(signed GET "http://$oep/$B/$PFX/$i" -o "$OUT/get-other.tmp" -w '%{http_code}')"
+    go="$(signed GET "http://$oep/$B/$PFX/$i" $GH -o "$OUT/get-other.tmp" -w '%{http_code}')"
     if [ "$go" = 200 ] && [ "$(sha256sum "$OUT/get-other.tmp" | cut -d' ' -f1)" = "$sha" ]; then go=OK; elif [ "$go" = 200 ]; then go=BAD; fi
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$t0" "$i" "$ep" "$pcode" "$ptime" "${etag:-none}" "$gs" "$fc" "$go" "${asg:-none}" "${wr:-n/a}" >> "$TSV"
 done
