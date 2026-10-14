@@ -196,7 +196,42 @@ sec5() {
 }
 
 # ------------------------------------------------------------------ sec6
+# SEC_DISTINCT=1 (added 14 October 2026 for Garage): the three objects get different random content with one marker each, because Garage stores blocks by
+# the hash of their content and three uploads of the same content share ONE block file (the search then cannot say which upload is stored in clear).
+sec6_distinct() {
+    CUR=sec6; header
+    local base="SECPROBE-REST-MARKER-$(date +%s)-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" ip n k m sse_c_key ext="${SEC_EXT:-txt}"
+    log "SEC_DISTINCT: three different random objects with one marker each (-PLAIN, -SSES, -SSEC), 16 KiB random bytes, 4 marker lines, 16 KiB random bytes; object names end in .$ext"
+    for k in plain sse ssec; do
+        case "$k" in plain) m="$base-PLAIN" ;; sse) m="$base-SSES" ;; ssec) m="$base-SSEC" ;; esac
+        { head -c 16384 /dev/urandom; for _ in 1 2 3 4; do echo "$m"; done; head -c 16384 /dev/urandom; } > "$OUT/rest-$k.tmp"
+    done
+    sse_c_key="$(openssl rand -hex 16)"
+    log "plain upload: $(aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest-plain.tmp" "s3://$B/secprobe-plain.$ext" --only-show-errors | cut150)"
+    log "SSE-S3 upload: $(aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/rest-sse.tmp" "s3://$B/secprobe-sse.$ext" --sse AES256 --only-show-errors | cut150)"
+    log "SSE-C upload: $(aws_as "$AK" "$SK" "$S3HOST" s3api put-object --bucket "$B" --key secprobe-ssec.$ext --body "$OUT/rest-ssec.tmp" --sse-customer-algorithm AES256 --sse-customer-key "$sse_c_key" | cut150)"
+    log "(an empty text after an upload line means the upload was accepted; an error text means it was refused)"
+    sleep 3
+    if [ -z "$DATA" ]; then
+        log "Ceph stores on raw devices: the marker search is a separate read only scan, NOT done by this script"
+    else
+        for k in PLAIN SSES SSEC; do
+            for ip in $NODES; do
+                n="$(rx "$ip" "grep -rlF '$base-$k' $DIRS 2>/dev/null | wc -l" 2>/dev/null || echo ssh-failed)"
+                log "files containing the marker of the $k object on $ip: $n"
+                rx "$ip" "grep -rlF '$base-$k' $DIRS 2>/dev/null | head -3 | sed 's/^/   /'" 2>/dev/null | tee -a "$OUT/sec6.txt" || true
+            done
+        done
+        log "(PLAIN is the positive control and must be found; a marker that is found on a node is stored in clear there, a marker that is not found is not stored in clear or not stored)"
+    fi
+    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-plain.$ext" >/dev/null || true
+    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-sse.$ext" >/dev/null || true
+    aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$B/secprobe-ssec.$ext" >/dev/null || true
+    rm -f "$OUT/rest-plain.tmp" "$OUT/rest-sse.tmp" "$OUT/rest-ssec.tmp"
+    echo "$base" > "$OUT/sec6-marker.txt"
+}
 sec6() {
+    [ -n "${SEC_DISTINCT:-}" ] && { sec6_distinct; return; }
     CUR=sec6; header
     local marker="SECPROBE-REST-MARKER-$(date +%s)-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" ip hits sse_c_key ext="${SEC_EXT:-txt}"
     log "object names end in .$ext (SEC_EXT; SeaweedFS compresses objects with a text name, so a control with SEC_EXT=bin is needed there)"
