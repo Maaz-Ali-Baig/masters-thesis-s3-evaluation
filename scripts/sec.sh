@@ -11,7 +11,8 @@
 #            sec2   anonymous write through the non S3 ports that answered (SeaweedFS: master assign, volume server)
 #            sec3   authentication: wrong secret, wrong access key, no signature
 #            sec4   scoped key: needs SCOPED_AK, SCOPED_SK and SCOPED_BUCKET in the environment (key made beforehand
-#                   with the admin tool of the system, the creation commands are recorded by hand)
+#                   with the admin tool of the system, the creation commands are recorded by hand); optional SCOPED_OTHER = a
+#                   second existing bucket without permission for the scoped key (Garage: the admin key needs read and write on both buckets)
 #            sec5   transport: is the object content visible on the wire (tcpdump, one upload to another node)
 #            sec6   encryption at rest: marker objects (plain, SSE-S3, SSE-C), marker search in the data directories
 #            sec8   visibility of the failed attempts of sec3 in the container logs
@@ -152,11 +153,13 @@ sec3() {
 sec4() {
     CUR=sec4; header
     [ -n "${SCOPED_AK:-}" ] && [ -n "${SCOPED_SK:-}" ] && [ -n "${SCOPED_BUCKET:-}" ] || die "set SCOPED_AK, SCOPED_SK and SCOPED_BUCKET (key limited to read of that bucket)"
-    local r other="secother$(date +%s)"
+    local r other="${SCOPED_OTHER:-secother$(date +%s)}"
     printf 'scoped key test\n' > "$OUT/scoped.tmp"
-    aws_as "$AK" "$SK" "$S3HOST" s3 mb "s3://$other" >/dev/null || true
-    aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/scoped.tmp" "s3://$other/obj.txt" --only-show-errors >/dev/null || true
-    aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/scoped.tmp" "s3://$SCOPED_BUCKET/obj.txt" --only-show-errors >/dev/null || true
+    # SCOPED_OTHER (optional): name of an existing second bucket that the scoped key has no permission on; needed for Garage, where a bucket made through the
+    # S3 API only gets a local alias of the creating key and the scoped key cannot resolve its name (a 404 instead of the refusal that is meant to be tested)
+    [ -n "${SCOPED_OTHER:-}" ] || aws_as "$AK" "$SK" "$S3HOST" s3 mb "s3://$other" >/dev/null || true
+    r="$(aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/scoped.tmp" "s3://$other/obj.txt" --only-show-errors | cut150)"; log "setup, admin key uploads obj.txt to the other bucket $other: ${r:-ok}"
+    r="$(aws_as "$AK" "$SK" "$S3HOST" s3 cp "$OUT/scoped.tmp" "s3://$SCOPED_BUCKET/obj.txt" --only-show-errors | cut150)"; log "setup, admin key uploads obj.txt to the allowed bucket $SCOPED_BUCKET: ${r:-ok}"
     log "scoped key, allowed bucket $SCOPED_BUCKET (the key itself is not printed)"
     r="$(aws_as "$SCOPED_AK" "$SCOPED_SK" "$S3HOST" s3 ls "s3://$SCOPED_BUCKET/" | cut150)"; log "list allowed bucket (expect ok): $r"
     r="$(aws_as "$SCOPED_AK" "$SCOPED_SK" "$S3HOST" s3 cp "s3://$SCOPED_BUCKET/obj.txt" - | cut150)"; log "read allowed object (expect ok): $r"
@@ -166,7 +169,7 @@ sec4() {
     r="$(aws_as "$SCOPED_AK" "$SCOPED_SK" "$S3HOST" s3api list-buckets | cut150)"; log "list all buckets (expect refused or only the allowed one): ${r:-EMPTY}"
     r="$(aws_as "$SCOPED_AK" "$SCOPED_SK" "$S3HOST" s3 mb "s3://secnew$(date +%s)" | cut150)"; log "create a bucket (expect refused): ${r:-ALLOWED}"
     aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$other" --recursive >/dev/null || true
-    aws_as "$AK" "$SK" "$S3HOST" s3 rb "s3://$other" >/dev/null || true
+    [ -n "${SCOPED_OTHER:-}" ] || aws_as "$AK" "$SK" "$S3HOST" s3 rb "s3://$other" >/dev/null || true
     aws_as "$AK" "$SK" "$S3HOST" s3 rm "s3://$SCOPED_BUCKET/obj.txt" >/dev/null || true
     rm -f "$OUT/scoped.tmp"
     log "cleanup done (other bucket removed, test object removed)"

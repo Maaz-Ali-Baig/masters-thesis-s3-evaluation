@@ -1,0 +1,60 @@
+Garage v1.0.0, three nodes on the university VMs: fault tolerance scenario S2, two nodes hard stopped (14 October 2026)
+========================================================================================================================
+
+Cluster:   as in results/garage-vm-fault-tolerance-S1-2026-10-14.txt (ceph0 = debian 192.168.1.72, ceph1 .71, ceph2 .70, replication factor 3, three zones). Starting condition: the cluster after S1 of the same day
+           (all three nodes healthy, resync queue 0, resync errors 0 at 11:51:44), no clean up in between.
+Method:    scripts/ft.sh (sha256 5cbefc42e1cf6c52941865c0ad21c9c067e5d3a27ef3354dd4d8a8decec66788) as "bash ft.sh garage scenario S2", scripts/ft-repairwatch.sh in mode garage, scripts/ft-diag.sh (commit
+           ad0950355dbcb7f100cae1873e3ad2d6307c9ecf, sha256 f643f688...ab8f) with DG_SYSTEM=garage against 192.168.1.72 only. Probe key prefix probe-S2-20261014-121535 (bucket ftbucket), same probe as in S1.
+Scenario:  S2. Nodes ceph1 (192.168.1.71) and ceph2 (192.168.1.70) hard stopped by the user in Proxmox, ceph0 stays up. All times are the VM clock (UTC+2).
+Output:    on ceph0 /root/ft-garage-S2-20261014-121535/ and /root/ft-garage-S2-20261014-121535.tar.gz (186021 bytes, sha256 2fca860da3d30e7e8197d17e5c184cc4431163a4342a80f13b85b59963d0e9ae, read from the screen).
+Predictions: results/garage-vm-predictions-2026-10-13.txt.
+
+This run is not the planned S2: the stop was done late and the power on was done late. The outage was about 29 minutes instead of 6. The script gave up at the power on step and the recovery was done by hand.
+
+Timeline (VM clock, 14 October 2026)
+12:15:35  scenario start, baseline 300 s. 12:18:59 to 12:19:01 the probe saw 192.168.1.71 silent for 2 s during the baseline (cause not examined).
+12:20:40  script signal: hard stop ceph1 and ceph2. The first write diagnostic (6 writes, started 12:20:42) therefore ran while both nodes were still up: all 6 writes PUT 200, reads OK. It is only a baseline.
+12:33:34  the script saw both nodes silent (waited 774 s for the stop). Probe: 192.168.1.70 silent and head_object failed from 12:33:23, 192.168.1.72 head_object failed from 12:33:42, 192.168.1.71 silent from 12:34:14
+          (probe times are written when a round ends, see the limits). Second write diagnostic started 12:34:23 against 192.168.1.72.
+12:39:34  script signal: power on ceph1 and ceph2 (planned outage 360 s).
+12:54:34  the script stopped because ceph1 did not answer ssh within 15 minutes (it stops the probe when it stops). The last failed attempt in the ledger is 12:54:37.
+13:02     both nodes booted (uptime: ceph2 13:02:11, ceph1 13:02:16), so the real outage was about 29 minutes (12:33:34 to about 13:02).
+13:05      Garage started by hand on ceph1 and ceph2 with the node script (rc 0 on both), repair watch started by hand (folder recovery/). 13:21:35 to 13:26:50 verification, summary, archive.
+
+Results (console of the script and tool output)
+Ledger:    527 acknowledged writes, 272 failed attempts, first failed attempt 12:34:37, last failed attempt 12:54:37, longest gap between acknowledged writes 56.6 s (after 12:34:08).
+During the outage, read of the seed set and the acknowledged probe objects through 192.168.1.72 (571 objects): ERROR_OR_EMPTY 571, OK 0 (the seed set too).
+Write diagnostic during the outage (second one, through 192.168.1.72, 4 writes): 12:34:23 no answer within 30 s (code 000); 12:34:58, 12:35:03 and 12:35:09 HTTP 503 after about 1.4 ms each; the reads of those keys also 503.
+After the return, per endpoint (192.168.1.72, .71, .70 the same): 570 OK, 2 ERROR_OR_EMPTY of 572 objects. The two unreadable objects are probes 526 and 527, both acknowledged through 192.168.1.72:
+           ledger rows: 523 ACK 12:33:11 (ceph0), 524 ACK 12:33:14 (ceph1), 525 ACK 12:33:15 (ceph2), 526 ACK 12:34:08 (ceph0), 527 FAIL 12:34:37 (ceph1), FAIL 12:34:38 (ceph2), ACK 12:35:04 (ceph0), 528 FAIL on all three.
+           Probes 526 and 527 were acknowledged after the script had seen both other nodes silent (12:33:34), i.e. while only ceph0 was up. The ledger has no acknowledgement after 527.
+           At 12:35:03 the diagnostic got HTTP 503 from the same endpoint where the probe write 527 was acknowledged at 12:35:04.
+Repair watch by hand (13:15:00 to 13:15:24 sample, files / bytes disk1): ceph0 1218 / 1278059157, ceph1 1229 / 1268622636, ceph2 1212 / 1268621184; Garage statistics: resync queue 0, resync errors 0. The counts
+           had not converged at that time (the watch was started 10 minutes earlier; the close-out started at 13:21:35 and the file counts were not read again).
+
+PREDICTIONS COMPARED
+P-S2-1 writes through ceph0 are refused, no write acknowledged during the outage: PARTLY WRONG. Refused in the diagnostic (503 or no answer), but the probe ledger shows two acknowledged writes (526, 527) while only ceph0 was up.
+P-S2-2 reads of earlier objects are refused too: right (all 571 objects, seed set included, unreadable through ceph0 alone; this differs from SeaweedFS where the seed set stayed readable).
+P-S2-3 no acknowledged write is lost: WRONG (2 lost, 526 and 527).
+
+PROVEN
+------
+P1. With two of three nodes down, the one surviving Garage node refuses new writes (HTTP 503 within 2 ms, or no answer) and could not read any object, the seed set included.
+P2. After the return of both nodes, 570 of 572 objects are readable through every endpoint; the two missing ones were acknowledged by the probe through ceph0 while only ceph0 was up (ledger).
+P3. During the same second the diagnostic through the same endpoint got HTTP 503 (12:35:03 refused, 12:35:04 probe acknowledged).
+
+NOT PROVEN, open
+----------------
+Q1. Why was probe 527 acknowledged at 12:35:04 while a refusal (503) was seen the second before? And probe 526? As in S1 the acknowledgement came about 25 s after the request started (527: after the failed attempts at
+    12:34:37 and 12:34:38; 526: about 25 s after the 53 s gap since 525). Candidate: see Q1 of the S1 record. Settles: the instrumented probe (ETag and elapsed time of every acknowledged PUT, HEAD after slow acknowledgements).
+Q2. Do the file count differences after the return (ceph1 +11, ceph2 -6 files at 13:15) disappear? Not read again.
+Q3. The two second silence of ceph1 at 12:18:59 in the baseline. Not examined.
+
+LIMITS
+------
+L1. One run, after S1, and an outage of 29 minutes instead of 6 (the stop 13 minutes late, the power on about 22 minutes late; the cause of the delays was not established).
+L2. The first write diagnostic ran before the stop, the second one has only 4 writes.
+L3. Probe times are written when a probe round ends; with stopped nodes a round takes up to 28 s, so times of state changes are exact only to that order. The script's own silence check (12:33:34) and the probe rows
+    (12:33:23 to 12:34:14) are not the same measurement.
+L4. Numbers were read from the console of the VM session; the archive stays on ceph0 and has not been copied to this repository.
+L5. No comparison between systems is made in this record. For SeaweedFS S2 see results/seaweedfs-vm-fault-tolerance-S2-2026-10-13.txt.

@@ -1,0 +1,94 @@
+Garage v1.0.0, three nodes on the university VMs: fault tolerance scenario S1, one node hard stopped (14 October 2026)
+=======================================================================================================================
+
+Cluster:   Garage v1.0.0 (image docker.io/dxflrs/garage@sha256:0c7ed80d22c0b0f902fbd0ec74fc68073f72a46ea15d54e3c4c484184a8c7516), one container per node on ceph0 (= hostname debian,
+           192.168.1.72), ceph1 (192.168.1.71) and ceph2 (192.168.1.70), replication factor 3, zones z1 (ceph0), z2 (ceph1), z3 (ceph2), layout version 1, lmdb, region "garage", S3 port 3900,
+           container started with --restart no. Bucket ftbucket, seed set of 45 objects (the same set as in the RustFS and SeaweedFS runs).
+Method:    scripts/ft.sh (sha256 5cbefc42e1cf6c52941865c0ad21c9c067e5d3a27ef3354dd4d8a8decec66788) run on ceph0 as "bash ft.sh garage scenario S1": probe of one 1 MiB object about every 2 s with
+           "aws s3 cp" (one try per endpoint, rotating endpoints, connect timeout 3 s, read timeout 25 s, AWS_MAX_ATTEMPTS=1), acknowledged = exit code 0; a head-object of a fixed object on every endpoint;
+           read of every acknowledged object and of the seed set through every endpoint after the recovery.
+           scripts/ft-repairwatch.sh in mode garage (counts files and bytes of the Garage data directories of every node every 20 s).
+           scripts/ft-diag.sh (commit ad0950355dbcb7f100cae1873e3ad2d6307c9ecf, sha256 f643f688bc82eaf0ff51d4ed31cbc3a45be3937caec99cfa23bfc3e7fb36ab8f) with DG_SYSTEM=garage: 80 writes of 1 MiB with plain curl
+           (every 5 s, alternating between 192.168.1.72 and 192.168.1.70), recording the HTTP code of the PUT, a read of the same key through the same endpoint and a read through the other endpoint 5 s later.
+Scenario:  S1. Node ceph1 (192.168.1.71) hard stopped (power off) by the user in Proxmox, later powered on; ceph0 and ceph2 stay up. All times are the VM clock (UTC+2); the Garage container logs are UTC.
+Predictions: results/garage-vm-predictions-2026-10-13.txt (written before the runs, unchanged).
+
+Two runs of S1 were made. Both are kept.
+
+RUN 1 (long outage, recovery watch aborted)  /root/ft-garage-S1-20261014-083928
+-----------------------------------------------------------------------------
+Planned outage 12 minutes. At the power on signal (08:58:42) the assistant's tools were blocked for about 50 minutes by a service interruption, so the signal was not passed on; the script waited 15 minutes for ceph1,
+stopped itself, and ceph1 was powered on late. The run was closed by hand (Garage started on ceph1 by hand, verification, summary, archive). It is therefore a run with a much longer outage than planned and without
+the recovery watch of the method. It is kept as the first observation; the second run below is the planned S1.
+Ledger:    428 acknowledged writes, 72 failed attempts, first failed attempt 08:47:33, last failed attempt 09:13:48, longest gap between acknowledged writes 55.0 s (after 08:47:04).
+           Endpoint states: 192.168.1.71 silent from 08:47:11; head_object of the fixed object failed through 192.168.1.72 08:47:30 to 08:48:00 and through 192.168.1.70 08:48:25 to 08:48:27.
+After the return: 471 of 473 objects readable. The two unreadable objects were acknowledged writes, probes 214 and 215 (both acknowledged after a stall of about 25 s, inside the first 75 s after the stop).
+           A head request of these keys returned 404 through every endpoint and no block error was listed (read from the VM session, not repeated in run 2 for these keys).
+Repair:    about 15 minutes after the return of ceph1 its disk2 had the same file count as ceph0 and ceph2; disk1 of ceph1 had 10 more files (860 bytes more) than the other two.
+Archive:   /root/ft-garage-S1-20261014-083928.tar.gz, 267723 bytes, sha256 7b18ef9a800c0af88678afd7203bc1ec1c6cef43d5f932da36cfb8923e869a31 (read from the screen).
+
+RUN 2 (planned S1, 12 minutes)  /root/ft-garage-S1-20261014-104306  (probe prefix probe-S1-20261014-104306)
+----------------------------------------------------------------------------------------------------------
+Timeline (VM clock, 14 October 2026)
+10:43:06  scenario start (probe and repair watch running), baseline 300 s. Write diagnostic started 10:48:12.
+10:48:10  script signal: hard stop ceph1. 10:48:43 all targets silent (waited 33 s for the user). Probe: 192.168.1.71 head_object failed and live silent from 10:48:47.
+10:48:58  first failed attempt (all failed attempts are to 192.168.1.71: 32 of them, probe indices 167 to 260, every third index).
+10:49:13  (UTC 08:49:13.76) ceph0 log line "PUT /ftbucket/probe-S1-20261014-104306/169" (the write of probe 169, see below).
+10:50:04  head_object of the fixed object failed through 192.168.1.72 and 192.168.1.70; both read again at 10:50:08.
+11:00:43  script signal: power on ceph1. 11:00:56 ssh answers on ceph1, 11:00:57 the script finished the node script (Garage started). Outage about 12 minutes (10:48:43 to 11:00:56).
+11:00:57 to 11:31:02  recovery watch (the 30 minute limit; the "bytes stable" stop did not fire). Then full verification (3 endpoints x 1214 objects), summary, archive.
+
+Results (read from the console of the script and the tool output)
+Ledger:    1169 acknowledged writes, 32 failed attempts, first failed 10:48:58, last failed 11:00:53, longest gap between acknowledged writes 32.4 s (after 10:49:06).
+During the outage, read of the seed set and the acknowledged probe objects through 192.168.1.72 (214 objects): 207 OK, 7 ERROR_OR_EMPTY. The seven are fixed/head.bin, five seed objects (seed/1MiB-1 to seed/1MiB-5)
+           and probe 169. Seed/1MiB-2 and seed/1MiB-3, probe 169 and fixed/head.bin were read directly from the tool output, seed/1MiB-1, -4 and -5 from the reply text of the VM session.
+After the return, per endpoint (192.168.1.72, .71 and .70 the same): 1213 OK, 1 ERROR_OR_EMPTY of 1214 objects. The one unreadable object is probe 169 (acknowledged through 192.168.1.72 at epoch 1791967778.873,
+           about 08:49:38.9 UTC, according to the ledger). All 45 seed objects and the other 1168 acknowledged probe objects are readable through all three endpoints.
+Write diagnostic (80 writes, 10:48:12 on, 5 s apart): 78 writes fully correct (PUT 200, ETag, read back identical through the same and through the other endpoint). Two exceptions:
+           sample 12 at 10:49:08 through 192.168.1.70: PUT 200 (0.02 s), read of the same key OK, read through 192.168.1.72 5 s later: no answer within 30 s (curl code 000);
+           sample 13 at 10:49:43 through 192.168.1.72: PUT no answer within 30 s (code 000, no ETag), the reads of that key through both endpoints 404 (so this write was not acknowledged and not stored: no lost write).
+           So 192.168.1.72 did not answer for about a minute after the stop (from about 10:49:13); ceph0 log, UTC: ping to ceph1 timed out at 08:49:01, 08:49:16, 08:49:31, 08:49:46 and 08:50:01,
+           "Too many failed pings ... closing connection" at 08:50:01.19; the head_object probe through ceph0 and ceph2 failed at 10:50:04 and worked again at 10:50:08, so the end of the stall coincides with the closing of the connection.
+Probe 169: the ceph0 log has exactly one PUT line for it (08:49:13.76 UTC); the ledger acknowledges it at about 08:49:38.9 UTC, 25.1 s later; after the return a HEAD of the key gives 404 through all three endpoints
+           and the listing with the prefix of probe 16x skips it (read from the VM session text; the raw output of these checks was not saved).
+Repair (end of the 30 minute watch, 11:31:22, files / bytes per data directory): ceph0 disk1 971 / 1019028824, disk2 972 / 1020040277; ceph2 the same numbers as ceph0; ceph1 disk1 981 / 1012738006, disk2 972 / 1007456921.
+           Garage statistics at 11:51:44: resync queue length 0, blocks with resync errors 0, all three nodes healthy. The same "ceph1 disk1 has 10 files more" was seen in run 1.
+Archive:   /root/ft-garage-S1-20261014-104306.tar.gz, 328373 bytes, sha256 1926c7a2a109b765c5ede8eb30d93fa9fd8dc5441d23eab65f7b818514d26500 (checked twice on ceph0, equal). Secret key found in the output files: 0.
+
+Client check (14 October 2026, ceph0, no Garage involved): the same aws command (read timeout 25 s, one attempt) against a local dummy listener that never answers gives "Read timeout", exit code 1, after 26.5 s;
+against a dummy that sends "100 Continue", reads the whole 1 MiB body and then never answers it gives the same, exit code 1 after 25.5 s. So a client time out alone does not produce an acknowledgement in the ledger.
+
+PREDICTIONS COMPARED (the predictions file stays unchanged)
+P-S1-1 writes and reads continue through ceph0 and ceph2: right in general (1169 acknowledged writes), but with a stall of about a minute after the stop (longest gap 32.4 s in run 2, 55.0 s in run 1) and 32 failed attempts.
+P-S1-2 no acknowledged write is lost: WRONG. Run 1: 2 acknowledged writes lost (214, 215). Run 2: 1 acknowledged write lost (169).
+P-S1-3 the endpoint of ceph1 does not answer, a third of the attempts fail: right (32 failed attempts, all to ceph1).
+P-S1-4 ceph1 catches up within 30 minutes: partly. Resync queue 0 and no resync errors, ceph0 and ceph2 identical, but ceph1 differs from them in file count (disk1 +10 files) and in bytes (smaller) at the end of the watch.
+
+PROVEN
+------
+P1. With ceph1 down, writes and reads through ceph0 and ceph2 worked again after a stall of about one minute after the stop (the failure detection of Garage: pings every 15 s, the connection closed after five failed pings).
+P2. During that stall requests through the surviving endpoints do not answer (curl 000 after 30 s; aws client time out after 25 s); the ledger has 32 failed attempts, all to ceph1.
+P3. In both runs acknowledged writes (ledger, exit code 0) are not readable after the recovery: 2 in run 1, 1 in run 2 (about 0.1 percent of the acknowledged writes in run 2). In run 2 the object does not exist
+    afterwards on any endpoint (404), and the ceph0 log shows its PUT request 25.1 s before the acknowledgement.
+P4. The same stall of 192.168.1.72 caused the only two diagnostic writes that did not behave normally; the diagnostic write that was in the stall was not acknowledged (code 000) and is correctly absent.
+P5. After the return of ceph1 the resync queue is empty and without errors; ceph1 data directories are not identical to those of ceph0 and ceph2 (+10 files, fewer bytes) in both runs.
+
+NOT PROVEN, open (not to be written as findings)
+-------------------------------------------------
+Q1. Why was probe 169 (and in run 1 probes 214 and 215) acknowledged but not stored? All three acknowledged-but-missing writes were acknowledged about 25 s after their request started, which is also the read timeout
+    of the client, so the time may be a coincidence or may be the point where Garage or the client gave up. The client check above rules out an aws exit code 0 after a plain timeout, but does not rule out
+    other client behaviour. Settles: a probe that records the ETag and the elapsed time of every acknowledged PUT (aws s3api put-object, JSON answer) and heads the key right after any acknowledgement that took
+    more than 10 s, in a repeat of S1.
+Q2. Is the difference of ceph1 (+10 files in disk1, fewer bytes) a normal effect (for example block files in different states) or missing data? The 1213 objects are readable through every endpoint, so no object is
+    missing by this test. Settles: a Garage repair/scrub listing, or a block list comparison between the nodes.
+Q3. Is the write quorum 2 of 3? Written from memory in the predictions, not verified in the Garage documentation or by a test of the data directories.
+Q4. The cause of the seed read errors (fixed/head.bin, seed/1MiB-1 to -5) during the outage: they come first in the read order, which fits the stall of about a minute, but it was not shown.
+
+LIMITS
+------
+L1. Run 2 is one run; run 1 was longer than planned and had no recovery watch of the method.
+L2. The probe timestamps are written when a probe round ends; with a stopped node a round takes up to 28 s, so the times of state changes are only exact to that order.
+L3. Numbers were read from the console of the VM session; where only the reply text of the session was read this is stated. The raw archives stay on ceph0 and have not been copied to this repository.
+L4. The write diagnostic ran for 80 samples through two endpoints at 5 s; it saw one stall of about one minute, so it does not measure the rate of lost writes.
+L5. Garage version 1.0.0 and the default settings of fsync, consistency mode and block compression were not changed and have not been looked up (see Q3).
+L6. No comparison between systems is made in this record.
