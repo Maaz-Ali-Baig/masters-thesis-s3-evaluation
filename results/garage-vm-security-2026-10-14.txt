@@ -1,0 +1,80 @@
+Garage v1.0.0, three nodes on the university VMs: security checks (14 October 2026)
+===================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one Garage container per node (S3 3900, RPC 3901, 3902 = admin API, see G-P2), replication factor 3, plain http, no TLS,
+           region "garage". S3 key thesis-key (can create buckets: yes, read from "garage key info"). The VMs had just been through the fault tolerance runs of the same day (all three nodes up, resync queue 0).
+Method:    security_method.md (draft of 10 October 2026), scripts/sec.sh run on ceph0, the same checks as for RustFS (results/rustfs-vm-security-2026-10-11.txt) and SeaweedFS (results/seaweedfs-vm-security-2026-10-13.txt).
+           Three runs (all script versions fetched on ceph0 by the full commit hash, sha256 checked there: equal):
+           Run 1  13:33:07  sec.sh as in commit 9f66e4e (sha256 cfd02df0b12b783cc7211523a69167f4568d2fdeace3e73df743eaaab5364608, /root/sec-deploy3): "SEC_PAD=random bash sec.sh garage all" with a read only test key
+                  (made with "garage key create sec-scoped-read", bucket secscoped, "garage bucket allow --read", key and bucket deleted afterwards by the wrapper). Folder /root/sec-garage-20261014-133307,
+                  archive 3581 bytes, sha256 95ad1cc990a835490fd9780cb26e5e65389cd4a1535879be9b812bbf5104e8c0. Its sec4 part is NOT valid (see SEC4) and sec6 was confounded (see SEC6).
+           Run 2  18:05:15  commit 72f36d8bbd15645c9a6755434e3c38910b25ac0a (sha256 5f5abf29ed12d4c1842ab580a5d5d581b5b5ae65f9783f1a44fe5aece6208fa5, /root/sec-deploy4): only sec4, with the two buckets secscoped and secother
+                  made with the Garage tool (the admin key got read and write on both, the scoped key read on secscoped only), SCOPED_OTHER=secother, all test keys and buckets deleted afterwards.
+                  Folder /root/sec-garage-20261014-180515, archive 962 bytes, sha256 741bb6d1a407907f34954f662f88dcff885032ccef401b85206916b8869d88ba.
+           Run 3  18:11:46  commit 6d045276ec4f8df1a895f233304a822cb501641a (sha256 938ad2b9a88c57f5f7a40a924132e64c8349cf56e115630ff8f5c6e4b0fe78ff, /root/sec-deploy5): "SEC_DISTINCT=1 SEC_PAD=random bash sec.sh garage sec6"
+                  (three different random objects, one marker each). Folder /root/sec-garage-20261014-181146, archive 1190 bytes, sha256 24df0e4fa8ba89e64ae3c875b7cac7631b7388e8d0ba60020daf9de33134dc9e.
+           All three: secret key found in the output files 0, access key found 0 (the three summaries). By hand (18:12): anonymous requests to port 3902 (see SEC2 extension).
+           Numbers were read from the console of the VM sessions (screenshots of the tool output); the folders and archives stay on ceph0 and are not copied here.
+Predictions: results/garage-vm-predictions-2026-10-13.txt (stays unchanged).
+
+Results
+-------
+SEC1 ports and anonymous answers (run 1)
+  Listening TCP ports on every node (identical): 22, 631, 3900, 3901, 3902. Port 631 was not examined (no HTTP answer on "/" in the list below, the same port is open on the other systems' nodes).
+  Without credentials these paths answered 200 with a body, on every node: 3902 /health (102 bytes) and 3902 /metrics (359382 bytes on ceph0, 194200 on ceph1, 203685 on ceph2) (6 rows).
+  Anonymous PUT and DELETE of a bucket path on the S3 port 3900: 403 (223 bytes each) on every node (ceph0 and ceph1 read directly from the screen, ceph2 from the reply text of the VM session).
+SEC2 anonymous write through non S3 ports (run 1): no non S3 port answered 200 or 3xx on "/", so the script made no anonymous PUT; the result file has the heading and no rows.
+SEC2 extension, port 3902 by hand (18:12, from ceph0 to 192.168.1.72, only HTTP code and size printed)
+  GET /health 200 (102 bytes), GET /metrics 200 (395304 bytes), GET /v1/status, /v1/layout, /v1/health 403 (174 bytes), GET /v1/key?list and /v1/bucket?list 403 (171 and 174 bytes, one of these two read from the
+  reply text), POST /v1/key?name=secprobe 403 (171 bytes); "garage key list" afterwards contains no key secprobe (count 0). So the admin API refuses calls without its token, and only /health and /metrics are open.
+SEC3 authentication (run 1, against 192.168.1.72:3900, fake access key SECPROBE1791977587FAKE made up for the test)
+  right access key, wrong secret: AccessDenied "Forbidden: Invalid signature". Fake access key, wrong secret: AccessDenied "No such key: SECPROBE179..." (text cut at 150 characters). Fake key, list buckets:
+  AccessDenied "No such key". No signature: GET bucket 403 (205 bytes), GET object 403 (220 bytes), PUT object 403 (224 bytes).
+SEC4 scoped key (run 2, valid; run 1 is not valid, see the notes)
+  Setup lines of the script: admin key uploads obj.txt to secother: ok; admin key uploads obj.txt to secscoped: ok. Scoped key (read only on secscoped): list secscoped ok (obj.txt, 16 bytes); read obj.txt ok (content
+  "scoped key test"); write new.txt: AccessDenied (PutObject); delete obj.txt: AccessDenied "Forbidden" (DeleteObject); read secother/obj.txt: 403 Forbidden (HeadObject); list all buckets: only secscoped is listed;
+  create a bucket: AccessDenied "Forbidden" (CreateBucket). All refusals are 403 or AccessDenied; nothing outside the permission worked.
+  Run 1 gave 404 for "read allowed object" and for "read another bucket": the admin key had no permission on the bucket made with the Garage tool, so obj.txt was never created, and a bucket made through the S3
+  API only gets a local alias of the creating key, so the scoped key could not resolve its name. That test proved nothing and was repeated with the fixed script (SCOPED_OTHER, setup lines).
+SEC5 transport (run 1): upload of a 200 line marker file to 192.168.1.71:3900 over plain http, capture on ceph0: "marker lines found in the capture: 199" (above 0 means the content crossed the network in clear).
+SEC6 encryption at rest (marker search with grep -rlF in /srv/s3/disk1/garage and /srv/s3/disk2/garage on each node; data blocks are files with the ending .zst, Garage compresses blocks with zstd)
+  Run 1 (the same random padded content for the plain, the SSE-S3 and the SSE-C upload): plain and SSE-S3 upload accepted without an error text (the output line after "SSE-S3 upload:" is empty), SSE-C upload accepted
+  (ETag, VersionId and SSECustomerAlgorithm in the answer); marker found in exactly one file on each node, /srv/s3/disk2/garage/data/83/72/83720e3a...0933.zst. Garage stores a block under the hash of its content, so
+  three uploads of the same content are one block file and this run cannot say which upload is stored in clear.
+  Run 3 (three different random objects, markers -PLAIN, -SSES, -SSEC): plain upload accepted, SSE-S3 upload accepted (empty output), SSE-C upload accepted (ETag, VersionId, SSECustomerAlgorithm).
+    PLAIN marker (positive control): found in 1 file on each of the three nodes (data/69/29/692917dd...e7974ae.zst on disk2).
+    SSES marker (SSE-S3 object, header --sse AES256): found in 1 file on each of the three nodes (data/eb/5f/eb5fb415...a9c5.zst on disk1), a different file from the plain one.
+    SSEC marker (SSE-C object): found in 0 files on each of the three nodes.
+SEC8 log of the failed attempts (run 1): the fake access key appears in 2 log lines of the Garage container on 192.168.1.72 (the node that served the requests) and in 0 lines on ceph1 and ceph2. The content
+  of those lines was not read (log level default).
+
+PREDICTIONS COMPARED
+P-SEC-1 "SSE-S3 is refused, SSE-C is supported": the SSE-S3 half is WRONG (the upload with --sse AES256 was accepted, and the content is stored readable); the SSE-C half is right as far as accepted (the answer carries
+        the SSE-C fields) and its marker is not found in clear (not read back with the key, see Q1).
+P-SEC-2 "blocks are compressed with zstd, random padding and a positive control are needed": right (blocks are .zst files, the plain control is found with random padding).
+P-SEC-3 "port 3902 answers /health and /metrics without a token, other admin calls need the token": right (all /v1 calls and the POST gave 403).
+
+PROVEN
+------
+G-P1. The S3 port refuses anonymous access (PUT, DELETE, no signature, wrong secret, fake key) with 403 / AccessDenied on every node tested; Garage tells "Invalid signature" and "No such key" apart in its answers.
+G-P2. Port 3902 is an HTTP interface on every node: /health and /metrics answer without credentials (the metrics text is 194 to 395 KB), all /v1 calls (and a POST that would create a key) are refused with 403.
+G-P3. A key limited to read on one bucket can list and read that bucket only; write, delete, creating a bucket and reading another bucket are refused (403), and the bucket list shows only its own bucket.
+G-P4. Object content crosses the network in clear on the S3 port (plain http, no TLS configured): 199 of 200 marker lines in the capture.
+G-P5. Content uploaded with the SSE-S3 header is accepted and stored in clear (marker found in a .zst block file on every node, as for the plain control). So an SSE-S3 request gives no protection at rest.
+G-P6. Content uploaded plain is stored in clear in block files on every node (three copies), zstd compression does not hide a marker in incompressible random data.
+G-P7. A failed login with a fake key is visible in the log of the node that served it (2 lines on ceph0, 0 on the others).
+
+NOT PROVEN, open
+----------------
+Q1. SSE-C: the marker is not found in clear on any node, but that alone does not prove encryption (an object that was not stored, or stored compressed, gives the same result). Settles: read the object back with the
+    right key and without the key, and look at the size of the block file. Not done.
+Q2. What the 2 log lines on ceph0 contain (key id, source address, reason). Not read.
+Q3. Ports 631 (all nodes) and 3901 (RPC between the nodes) were not tested for anonymous access; 3901 is the cluster RPC, authentication with the shared rpc_secret is not tested.
+Q4. Whether the metrics text on 3902 (about 0.2 to 0.4 MB) contains anything sensitive (bucket names, key ids). Not read.
+Q5. Whether the anonymous 3902 /metrics is a default of Garage or the result of the configuration of this setup (the configuration file was not re-read for this record).
+
+LIMITS
+------
+L1. One run per check, one cluster, plain http only. No TLS test (none configured). The sec4 run 1 and the sec6 run 1 are kept as records of the first attempt, their results are not used as findings except where stated.
+L2. sec2 made no anonymous write test because no non S3 port answered 200 or 3xx on "/"; the admin port was tested by hand with a few paths only.
+L3. No comparison between systems is made in this record.
