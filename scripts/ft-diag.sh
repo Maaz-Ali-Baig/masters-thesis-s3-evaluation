@@ -28,9 +28,17 @@ MASTER="${DG_MASTER:-192.168.1.72:9333}"
 COLL="${DG_COLLECTION:-$B}"
 REPL="${DG_REPL:-002}"
 REGION="${DG_REGION:-us-east-1}"
-KEYFILE="${DG_KEYFILE:-/root/seaweedfs-config/s3_credentials.txt}"
+SYS="${DG_SYSTEM:-seaweedfs}"
+# DG_SYSTEM=garage (added 14 October 2026): key file /root/garage-key.txt with the labels "Key ID" and "Secret key", region garage,
+# live endpoints default 192.168.1.72:3900 and 192.168.1.70:3900, and the SeaweedFS columns filer, assign and writable are written as n/a.
+if [ "$SYS" = garage ]; then
+    KEYFILE="${DG_KEYFILE:-/root/garage-key.txt}"; AKL="Key ID"; REGION="${DG_REGION:-garage}"
+    EPS="${DG_EPS:-192.168.1.72:3900 192.168.1.70:3900}"
+else
+    KEYFILE="${DG_KEYFILE:-/root/seaweedfs-config/s3_credentials.txt}"; AKL="Access key"
+fi
 [ -s "$KEYFILE" ] || { echo "ft-diag: $KEYFILE missing" >&2; exit 1; }
-AK="$(awk -F': *' '$1=="Access key"{print $2}' "$KEYFILE")"
+AK="$(awk -F': *' -v k="$AKL" '$1==k{print $2}' "$KEYFILE")"
 SK="$(awk -F': *' '$1=="Secret key"{print $2}' "$KEYFILE")"
 [ -n "$AK" ] && [ -n "$SK" ] || { echo "ft-diag: cannot parse $KEYFILE" >&2; exit 1; }
 mkdir -p "$OUT"
@@ -60,6 +68,7 @@ for i in $(seq 1 "$N"); do
     g="$(signed GET "http://$ep/$B/$PFX/$i" -o "$OUT/get-same.tmp" -w '%{http_code}')"
     if [ "$g" = 200 ] && [ "$(sha256sum "$OUT/get-same.tmp" | cut -d' ' -f1)" = "$sha" ]; then gs=OK; elif [ "$g" = 200 ]; then gs=BAD; else gs="$g"; fi
     fnode="${ep%%:*}"
+    if [ "$SYS" = garage ]; then fc="n/a"; asg="n/a"; wr="n/a"; else
     fc="$(curl -s -m 10 -o /dev/null -w '%{http_code}' "http://$fnode:8888/buckets/$B/$PFX/$i")"
     asg="$(curl -s -m 10 "http://$MASTER/dir/assign?collection=$COLL&replication=$REPL" | tr '\n\t' '  ' | cut -c1-80)"
     wr="$(curl -s -m 10 "http://$MASTER/dir/status" | python3 -c '
@@ -74,6 +83,7 @@ try:
 except Exception:
     print("n/a")
 ' "$COLL" "$REPL" 2>/dev/null)"
+    fi
     sleep 5
     go="$(signed GET "http://$oep/$B/$PFX/$i" -o "$OUT/get-other.tmp" -w '%{http_code}')"
     if [ "$go" = 200 ] && [ "$(sha256sum "$OUT/get-other.tmp" | cut -d' ' -f1)" = "$sha" ]; then go=OK; elif [ "$go" = 200 ]; then go=BAD; fi

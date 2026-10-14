@@ -1,0 +1,84 @@
+Garage v1.0.0, three nodes on the VMs: resource use during the performance series (13 to 14 October 2026)
+==========================================================================================================
+
+Follows results/garage-vm-performance-2026-10-13.txt (same series, same output folder name /root/perf-garage-20261013-215853 on the three nodes).
+It reads the sar logs (sar -u -r -d -n DEV, one sample per second, recorded on each node during the whole series by scripts/perf-warp.sh).
+
+Method:    scripts/perf-sar.sh at commit 4ba78311001783d2c0b8a521caebfa807da6ddba, sha256 3f51a415eb503976fb89a7fd84270dd22c25d2885ea07d7c4d7a8c36595a6d6a (the copy in /root/perf-deploy3 on ceph2,
+           copied to ceph0 by scp, hash printed there: equal). Run on 14 October on the three nodes, each in the output folder of the series on that node; the file runs.tsv was copied from ceph2 into the
+           folders of ceph0 and ceph1 first (the sar logs are on the nodes themselves, not on ceph2). The first try on ceph0 and ceph1 with a work folder that held no sar log failed with "missing" and
+           changed nothing; /root/sarwork-garage on ceph0, ceph1 and ceph2 are scratch folders of that try (ceph2 got a correct copy of its own result there, hash equal to the one in the series folder).
+           For every recorded run (51) the script averages the sar samples between the start and the end of the Warp process (epochs from runs.tsv). The window is the whole Warp process, which is
+           much longer than the 60 s measured window for PUT (see S7), so rates and ratios of PUT runs are not rates of the measured minute.
+           Columns: cpu_busy (100 minus idle of the line "all", percent), iowait (percent), rd_MiBs and wr_MiBs (disk read and write rate summed over the data disks, system disk excluded), net_rx_MiBs and
+           net_tx_MiBs (the interface that is not lo, MiB/s), samples (seconds in the window).
+Per run tables (51 runs each, header line included, 52 lines), typed from the VM screen into these files; the sha256 of every file equals the sha256 printed by the VM for its own file (compared, equal):
+           results/perf-garage-vm-3node-20261013-sar-runs-ceph0.tsv  sha256 87e27f834fb8eb2f93bc60b1fc05405f7966a9f004ce3ac889ae9c6b83d31296 (host debian)
+           results/perf-garage-vm-3node-20261013-sar-runs-ceph1.tsv  sha256 06cfbc2fec7cdb499775552139bb49d23cb90b9c468cfcfd7a1f0d1b4f52fddc
+           results/perf-garage-vm-3node-20261013-sar-runs-ceph2.tsv  sha256 41951fa5d596509907bcb9c6fcd495cb36483a004d468568dadf72db1ef6632b
+           The numbers below are my arithmetic on these files and on results/perf-garage-vm-3node-20261013-table-*.tsv (means of the three runs of a configuration, medians of the client throughput from the
+           configs table). The system disk is sda on ceph0 and ceph2 and sdc on ceph1 (printed by the script, read from lsblk).
+Node names: debian is ceph0 (192.168.1.72), ceph1 (.71), ceph2 (.70). ceph2 is the load node (Warp) and also a storage node.
+
+PROVEN (read from the tables, arithmetic mine; sums are over the three nodes)
+----------------------------------------------------------------------------
+S1. Written volume of the drives in the window of a PUT run against the client volume of the measured minute (sum over the nodes of wr_MiBs times samples, divided by client MiB/s times 60 s;
+    the client ran 57 to 60 s, so the ratios are up to 5 percent too low). Mean of the three runs, range in brackets:
+      100 MiB 3.66 (3.61 to 3.72);  16 MiB 3.57 (3.47 to 3.72);  1 MiB at concurrency 1: 6.11 (5.78 to 6.38);  c4 4.32 (4.14 to 4.48);  c8 3.52 (3.39 to 3.63);  c16 4.02 (3.78 to 4.20);
+      c64 3.80 (3.72 to 3.84);  50 KiB 7.54 (7.37 to 7.72)
+    Three copies would give 3.0. Every PUT configuration is above that (3.4 to 3.7 for 1 MiB at concurrency 8, 16 MiB and 100 MiB, 3.7 to 4.5 at 1 MiB with 4 to 64 users, about 6 at one user, about 7.5 at 50 KiB).
+    The window includes everything the drives did while the Warp process was running, also after the measured minute (S7), so the excess over 3.0 cannot be assigned to the writes of the objects.
+    The cause is NOT known (open question Q1). A rate based ratio (sum of wr_MiBs divided by the client MiB/s, no window correction) gives 2.83 (100 MiB), 2.64 (16 MiB), 1.37 (1 MiB c8), 1.22 (c16),
+    1.26 (c64), 0.93 (50 KiB) and is NOT used, because the window is longer than the measured minute.
+S2. Disk read volume against client throughput for GET (sum of rd_MiBs over the three nodes divided by client MiB/s; the GET windows are 64 to 73 s, close to the measured minute, so the rates are usable):
+      100 MiB 323.0 / 832.83 = 0.39;  16 MiB 333.3 / 769.85 = 0.43;  50 KiB 9.1 / 59.01 = 0.15
+      1 MiB: c1 39.4 / 47.97 = 0.82;  c4 107.9 / 297.15 = 0.36;  c8 116.8 / 636.58 = 0.18;  c16 117.5 / 800.17 = 0.15;  c64 116.6 / 822.37 = 0.14
+    In every GET configuration the drives delivered less than the client received: 15 percent for 50 KiB, 14 to 18 percent for 1 MiB from concurrency 8, 36 percent at concurrency 4, 82 percent at 1,
+    43 and 39 percent at 16 and 100 MiB. So a large part of the data did not come from the drives in the run window (it came from memory). At 1 MiB the read rate of the drives is nearly the same for
+    concurrency 8, 16 and 64 (116.8, 117.5, 116.6 MiB/s over the three nodes) while the client rate changes from 636.58 to 822.37 MiB/s; cause not examined (Q2).
+S3. Network during GET: the receive rate of the load node ceph2 is 61 to 66 percent of the client throughput for 1 MiB, 16 MiB and 100 MiB (100 MiB 505.7 / 832.83 = 0.61; 16 MiB 477.5 / 769.85 = 0.62; 1 MiB c1 29.2 /
+    47.97 = 0.61, c4 181.3 / 297.15 = 0.61, c8 420.8 / 636.58 = 0.66, c16 508.6 / 800.17 = 0.64, c64 529.2 / 822.37 = 0.64) and 0.89 for 50 KiB (52.8 / 59.01). The transmit rate of ceph0 plus ceph1 equals that
+    receive rate (GET 1 MiB c64: 261.9 + 267.0 = 528.9 against 529.2 on ceph2), the transmit rate of ceph2 is 0.1 to 1.5 MiB/s, and the receive rate of ceph0 and ceph1 is 0.1 to 1.1 MiB/s in every GET run. So during
+    GET the data went from ceph0 and ceph1 to ceph2 and nothing went between the storage nodes. The highest receive rate of ceph2 in the series, 529.2 MiB/s (4.4 Gbit/s), is far below the one stream measured with
+    iperf3 from ceph2 to ceph0 (8.97 Gbit/s, controls after the series), so the network card is not the limit in these runs.
+    Consistent with this: Warp sends about two thirds of the requests to ceph0 and ceph1 and each node reads the object from its own disks; ceph2 reads a third of the requests locally (loopback, not counted). That this is how
+    Garage reads is an inference from these counters, NOT proven (Q4).
+S4. CPU (mean over the three runs, ceph0 / ceph1 / ceph2, percent busy): GET 1 MiB c16 66.2 / 65.3 / 70.4, c64 67.5 / 67.2 / 69.5, c8 39.1 / 37.5 / 62.6; GET 16 MiB 57.8 / 55.7 / 64.4; GET 100 MiB 62.2 / 60.4 / 68.4;
+    PUT 100 MiB 61.8 / 54.3 / 78.1; PUT 16 MiB 65.8 / 61.2 / 71.7; PUT 1 MiB c8 35.0 / 34.4 / 35.3, c16 31.0 / 29.2 / 36.0, c64 30.7 / 29.4 / 40.0; mixed 49.5 / 41.9 / 52.5; 50 KiB PUT 12.7 / 12.8 / 12.0 and GET
+    34.0 / 31.5 / 15.3. No node is above 80 percent busy in any configuration mean (highest 78.1 on ceph2, PUT 100 MiB; highest single run 78.5, PUT 100 MiB r2). By the rule of the method (load node above 80 percent
+    busy: client limited, not used for a ranking) NO configuration is flagged in this series. ceph2 is the busiest node in 15 of the 17 configurations; exceptions: PUT 50 KiB (ceph1 12.8 against ceph2 12.0) and GET 50 KiB
+    (ceph0 34.0 against ceph2 15.3). In GET 1 MiB from concurrency 16 the three nodes are at 65 to 70 percent each.
+S5. PUT at 1 MiB, concurrency 16 and 64: ceph2 is at 36.0 and 40.0 percent busy, ceph0 and ceph1 at 29 to 31 percent, iowait 1.4 to 7.5 percent, while the throughput does not grow between 16 and 64 users (104.25 and
+    103.03 MiB/s) and the average latency grows from 152.6 to 161.3 ms (c16) to 574.8 to 687.5 ms (c64). By the mean CPU, no node is saturated. The mean over four cores can hide one saturated core (Q3).
+S6. iowait: PUT 1 MiB at concurrency 1 is the highest in the series (ceph0 7.9, ceph2 9.3 percent), PUT 100 MiB ceph0 8.8, GET 16 MiB ceph0 7.2, PUT 16 MiB ceph0 7.2 and ceph2 7.0, PUT 1 MiB c4 ceph2 8.2; GET 1 MiB from
+    concurrency 8 is at 1.1 to 2.9 on every node. (Means of three runs.)
+S7. Windows: the sar window is the whole Warp process. GET runs 64 to 73 samples. PUT runs: 50 KiB 409 to 606, 1 MiB c1 75 to 105, c4 143 to 195, c8 116 to 243, c16 139 to 242, c64 155 to 265, 16 MiB 80 to 84, 100 MiB 76 to 78,
+    mixed 134 to 156. The measured minute of a PUT run is therefore only a part of the window, and the drives were writing during the rest of it (S1).
+
+OPEN QUESTIONS (hypotheses, with the test that settles them; not findings)
+--------------------------------------------------------------------------
+Q1. Why do the drives write 3.4 to 7.5 times the client volume in the window of a PUT run (S1) where three copies would be 3.0? Candidates: (a) metadata writes of the three LMDB stores (object, version and block_ref entries, one
+    page write per update) and the deletes by the Warp cleanup in the same window; (b) data of earlier runs flushed from the page cache in the window; (c) the file system or the sar device rates count more than the data.
+    Settles: the kernel counters of written bytes (/proc/diskstats) per disk (data disks and meta disk separately) before and after one PUT run, separately for the write phase and the cleanup, compared with the client bytes.
+Q2. Why is the disk read rate over the three nodes constant at about 117 MiB/s for 1 MiB GET from concurrency 8 to 64? Settles: per run values, sar -d await and utilisation, a run with the page cache emptied during the run.
+Q3. Is one core saturated in the 1 MiB runs? GET 1 MiB c16 and c64 are at 65 to 70 percent on every node while the throughput stays at 800 to 822 MiB/s. Settles: sar -P ALL (not recorded in this series).
+Q4. Does every Garage gateway read the blocks of a GET from the disks of its own node (S3)? Settles: the Garage documentation or source for the read path (read quorum, local preference) and a GET through one endpoint
+    with the network counters of all three nodes.
+
+STATUS OF THE HYPOTHESES OF THE PERFORMANCE RECORD
+--------------------------------------------------
+H2 (GET partly from page cache): SUPPORTED for GET 1 MiB from concurrency 4 (drives delivered 36 percent of the client volume), 1 MiB from 8 (14 to 18 percent), 50 KiB (15 percent), 16 MiB and 100 MiB (43 and 39 percent); at
+   one user 82 percent. So the GET figures of this series must be labelled as measurements with a large cache share.
+H3 (common cause of the PUT plateau): OPEN. For 1 MiB no node is saturated by mean CPU, and iowait and network are low (S3, S4, S5); for 16 MiB and 100 MiB ceph2 is at 72 and 78 percent.
+H1 and H4: not tested by these data.
+
+LIMITS
+------
+L1. The load node is also a storage node (decision of 10 October); in this series it is the busiest node in 15 of 17 configurations, below 80 percent CPU everywhere.
+L2. sar %util, await and queue depth are not in the table (only rates), so a drive saturation cannot be excluded or shown here. Per core CPU is not in the table (Q3).
+L3. The windows are the whole Warp process, much longer than the measured minute for PUT (S7), so the PUT rates and ratios are not rates of the measured minute. The volume ratio (S1) is the better figure but still
+    mixes the measured minute with the cleanup and anything the drives did later.
+L4. Means of three runs per configuration; single run values are in the per run tables.
+L5. The waiting for free space between runs (performance record, section SPACE) produced disk and CPU activity outside the run windows; its effect on the page cache or on the following run was not measured.
+L6. The resource record for SeaweedFS used a window of about 10 percent more than the measured minute; for Garage the PUT windows are 1.3 to 10 times the measured minute (S7), so the PUT volume figures of the two records
+    must not be put side by side without this limit.

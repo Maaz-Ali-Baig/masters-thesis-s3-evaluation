@@ -1,0 +1,52 @@
+run	throughput	objects_per_s	avg_latency	p99_latency	error_lines
+get_100MiB_c8_r1	822.94 MiB/s	8.23 obj/s	953.7ms	1533.9ms	0
+get_100MiB_c8_r2	832.83 MiB/s	8.33 obj/s	946.5ms	1454.6ms	0
+get_100MiB_c8_r3	835.48 MiB/s	8.35 obj/s	968.0ms	1552.4ms	0
+get_16MiB_c8_r1	759.24 MiB/s	47.45 obj/s	168.4ms	318.2ms	0
+get_16MiB_c8_r2	799.74 MiB/s	49.98 obj/s	163.7ms	278.5ms	0
+get_16MiB_c8_r3	769.85 MiB/s	48.12 obj/s	166.3ms	286.1ms	0
+get_1MiB_c16_r1	788.10 MiB/s	788.10 obj/s	19.8ms	39.0ms	0
+get_1MiB_c16_r2	800.17 MiB/s	800.17 obj/s	49.4ms	70.7ms	0
+get_1MiB_c16_r3	809.42 MiB/s	809.42 obj/s	19.9ms	39.8ms	0
+get_1MiB_c1_r1	47.97 MiB/s	47.97 obj/s	20.8ms	57.2ms	0
+get_1MiB_c1_r2	45.68 MiB/s	45.68 obj/s	21.3ms	58.1ms	0
+get_1MiB_c1_r3	48.34 MiB/s	48.34 obj/s	19.9ms	62.2ms	0
+get_1MiB_c4_r1	313.62 MiB/s	313.62 obj/s	12.6ms	26.9ms	0
+get_1MiB_c4_r2	294.14 MiB/s	294.14 obj/s	14.2ms	32.8ms	0
+get_1MiB_c4_r3	297.15 MiB/s	297.15 obj/s	13.9ms	30.6ms	0
+get_1MiB_c64_r1	822.37 MiB/s	822.37 obj/s	79.2ms	139.1ms	0
+get_1MiB_c64_r2	848.71 MiB/s	848.71 obj/s	76.2ms	139.6ms	0
+get_1MiB_c64_r3	800.47 MiB/s	800.47 obj/s	79.8ms	145.0ms	0
+get_1MiB_c8_r1	606.23 MiB/s	606.23 obj/s	13.5ms	30.7ms	0
+get_1MiB_c8_r2	636.58 MiB/s	636.58 obj/s	12.8ms	28.7ms	0
+get_1MiB_c8_r3	637.52 MiB/s	637.52 obj/s	12.7ms	26.4ms	0
+get_50KiB_c8_r1	58.11 MiB/s	1190.14 obj/s	6.9ms	50.8ms	0
+get_50KiB_c8_r2	60.22 MiB/s	1233.30 obj/s	6.6ms	48.4ms	0
+get_50KiB_c8_r3	59.01 MiB/s	1208.56 obj/s	6.7ms	48.8ms	0
+mixed_1MiB_c16_r1	249.13 MiB/s	415.29 obj/s			0
+mixed_1MiB_c16_r2	253.62 MiB/s	422.85 obj/s			0
+mixed_1MiB_c16_r3	258.83 MiB/s	431.43 obj/s			0
+put_100MiB_c8_r1	115.61 MiB/s	1.16 obj/s	6926.4ms	9403.0ms	0
+put_100MiB_c8_r2	108.87 MiB/s	1.09 obj/s	7045.7ms	9408.4ms	0
+put_100MiB_c8_r3	120.94 MiB/s	1.21 obj/s	6097.3ms	7890.2ms	0
+put_16MiB_c8_r1	124.19 MiB/s	7.76 obj/s	1022.5ms	1964.5ms	0
+put_16MiB_c8_r2	128.04 MiB/s	8.00 obj/s	983.0ms	1923.9ms	0
+put_16MiB_c8_r3	133.85 MiB/s	8.37 obj/s	931.1ms	1518.6ms	0
+put_1MiB_c16_r1	98.20 MiB/s	98.20 obj/s	161.3ms	387.9ms	0
+put_1MiB_c16_r2	104.25 MiB/s	104.25 obj/s	154.1ms	330.5ms	0
+put_1MiB_c16_r3	104.50 MiB/s	104.50 obj/s	152.6ms	327.8ms	0
+put_1MiB_c1_r1	18.13 MiB/s	18.13 obj/s	53.1ms	105.5ms	0
+put_1MiB_c1_r2	19.16 MiB/s	19.16 obj/s	51.1ms	115.5ms	0
+put_1MiB_c1_r3	19.10 MiB/s	19.10 obj/s	53.7ms	117.4ms	0
+put_1MiB_c4_r1	67.29 MiB/s	67.29 obj/s	59.9ms	108.8ms	0
+put_1MiB_c4_r2	67.50 MiB/s	67.50 obj/s	59.3ms	106.0ms	0
+put_1MiB_c4_r3	69.08 MiB/s	69.08 obj/s	58.3ms	100.9ms	0
+put_1MiB_c64_r1	103.03 MiB/s	103.03 obj/s	613.0ms	1301.4ms	0
+put_1MiB_c64_r2	109.43 MiB/s	109.43 obj/s	574.8ms	1112.7ms	0
+put_1MiB_c64_r3	99.08 MiB/s	99.08 obj/s	687.5ms	1523.2ms	0
+put_1MiB_c8_r1	88.27 MiB/s	88.27 obj/s	90.5ms	168.0ms	0
+put_1MiB_c8_r2	87.48 MiB/s	87.48 obj/s	90.8ms	135.9ms	0
+put_1MiB_c8_r3	89.66 MiB/s	89.66 obj/s	89.5ms	151.8ms	0
+put_50KiB_c8_r1	15.18 MiB/s	310.86 obj/s	25.1ms	68.9ms	0
+put_50KiB_c8_r2	14.64 MiB/s	299.74 obj/s	26.4ms	87.4ms	0
+put_50KiB_c8_r3	14.98 MiB/s	306.83 obj/s	26.2ms	68.5ms	0

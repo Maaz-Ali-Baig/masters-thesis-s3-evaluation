@@ -1,0 +1,126 @@
+Garage v1.0.0, three nodes on the university VMs: performance series (13 to 14 October 2026)
+===========================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70), one Garage container per node (S3 on port 3900, RPC 3901, admin 3902),
+           image docker.io/dxflrs/garage@sha256:0c7ed80d22c0b0f902fbd0ec74fc68073f72a46ea15d54e3c4c484184a8c7516 (Garage v1.0.0), replication_factor 3 (three copies of
+           every block and of the metadata, one per zone: z1 ceph0, z2 ceph1, z3 ceph2), layout version 1 (unchanged since 8 October), lmdb, s3_region "garage", two data
+           directories per node (/srv/s3/disk1/garage/data and /srv/s3/disk2/garage/data, capacity 30G each), metadata on /srv/s3/disk1/garage/meta. Data disks: XFS /srv/s3/disk1
+           and /srv/s3/disk2 (32 GB each). 4 vCPU and 7.7 GiB RAM per node. Deployment scripts deploy/garage/*.sh, hashes on the three VMs equal the repo (checked 13 October).
+           Started again on 13 October 20:1x by garage-node.sh after the SeaweedFS containers were stopped by hand; the three nodes connected, "garage status" showed
+           three healthy nodes, round trip 12 of 12 PASS (garage-roundtrip.sh, bucket thesis-test-bucket). The buckets perfbench and ftbucket did not exist and were made with the
+           garage CLI (bucket create, bucket allow --read --write --owner for the key thesis-key) before the series.
+Load:      Warp v1.8.0 (13c3b89) on ceph2, requests spread by Warp over the S3 endpoints of all three nodes (192.168.1.72:3900, .71:3900, .70:3900, region garage, bucket
+           perfbench), AWS CLI 2.36.8 for bucket handling, checksum setting for the aws cli: when_required (finding F1; Garage needs it for multipart). ceph2 is also a
+           storage node, so it carries the client cost (limit L1 below).
+Method:    performance_method.md, script scripts/perf-warp.sh at commit 267d3448aee1810247b5c07eff9baf0901882b1c, sha256
+           ceccf128d4a6634cf89878c13407869a2fa8cfbc9304b44dc766c0b0b450280b (hash of /root/perf-deploy4/perf-warp.sh on ceph2, fetched by the full commit hash from
+           raw.githubusercontent.com and compared before the start: equal), mode "all" (size series, concurrency series, mixed). New in this script version: for Garage the
+           wait for free space may last 60 minutes instead of 10 (see section SPACE). Tables made with scripts/perf-table.sh (sha256 797afb36c44de6a99df4be39d543e4d8b1b383bef21a1da555dd0190587cd644,
+           /root/perf-deploy/perf-table.sh on ceph2, read from the screen).
+Times:     VM clock, local time (UTC+2). Header time 21:58:54 on 13 October, first run start 21:58:56, last run end 01:38:25 on 14 October (the series crossed midnight, see the
+           resource record), 68 runs (17 configurations of one discarded warm up and three recorded runs; the tables cover the 51 recorded runs). Duration 60 s per recorded run,
+           30 s warm up.
+Output:    on ceph2 /root/perf-garage-20261013-215853/ (console text per run, Warp benchdata, runs.tsv, header.txt, summary.txt, sar of ceph2, table-runs.tsv, table-configs.tsv)
+           and /root/perf-garage-20261013-215853.tar.gz (2590308 bytes, sha256 af57799280babe5d7a6b2572ba0c29a45433fbda1a44f20e9a60e0f6e06a03a2, read from the screen twice
+           with the same value). The sar logs of ceph0 and ceph1 are in the folder of the same name on those nodes. Access key and secret key found in the output files: 0 and 0
+           (grep in the script). Outer log of the series: /root/perf-garage-outer2.log on ceph2.
+Tables:    results/perf-garage-vm-3node-20261013-table-runs.tsv    (sha256 61b6394ca320c00eb56ed694e6f3ce7bac80a0784a3f111e0bf0954f97158a22)
+           results/perf-garage-vm-3node-20261013-table-configs.tsv (sha256 9f061d427d5ac625c800f5dc8c9d5172c320ce6d44e3766c4280c2b04d2f969e)
+           Both were read from the VM screen and typed into these files; the sha256 of both files equals the sha256 printed by the VM for its own files (compared, equal).
+Resources: results/garage-vm-performance-sar-2026-10-13.txt (same series, sar of the three nodes).
+Predictions: results/garage-vm-predictions-2026-10-13.txt was written before the fault tolerance runs and does not cover performance.
+
+First attempt (NOT used): the series was first started on 13 October at 20:29:31 (output /root/perf-garage-20261013-202953 on ceph2, 14 lines in runs.tsv = 13 runs). It stopped itself at
+21:34:45 because the data disks were still 57 percent used after the script's 10 minute wait for free space (limit 50 percent). The disks were back at 23 to 27 percent on all
+three nodes at 21:54, so Garage frees deleted data later than the script waited. The 13 runs of that attempt (PUT 50 KiB and PUT/GET 1 MiB at concurrency 8, warm up of GET 1 MiB) are kept on
+ceph2 but are not in any table here. The script was changed (60 minutes of waiting for Garage), committed as 267d3448 and the whole series was started again at 21:58.
+
+Settings of the series
+----------------------
+Object size series, concurrency 8, PUT and GET: 50 KiB, 1 MiB, 16 MiB, 100 MiB. Concurrency series, 1 MiB, PUT and GET: 1, 4, 16, 64.
+Mixed workload (Warp default mix of GET, PUT, STAT, DELETE), 1 MiB, concurrency 16. Same dataset sizes as for RustFS and SeaweedFS: GET datasets 50000 objects of 50 KiB,
+8192 of 1 MiB, 512 of 16 MiB, 80 of 100 MiB, prepared in the warm up run and read with --list-existing.
+Before every GET run the script emptied the page cache on the three nodes over ssh (header: ssh to storage nodes 1, nodes handled .72 .71 .70; the success of each drop was
+not logged, so it is set, not proven, for every run). Before every run the script checked the free space on all data disks (limit 50 percent used). The bucket was emptied after
+every configuration.
+
+Results (median, minimum and maximum of three recorded runs, MiB/s; full list with latencies in the two tables)
+------------------------------------------------------------------------------------------------------------
+Object size series (concurrency 8)         PUT median (min, max)       GET median (min, max)
+  50 KiB                                    14.98 (14.64, 15.18)        59.01 (58.11, 60.22)
+  1 MiB                                     88.27 (87.48, 89.66)        636.58 (606.23, 637.52)
+  16 MiB                                    128.04 (124.19, 133.85)     769.85 (759.24, 799.74)
+  100 MiB                                   115.61 (108.87, 120.94)     832.83 (822.94, 835.48)
+Concurrency series (1 MiB)                 PUT median (min, max)       GET median (min, max)
+  1                                         19.10 (18.13, 19.16)        47.97 (45.68, 48.34)
+  4                                         67.50 (67.29, 69.08)        297.15 (294.14, 313.62)
+  8 (from the size series)                  88.27 (87.48, 89.66)        636.58 (606.23, 637.52)
+  16                                        104.25 (98.20, 104.50)      800.17 (788.10, 809.42)
+  64                                        103.03 (99.08, 109.43)      822.37 (800.47, 848.71)
+Mixed, 1 MiB, concurrency 16 (Total)        253.62 (249.13, 258.83) MiB/s
+Objects per second at 50 KiB: PUT 310.86, 299.74, 306.83 (median 306.83), GET 1190.14, 1233.30, 1208.56 (median 1208.56).
+Errors: the error_lines column is 0 in all 51 recorded runs and every run ended with exit code 0 (68 of 68 including the warm ups).
+
+PROVEN (read from the tables, arithmetic mine)
+----------------------------------------------
+P1. Every recorded run finished without errors. The three runs of a configuration lie close together for most configurations. Largest spreads: PUT 100 MiB, 108.87 to
+    120.94 MiB/s (11 percent of the minimum), PUT 1 MiB at concurrency 64, 99.08 to 109.43 (10 percent), GET 1 MiB at concurrency 4, 294.14 to 313.62 (7 percent).
+P2. Latency and throughput agree with the concurrency (Little's law, concurrency divided by average latency):
+    PUT 1 MiB concurrency 1: 1 MiB / 53.1, 51.1, 53.7 ms = 18.8, 19.6, 18.6 MiB/s against 18.13, 19.16, 19.10;
+    PUT 1 MiB concurrency 64: 64 / 613.0, 574.8, 687.5 ms = 104.4, 111.3, 93.1 against 103.03, 109.43, 99.08;
+    GET 100 MiB concurrency 8: 800 MiB / 0.9537, 0.9465, 0.9680 s = 838.9, 845.2, 826.4 against 822.94, 832.83, 835.48;
+    GET 1 MiB concurrency 64: 64 / 79.2, 76.2, 79.8 ms = 808, 840, 802 against 822.37, 848.71, 800.47;
+    PUT 50 KiB concurrency 8: 8 / 25.1 ms = 318.7 objects/s against 310.86.
+    The values agree within 6 percent, so the tool measures what it says.
+P3. PUT is slower than GET in every configuration, at the median: 7.2 times at 100 MiB (832.83 against 115.61), 6.0 times at 16 MiB, 7.2 times at 1 MiB and concurrency 8, 2.5 times at
+    1 MiB and concurrency 1, 4.4 at concurrency 4, 7.7 at concurrency 16, 8.0 at concurrency 64, and 3.9 times at 50 KiB (59.01 against 14.98 MiB/s; 1208.56 against 306.83 objects per second).
+P4. Average latency of one request: PUT 1 MiB at concurrency 1 about 52 ms (51.1 to 53.7), GET 1 MiB at concurrency 1 about 21 ms (19.9 to 21.3); at 50 KiB and concurrency 8: PUT 25.1 to
+    26.4 ms, GET 6.6 to 6.9 ms (p99 48.4 to 50.8 ms). GET 100 MiB at concurrency 8: 946.5 to 968.0 ms, PUT 100 MiB: 6097.3 to 7045.7 ms.
+P5. PUT throughput at 1 MiB grows with concurrency from 19.10 (1) to 67.50 (4), 88.27 (8) and 104.25 (16) MiB/s and does not grow above 16 (103.03 at 64, a change of -1.2 percent, the
+    ranges 98.20 to 104.50 and 99.08 to 109.43 overlap). GET grows from 47.97 (1) to 297.15 (4), 636.58 (8) and 800.17 (16) and is 822.37 at 64 (+2.8 percent, ranges overlap).
+P6. At 16 MiB and 100 MiB PUT is 128.04 and 115.61 MiB/s at concurrency 8, which is 23 and 11 percent above PUT 1 MiB at concurrency 16 (104.25); the 100 MiB PUT is 10 percent below the 16 MiB PUT.
+    GET at 16 MiB and 100 MiB is 769.85 and 832.83, near GET 1 MiB at concurrency 16 and 64 (800.17, 822.37).
+P7. The wall time of a run is far longer than its measured 60 s for small objects: the PUT 50 KiB runs lasted about 10 minutes each (Warp process, from runs.tsv: 630 s for the warm up and
+    605 s for the first recorded run), while Warp reported 57 s of measurement. The extra time is outside the measured window; what the process does in it was not examined (most likely
+    Warp deleting its objects after the run; not checked). The same applies, less strongly, to the other PUT runs (sar window 75 to 265 s, resource record).
+
+SPACE (observations about Garage disk space, made while running the series)
+----------------------------------------------------------------------------
+Garage gave the space of deleted objects back late. First attempt: after the cleaning of the first PUT configuration the disks were at 57 percent for the 10 minutes the script waited; 20 minutes
+later (21:54) they were at 23 to 27 percent on all three nodes, the resync queue was 0 and "garage worker list" showed all workers idle. The second series: 20 waiting episodes in the outer
+log (first reading of an episode between 51 and 62 percent used), 116 lines "space: ... waiting 30 s" in total, the longest episode 28 waits (14 minutes, more than the old limit of 20 waits, so at least
+three episodes would have stopped the series with the old script); no episode hit the new limit of 120 waits. Why Garage frees the space late is NOT examined (candidate: the block store removes
+the files of deleted blocks only after a delay; not checked in the source or the documentation).
+After the series (14 October 08:26, read on ceph0): bucket perfbench 0 objects, 0 bytes, no unfinished uploads, S3 listing 0 lines; data directories of Garage on ceph0 60 MB and 49 MB, 103 block entries left;
+resync queue 0, no resync errors, no busy worker. The metadata store (LMDB) is 1.1 GB on ceph0 (it was 336 MB on 13 October 21:54) and "garage stats" still lists 409794 object, 412262 version and 513283 block_ref
+entries although the bucket is empty (not examined: probably deletion markers that Garage keeps for some time). The df used space of the data disks (5.2 G and 3.2 G on ceph0) is larger than the Garage
+directories, the rest was not examined (it is probably the data of the stopped systems on the same disks, not checked).
+
+NOT PROVEN, hypotheses with the test that settles them (not to be written as findings)
+-------------------------------------------------------------------------------------
+H1. The fixed cost per PUT (52 ms for 1 MiB at concurrency 1, against 21 ms for GET) comes from writing the block and the metadata to several nodes before the acknowledgement. Settles: the
+    Garage documentation or source for the write path (quorum, fsync default) and the planned fault tolerance run S1 (is a write acknowledged with one node down?).
+H2. The GET results are partly served from the page cache. The resource record supports this for GET 1 MiB from concurrency 4 and for 50 KiB (drives delivered 14 to 36 percent and 15 percent of the client volume).
+H3. The PUT plateau of about 100 to 128 MiB/s (1 MiB from 16 users, 16 MiB and 100 MiB at 8) has one common cause. By mean CPU no node is saturated in the 1 MiB PUT runs (resource record, highest
+    47 percent on ceph2), for 16 MiB and 100 MiB ceph2 is at 69 to 78 percent. Settles: sar -P ALL for the cores, a run with the load generator on a fifth VM (not available).
+H4. The three copies are written before the acknowledgement of a PUT. Settles: fault tolerance S1 and S2 (planned).
+
+LIMITS OF THIS SERIES (to be repeated in the thesis)
+----------------------------------------------------
+L1. The load node ceph2 is also a storage node (decision of 10 October). The client CPU cost falls on ceph2, and part of the GET data of ceph2 is read locally and does not pass its network card
+    (resource record).
+L2. Redundancy differs between the systems (Garage three copies, SeaweedFS three copies by replication 002, RustFS erasure coding 3+3, Ceph as it will be configured), so write costs differ by design. This
+    record contains no comparison between systems and no ranking.
+L3. Three runs per configuration: ranges only, no statistical test. One cluster, one series, three and a half hours on one night.
+L4. The waiting for free space (116 waits of 30 s in 20 episodes, a first aborted attempt) changed the timing between runs; its effect on the results was not measured. The bucket was not listed before
+    the second start: at 21:54 the Garage data directories held 4.2 G and 4.1 G per node (8295 blocks), probably the GET 1 MiB dataset of the first attempt, which the script empties after the first
+    configuration; the effect on the first configuration (PUT 50 KiB) was not examined. The bucket was empty after the series.
+L5. Control measurements (read from the screen, no hash). BEFORE the series (13 October 20:29, in the first attempt's controls run /root/perf-garage-20261013-202931): dd of 2 GiB with direct writes and fsync on
+    disk1 of each node 963 MB/s (ceph0), 1.2 GB/s (ceph1), 645 MB/s (ceph2); the network part of that log was not read. AFTER the series (14 October 08:23, output /root/perf-garage-20261014-082309, archive 1147 bytes, sha256
+    969f001ebf9407d7296084eaf3f5086900f95f09d10bd567f3d51c2dc25046f6): dd 1.1 GB/s (ceph0), 648 MB/s (ceph1), 1.0 GB/s (ceph2); iperf3 from ceph2 to ceph0 8.97 Gbit/s sender and 8.96 receiver (5519 retransmits,
+    as shown on the screen); iperf3 is not installed on ceph1, so the network to ceph1 was not measured. The single dd run of the same node differs between the two measurements by up to a factor of 1.9 (ceph1 1.2 GB/s
+    then 648 MB/s, ceph2 645 MB/s then 1.0 GB/s), and earlier systems showed 662 MB/s, 1.1 GB/s and 905 MB/s (SeaweedFS, 12 October) and about 1.6, 1.4 and 2.8 GB/s (RustFS, 10 October, my arithmetic from 2 GiB in 1.34, 1.54 and 0.77 s). So a
+    single dd run does not give a stable disk speed of the VMs; that variation is a limit for every comparison between systems.
+L6. The laptop results for Garage (earlier version of the setup, one node, laptop) are not comparable with this series.
+L7. The series crossed midnight; the script perf-sar.sh used here is the fixed one (commit 4ba7831). The Warp tables do not use the sar windows and are not affected.
+L8. Garage data_fsync and the consistency mode were not set in garage.toml (defaults of v1.0.0, whose values were not looked up here), so the durability of an acknowledged write is not stated by this record.
