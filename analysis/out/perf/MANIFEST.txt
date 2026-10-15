@@ -1,0 +1,34 @@
+Performance comparison: inputs and outputs
+==========================================
+
+repository commit: 44d2120d56518fef9e43975ef35695f08753d65a
+working tree (analysis, results): UNCOMMITTED CHANGES in analysis/ (outside out/) or results/
+python 3.12.3
+matplotlib 3.6.3
+
+INPUT FILES (results/)
+8622184a04d1c8fc0ab689e57549b303616e0633665bcebb959d6cd4358cd88d  results/perf-ceph-vm-3node-20261015-table-runs.tsv
+a21360dd0f2fd4a4f8e658969ac4727878636b25ac7b90fd58fad06cb29afaf4  results/perf-ceph-vm-3node-20261015-table-configs.tsv
+5647b198b0241b35c8820c6679ffb22e3e01e40277213e73a3870a815d6dff40  results/perf-ceph-vm-3node-20261015-sar-runs-ceph2.tsv
+321c283abb182adef897391b372464e09bd4a4dff16bae9e5c11177a4014b579  results/perf-seaweedfs-vm-3node-20261012-table-runs.tsv
+7bef6987cd224be33eb395477d26cb19c14ed78b1e3c169c3dbddd03f12588b3  results/perf-seaweedfs-vm-3node-20261012-table-configs.tsv
+dc349388afcbd759f3f1a3157fed58ed3d0147876c75b6f7751872ef3ee286de  results/perf-seaweedfs-vm-3node-20261012-sar-configs.tsv
+79efdebc85fb0924d2125dc6bc0317f8b59397517126aba363bc936469acdcc0  results/perf-rustfs-vm-3node-20261010-table-runs.tsv
+6d428ab2e30e01250156c13d182cdc0adeca146e6fd61fae6bfd10d3ed532736  results/perf-rustfs-vm-3node-20261010-table-configs.tsv
+10cb92cf95f2c6d6af999ee7f151b5747c26190067024b9f2f3eff792b8ef7c3  results/perf-rustfs-vm-3node-20261010-sar-configs.tsv
+61b6394ca320c00eb56ed694e6f3ce7bac80a0784a3f111e0bf0954f97158a22  results/perf-garage-vm-3node-20261013-table-runs.tsv
+9f061d427d5ac625c800f5dc8c9d5172c320ce6d44e3766c4280c2b04d2f969e  results/perf-garage-vm-3node-20261013-table-configs.tsv
+41951fa5d596509907bcb9c6fcd495cb36483a004d468568dadf72db1ef6632b  results/perf-garage-vm-3node-20261013-sar-runs-ceph2.tsv
+
+OUTPUT FILES
+9384f16196b823b7107bee90a0520a3275c6bf4c1230f2f05fb93204a1fbdbc9  analysis/out/perf/perf_long.csv
+d8889017672a8730f2bfe40f34cd3ba98765b8c01ffcd7df9f9d7277b59fd5c9  analysis/out/perf/perf_ranking.csv
+f37d8fc433213fa00fee5d7a48ff05203f3f480e0435b28d209b6a90bd827557  analysis/out/perf/perf_size.tex
+9b9064b64887daeeb3ef70181ea171ade6831eddba29c241266cef551763d088  analysis/out/perf/perf_concurrency.tex
+bf7e45f3a025e54bd9f2abab1f218cfd104419d58b20ea8de8c1e0febe4a90d3  analysis/out/perf/perf_load_node_cpu.csv
+960af916ef6bb6d9d3c5454b4e3fb3ae9c4e1135c89caaa0d585d47391e6538c  analysis/out/perf/perf_size.pdf
+e4a661b985e81cbadf0db4a452da87ed95a7e5e1894e61bab88a7488914b797a  analysis/out/perf/perf_size.png
+ac329d78578d66824e0685e729352c23649a96a7ce68750f9ad8ce78e622944f  analysis/out/perf/perf_concurrency.pdf
+31a215c5cec308c7cba56b4e04856a73a729e3717f643ff01d9ee4216ef0af49  analysis/out/perf/perf_concurrency.png
+89755f3cfe24a115403e47d6ad3859e950c27d2fe9947b56073352be0fe1670f  analysis/out/perf/perf_mixed.pdf
+5f2dce8adf7ecc7fb831e443c748859dd38b8ffbc1e5ee69876afa5d8b34ad9f  analysis/out/perf/perf_mixed.png

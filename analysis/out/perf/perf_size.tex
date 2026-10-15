@@ -1,0 +1,15 @@
+\begin{tabular}{lrrrr}
+\toprule
+Configuration & Ceph & SeaweedFS & RustFS & Garage \\
+\midrule
+PUT 50 KiB & 28.65 & \textbf{46.14} & 7.49 & 14.98 \\
+PUT 1 MiB & \textbf{191.71} & 183.46 & 86.70 & 88.27 \\
+PUT 16 MiB & \textbf{298.87}$^{\dagger}$ & 233.67$^{\dagger}$ & 200.30$^{\dagger}$ & 128.04 \\
+PUT 100 MiB & \textbf{306.83}$^{\dagger}$ & 231.81$^{\dagger}$ & 216.17$^{\dagger}$ & 115.61 \\
+\midrule
+GET 50 KiB & 95.36 & \textbf{193.46} & 80.52$^{\dagger}$ & 59.01 \\
+GET 1 MiB & 1004.41 & \textbf{1125.51} & 592.05 & 636.58 \\
+GET 16 MiB & 1132.17 & \textbf{1302.95} & 922.29 & 769.85 \\
+GET 100 MiB & 1173.02 & \textbf{1302.15} & 933.10 & 832.83 \\
+\bottomrule
+\end{tabular}

@@ -18,3 +18,8 @@ results/perf-rustfs-vm-3node-20261010-sar-configs.tsv -text
 results/perf-seaweedfs-vm-3node-20261012-table-*.tsv -text
 results/perf-seaweedfs-vm-3node-20261012-sar-configs.tsv -text
 results/ft-seaweedfs-vm-S*-filecounts.txt -text
+
+# Inputs of analysis/ are checked by sha256 against the records, and its outputs are listed with sha256 in a manifest: keep the bytes
+results/perf-ceph-vm-3node-20261015-*.tsv -text
+results/perf-garage-vm-3node-20261013-*.tsv -text
+analysis/out/** -text

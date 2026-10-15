@@ -62,11 +62,11 @@ def verify_inputs(expected):
 def git_state():
     def run(*args):
         return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True,
-                              timeout=20).stdout.strip()
+                              timeout=180).stdout.strip()
     try:
         commit = run("rev-parse", "HEAD")
-        dirty = run("status", "--porcelain", "--", "analysis", "results")
-        return commit, ("clean" if not dirty else "UNCOMMITTED CHANGES in analysis/ or results/")
+        dirty = run("status", "--porcelain", "--", "analysis", "results", ":(exclude)analysis/out")
+        return commit, ("clean" if not dirty else "UNCOMMITTED CHANGES in analysis/ (outside out/) or results/")
     except Exception as exc:  # git missing or slow: say so, do not guess
         return "unknown", f"git not readable ({exc.__class__.__name__})"
 

@@ -1,0 +1,18 @@
+configuration,order_by_median,best_over_second_percent,ranges_separate,client_limited_systems
+put_50KiB_c8,SeaweedFS > Ceph > Garage > RustFS,61.0,yes,none
+put_1MiB_c8,Ceph > SeaweedFS > Garage > RustFS,4.5,yes,none
+put_16MiB_c8,Ceph > SeaweedFS > RustFS > Garage,27.9,yes,"Ceph, SeaweedFS, RustFS"
+put_100MiB_c8,Ceph > SeaweedFS > RustFS > Garage,32.4,yes,"Ceph, SeaweedFS, RustFS"
+get_50KiB_c8,SeaweedFS > Ceph > RustFS > Garage,102.9,yes,RustFS
+get_1MiB_c8,SeaweedFS > Ceph > Garage > RustFS,12.1,yes,none
+get_16MiB_c8,SeaweedFS > Ceph > RustFS > Garage,15.1,yes,none
+get_100MiB_c8,SeaweedFS > Ceph > RustFS > Garage,11.0,yes,none
+put_1MiB_c1,SeaweedFS > Ceph > RustFS > Garage,2.1,no,none
+put_1MiB_c4,SeaweedFS > Ceph > Garage > RustFS,2.3,yes,none
+put_1MiB_c16,Ceph > SeaweedFS > RustFS > Garage,20.7,yes,Ceph
+put_1MiB_c64,Ceph > SeaweedFS > RustFS > Garage,31.6,yes,Ceph
+get_1MiB_c1,SeaweedFS > Ceph > RustFS > Garage,23.8,yes,none
+get_1MiB_c4,SeaweedFS > Ceph > RustFS > Garage,15.3,yes,none
+get_1MiB_c16,SeaweedFS > Ceph > Garage > RustFS,6.1,yes,none
+get_1MiB_c64,SeaweedFS > Ceph > Garage > RustFS,10.8,no,none
+mixed_1MiB_c16,Ceph > SeaweedFS > Garage > RustFS,0.8,no,"Ceph, SeaweedFS"
