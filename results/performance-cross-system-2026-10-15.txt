@@ -1,0 +1,80 @@
+Performance, Ceph, SeaweedFS, RustFS and Garage on the same three VMs: cross system analysis of the four series (15 October 2026)
+================================================================================================================================
+
+Source:    the four result tables of the series (results/perf-<system>-vm-3node-<date>-table-runs.tsv and -table-configs.tsv, -sar-* tables) and the single records (results/<system>-vm-performance-*.txt,
+           results/<system>-vm-performance-sar-*.txt). Nothing below is typed from those records except the facts named with their record in sections LIMITS and CORRECTIONS.
+Method:    analysis/build_perf.py (script commit 44d2120, outputs commit 569320e; definitions in analysis/README.md); outputs analysis/out/perf/ (perf_long.csv, perf_ranking.csv, perf_load_node_cpu.csv, perf_size.tex, perf_concurrency.tex,
+           figures perf_size, perf_concurrency, perf_mixed as pdf and png, MANIFEST.txt with the sha256 of every input and output). The script checks the 12 input files against the sha256 written in the records, recomputes
+           median, minimum and maximum of the three recorded runs from the per run tables and compares them with the config tables made on the VMs (all equal), and marks a configuration of a system as client limited when the
+           mean CPU of the load node ceph2 was above 80 percent in it (performance_method.md, section 3: such a run is not used for a ranking). Its flags for SeaweedFS, RustFS and Garage equal the flags stated in their records.
+Protocol:  same for all four: Warp 1.8.0 on ceph2 (which also runs a storage node), three recorded runs of 60 s per configuration after a discarded warm up of 30 s, 17 configurations (object sizes 50 KiB, 1 MiB, 16 MiB, 100 MiB at
+           8 users; 1 MiB at 1, 4, 16 and 64 users; mixed workload of 1 MiB at 16 users), page cache emptied on the storage nodes before every GET run (set, not proven for every run), space guard of 50 percent. 51 recorded runs per system,
+           error_lines 0 in all 204 runs.
+Systems:   Ceph 20.2.4 (replicated, 3 copies, 6 OSDs, 15 October), SeaweedFS 4.25 (replication 002, 3 copies, 12 to 13 October), RustFS 1.0.1 (erasure coding 3+3 over six drives, 10 October), Garage v1.0.0 (3 copies, 13 to 14 October).
+
+RESULTS (median of three runs, MiB/s; dagger = client limited; bold in the tex tables = highest median; ranges and spreads in perf_long.csv)
+-------
+Configuration        Ceph        SeaweedFS   RustFS      Garage      order by median (gap first to second)
+PUT 50 KiB, 8        28.65       46.14       7.49        14.98       SeaweedFS > Ceph > Garage > RustFS (61.0 %)
+PUT 1 MiB, 1 user    34.16       34.88       19.54       19.10       SeaweedFS > Ceph > RustFS > Garage (2.1 %, ranges overlap)
+PUT 1 MiB, 4 users   118.26      120.96      58.32       67.50       SeaweedFS > Ceph > Garage > RustFS (2.3 %, ranges do not overlap)
+PUT 1 MiB, 8 users   191.71      183.46      86.70       88.27       Ceph > SeaweedFS > Garage > RustFS (4.5 %), no system client limited
+PUT 1 MiB, 16 users  256.04 +    212.12      109.36      104.25      Ceph > SeaweedFS > RustFS > Garage (20.7 %), Ceph client limited
+PUT 1 MiB, 64 users  277.35 +    210.75      130.29      103.03      Ceph > SeaweedFS > RustFS > Garage (31.6 %), Ceph client limited
+PUT 16 MiB, 8        298.87 +    233.67 +    200.30 +    128.04      Ceph > SeaweedFS > RustFS > Garage (27.9 %), three systems client limited
+PUT 100 MiB, 8       306.83 +    231.81 +    216.17 +    115.61      Ceph > SeaweedFS > RustFS > Garage (32.4 %), three systems client limited
+GET 50 KiB, 8        95.36       193.46      80.52 +     59.01       SeaweedFS > Ceph > RustFS > Garage (102.9 %), RustFS client limited
+GET 1 MiB, 1 user    147.16      182.12      90.35       47.97       SeaweedFS > Ceph > RustFS > Garage (23.8 %)
+GET 1 MiB, 4 users   612.21      705.61      359.15      297.15      SeaweedFS > Ceph > RustFS > Garage (15.3 %)
+GET 1 MiB, 8 users   1004.41     1125.51     592.05      636.58      SeaweedFS > Ceph > Garage > RustFS (12.1 %)
+GET 1 MiB, 16 users  1209.14     1283.49     708.01      800.17      SeaweedFS > Ceph > Garage > RustFS (6.1 %)
+GET 1 MiB, 64 users  1119.56     1240.18     720.96      822.37      SeaweedFS > Ceph > Garage > RustFS (10.8 %, ranges overlap)
+GET 16 MiB, 8        1132.17     1302.95     922.29      769.85      SeaweedFS > Ceph > RustFS > Garage (15.1 %)
+GET 100 MiB, 8       1173.02     1302.15     933.10      832.83      SeaweedFS > Ceph > RustFS > Garage (11.0 %)
+Mixed 1 MiB, 16      585.87 +    580.94 +    225.18      253.62      Ceph > SeaweedFS > Garage > RustFS (0.8 %, ranges overlap), Ceph and SeaweedFS client limited
+
+PROVEN (from the tables above)
+------
+P1. GET: SeaweedFS has the highest median in all 8 GET configurations and Ceph the second highest in all 8 (the gap between them is 6.1 to 23.8 percent at 1 MiB and larger, 102.9 percent at 50 KiB). The ranges of the
+    three runs do not overlap except at 1 MiB with 64 users. RustFS and Garage are third and fourth: RustFS is above Garage at 1 and 4 users and at 16 and 100 MiB, Garage is above RustFS at 1 MiB with 8, 16 and 64 users.
+P2. PUT, configurations without a client limited cell: SeaweedFS is first at 50 KiB (61.0 percent above Ceph), at 1 MiB with 1 user (2.1 percent, ranges overlap) and with 4 users (2.3 percent); Ceph is first at 1 MiB with 8 users
+    (4.5 percent above SeaweedFS, ranges do not overlap). In these configurations Garage and RustFS are the two lowest systems.
+P3. PUT, client limited cells: Ceph has the highest median at 1 MiB with 16 and 64 users, at 16 MiB and at 100 MiB (21 to 32 percent above SeaweedFS), but ceph2 was above 80 percent CPU in these Ceph runs (86.4, 88.5, 89.6 and 92.0
+    percent), and at 16 and 100 MiB also in the SeaweedFS and RustFS runs. By the rule of the method these cells are NOT a ranking. They are listed because the numbers exist.
+P4. Mixed workload: Ceph 585.87 and SeaweedFS 580.94 MiB/s (0.8 percent apart, ranges overlap, both client limited) are well above Garage (253.62) and RustFS (225.18). No difference between Ceph and SeaweedFS is shown.
+P5. Growth with the number of users (1 MiB): PUT does not grow between 16 and 64 users in SeaweedFS (212.12 and 210.75) and Garage (104.25 and 103.03); RustFS grows by 19 percent (109.36 to 130.29) and Ceph by 8 percent (256.04 to 277.35,
+    client limited). GET changes by less than 3 percent or falls between 16 and 64 users (Ceph 1209 to 1120, SeaweedFS 1283 to 1240, RustFS 708 to 721, Garage 800 to 822 MiB/s).
+P6. Largest spread of the three runs (maximum over minimum, computed from the tables): SeaweedFS GET 1 MiB with 64 users 21.9 percent, RustFS GET 1 MiB with 64 users 14.8, Ceph GET 1 MiB with 1 user 11.8, RustFS mixed 11.3, Garage PUT 100 MiB 11.1,
+    RustFS PUT 50 KiB 10.9, Garage PUT 1 MiB with 64 users 10.4; every other cell of every system is 8.1 percent or less.
+P7. Resource use (the sar records): in the GET runs the drives delivered less than the client received in nearly every configuration (Ceph 0.01 to 0.75 of the client volume, SeaweedFS 0.04 to 0.81, Garage 0.14 to 0.82, RustFS 0.11
+    to 0.76 at 1 MiB and 0.39 at 50 KiB), the exception being RustFS at 16 and 100 MiB where the drives read about 1.8 times the client volume. So most GET data came from memory in the window of a run. PUT: Ceph wrote 3.03 to 3.08 times
+    the client volume to the drives for 1 MiB and larger (3 copies would give 3.0) and 7.81 times at 50 KiB. The PUT write ratios of the other three systems are NOT put side by side, because their sar windows differ (up to 10 times the
+    measured minute for Garage, about 10 percent for SeaweedFS and RustFS; Garage record, limit L6).
+P8. The redundancy differs by design: Ceph, SeaweedFS and Garage keep three copies, RustFS uses erasure coding 3+3 (write volume 1.4 to 2.0 times the client volume for 1 MiB and larger, 5.9 times at 50 KiB, RustFS sar record S1).
+
+PREDICTIONS OF 15 OCTOBER (Ceph, written before the series): P-PERF-1 "slowest at 50 KiB, fastest or close to the fastest for large objects at high concurrency": PARTLY WRONG (Ceph is second at 50 KiB for PUT and GET; the large
+object part rests on client limited cells, see P3 and the addendum of results/ceph-vm-performance-2026-10-15.txt). P-PERF-2 "ceph2 CPU high in the small object GET runs": WRONG (the lowest of the three nodes in GET 50 KiB).
+
+OPEN
+----
+Q1. Why most GET data did not come from the drives (P7). A cache hit in the page cache or in a system cache is a HYPOTHESIS; test: the cache counters during a GET run. It means the GET numbers say little about the drives.
+Q2. Whether the load node limits the client limited PUT cells (P3), that is whether Ceph, SeaweedFS and RustFS would be faster with Warp on a host that is not a storage node. Test: a fifth VM, not available.
+Q3. Why PUT of 1 MiB does not grow above 16 users in SeaweedFS and Garage although no node is saturated by mean CPU, iowait or network (sar records). Not examined (per core CPU was not recorded).
+Q4. Why Garage PUT of 1 MiB with one user takes about 52 ms per request against 28 to 29 ms for SeaweedFS and Ceph (Garage record: HYPOTHESIS that the write goes to several nodes before the acknowledgement; not tested).
+Q5. Why PUT of 50 KiB writes 5.9 to 7.8 times the client volume to the drives in Ceph, RustFS and Garage (the September Ceph record examined it on the earlier cluster; not tested on this series).
+
+LIMITS
+------
+L1. The load node ceph2 is also a storage node (decision of 10 October). Its CPU is above 80 percent in 5 Ceph, 3 SeaweedFS and 3 RustFS configurations (client limited cells marked in the table), in no Garage configuration.
+L2. Redundancy differs (P8): the write cost differs by design, and the table is not a ranking of the quality of the products.
+L3. Three runs per configuration, ranges only, no statistical test. One cluster, one series per system, on different days (RustFS 10 October, SeaweedFS 12 to 13 October, Garage 13 to 14 October, Ceph 15 October).
+L4. Waiting for free space between runs changed the timing: the first Ceph series stopped at the space guard (RGW garbage collection, 8430 entries and about 33 GiB) and was repeated with garbage collection in the wait; Garage waited 20 times
+    (116 waits of 30 s) after a first aborted attempt; SeaweedFS needed vacuum calls (14 of 33 timed out). The effect on the results was not measured (the single records).
+L5. The control measurement of one disk (dd) varied between days by up to a factor of 1.9 for the same node (Garage record L5), so the speed of the VM disks is not stable across the days of the four series. This is a limit of every comparison.
+L6. The laptop runs (Docker, single node) and the September Ceph runs on the single vCPU cluster are earlier runs and are not part of this table.
+L7. One object size per series point, 1 MiB for the concurrency series; no TLS; Warp (S3 client) only; the page cache drop before each GET run was not logged per run.
+
+CORRECTIONS OF EARLIER STATEMENTS (made when this analysis was written)
+------------------------------------------------------------------------
+C1. The notebook, setup_notes.md and the Ceph record said "Ceph is first for large PUT". That holds for the medians only; the cells are client limited (P3). Corrected on 15 October (addendum A1 to A5 of the Ceph performance record).
+C2. A ranking over the whole table is not allowed. Statements are made per configuration (P1, P2, P4), and client limited cells are named as such (P3).
