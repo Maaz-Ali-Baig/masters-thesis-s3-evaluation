@@ -34,13 +34,18 @@ SYS="${DG_SYSTEM:-seaweedfs}"
 if [ "$SYS" = garage ]; then
     KEYFILE="${DG_KEYFILE:-/root/garage-key.txt}"; AKL="Key ID"; REGION="${DG_REGION:-garage}"
     EPS="${DG_EPS:-192.168.1.72:3900 192.168.1.70:3900}"
+elif [ "$SYS" = ceph ]; then
+    # DG_SYSTEM=ceph (added 15 October 2026): RGW on port 80, key file /root/ceph-s3-credentials.txt, region us-east-1, the SeaweedFS columns are n/a,
+    # GETs send the hash of the empty body like for Garage (harmless for RGW, the header is part of a valid SigV4 request).
+    KEYFILE="${DG_KEYFILE:-/root/ceph-s3-credentials.txt}"; AKL="Access key"
+    EPS="${DG_EPS:-192.168.1.72:80 192.168.1.70:80}"
 else
     KEYFILE="${DG_KEYFILE:-/root/seaweedfs-config/s3_credentials.txt}"; AKL="Access key"
 fi
 # Garage answers a GET without the header x-amz-content-sha256 with 400 InvalidRequest (tested on 14 October 2026 on the healthy cluster:
 # no header 400, sha256 of the empty body 200, UNSIGNED-PAYLOAD 200), so for Garage every GET sends the hash of the empty body.
 GH=""
-[ "$SYS" = garage ] && GH="-H x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+{ [ "$SYS" = garage ] || [ "$SYS" = ceph ]; } && GH="-H x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 [ -s "$KEYFILE" ] || { echo "ft-diag: $KEYFILE missing" >&2; exit 1; }
 AK="$(awk -F': *' -v k="$AKL" '$1==k{print $2}' "$KEYFILE")"
 SK="$(awk -F': *' '$1=="Secret key"{print $2}' "$KEYFILE")"
@@ -72,7 +77,7 @@ for i in $(seq 1 "$N"); do
     g="$(signed GET "http://$ep/$B/$PFX/$i" $GH -o "$OUT/get-same.tmp" -w '%{http_code}')"
     if [ "$g" = 200 ] && [ "$(sha256sum "$OUT/get-same.tmp" | cut -d' ' -f1)" = "$sha" ]; then gs=OK; elif [ "$g" = 200 ]; then gs=BAD; else gs="$g"; fi
     fnode="${ep%%:*}"
-    if [ "$SYS" = garage ]; then fc="n/a"; asg="n/a"; wr="n/a"; else
+    if [ "$SYS" = garage ] || [ "$SYS" = ceph ]; then fc="n/a"; asg="n/a"; wr="n/a"; else
     fc="$(curl -s -m 10 -o /dev/null -w '%{http_code}' "http://$fnode:8888/buckets/$B/$PFX/$i")"
     asg="$(curl -s -m 10 "http://$MASTER/dir/assign?collection=$COLL&replication=$REPL" | tr '\n\t' '  ' | cut -c1-80)"
     wr="$(curl -s -m 10 "http://$MASTER/dir/status" | python3 -c '

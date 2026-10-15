@@ -2,7 +2,7 @@
 #
 # ft-ackcheck.sh : does an acknowledgement of the probe client mean a stored object? (open question Q1 of the Garage S1 and S2 records and of the SeaweedFS S1 record)
 #
-#   bash ft-ackcheck.sh <system> <output folder> <seconds>        system: garage (the only one supported so far)
+#   bash ft-ackcheck.sh <system> <output folder> <seconds>        system: garage or ceph (ceph added 15 October 2026: RGW port 80, key file /root/ceph-s3-credentials.txt, bucket ftbucket)
 #
 # Run on ceph0 while one node is stopped, or while the Garage container of one node is frozen (see AC_PAUSE_IP). For <seconds> it writes random 1 MiB objects with THREE clients one after the other:
 #   cp    aws s3 cp            exactly as the probe of ft.sh (connect timeout 3 s, read timeout 25 s, AWS_MAX_ATTEMPTS=1, standard retry mode, checksum when_required)
@@ -17,13 +17,15 @@
 # All objects are written under ackcheck-<time>/ in the bucket (AC_BUCKET, default ftbucket) and are removed at the end.
 
 set -u
-SYS="${1:?usage: bash ft-ackcheck.sh garage <output folder> <seconds>}"
+SYS="${1:?usage: bash ft-ackcheck.sh garage|ceph <output folder> <seconds>}"
 OUT="${2:?output folder}"
 SECS="${3:?seconds}"
 B="${AC_BUCKET:-ftbucket}"
 case "$SYS" in
     garage) KEYFILE="${AC_KEYFILE:-/root/garage-key.txt}"; AKL="Key ID"; REGION=garage; EPS="${AC_EPS:-192.168.1.72:3900 192.168.1.70:3900}"; CONT=garage ;;
-    *) echo "ft-ackcheck: system $SYS not supported" >&2; exit 1 ;;
+    # ceph (added 15 October 2026): RGW on port 80, no container freeze (AC_PAUSE_IP is not used for ceph)
+    ceph)   KEYFILE="${AC_KEYFILE:-/root/ceph-s3-credentials.txt}"; AKL="Access key"; REGION=us-east-1; EPS="${AC_EPS:-192.168.1.72:80 192.168.1.70:80}"; CONT=none ;;
+    *) echo "ft-ackcheck: system $SYS not supported (garage or ceph)" >&2; exit 1 ;;
 esac
 [ -s "$KEYFILE" ] || { echo "ft-ackcheck: $KEYFILE missing" >&2; exit 1; }
 AK="$(awk -F': *' -v k="$AKL" '$1==k{print $2}' "$KEYFILE")"

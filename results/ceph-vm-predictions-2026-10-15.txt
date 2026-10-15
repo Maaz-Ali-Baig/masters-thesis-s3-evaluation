@@ -1,0 +1,35 @@
+Ceph 20.2.4 on the three university VMs: predictions written BEFORE the VM runs of 15 October 2026
+Date: 15 October 2026, written by the thesis author with the assistant, before the Ceph target is started again on the VMs.
+
+These are predictions, not findings. They are written down before the runs so that the result can be compared with what was expected. A prediction that turns out wrong stays here unchanged and is reported as wrong in the run record.
+
+Basis (from the Ceph documentation and the earlier Ceph runs of this project as remembered, NOT verified again for this release):
+- cluster as deployed in September: 3 mons (one per VM), 6 OSDs (two per VM), RGW on all three VMs on port 80, replicated pools of size 3 and min_size 2, failure domain host.
+- a write is acknowledged by the RGW after the primary OSD has the write committed on all OSDs of the acting set; a PG with fewer than min_size OSDs does not serve reads or writes (it blocks).
+- the monitors need a majority (2 of 3) for quorum. Without quorum no OSD can be marked down or out and no new map is made.
+- OSDs of a stopped host are marked down after the heartbeat grace (default 20 s) and out after mon_osd_down_out_interval (default 600 s). The September run on these VMs saw the out marking after the default time (setup_notes.md, fault tolerance section).
+- the earlier Ceph fault tolerance runs (18 and 22 September 2026) used the old probe (aws s3 cp), single node outage only, and are not repeated here as such.
+
+Prediction S1 (ceph1 hard stopped for 720 s, ceph0 and ceph2 up; the outage is longer than the 600 s out interval):
+- P-S1-1 writes and reads through the endpoints of ceph0 and ceph2 keep working; one short stall of up to about 30 s while the OSDs of ceph1 are not yet marked down (requests to PGs with an OSD on ceph1 wait for the heartbeat grace). The longest gap between acknowledged writes stays below 40 s.
+- P-S1-2 every write that was acknowledged is readable afterwards (no lost acknowledged write), with the corrected probe (s3api put-object and ETag).
+- P-S1-3 the endpoint of ceph1 does not answer during the outage; the probe rotates endpoints, so about a third of the attempts hit a dead endpoint and are retried against the next one.
+- P-S1-4 after about 600 s the OSDs of ceph1 are marked out and Ceph starts to re-create the missing copies on the other hosts (degraded and misplaced objects appear in the repair watch). After the power on the OSDs of ceph1 rejoin, and the cluster is HEALTH_OK again within the 30 minute watch (the data set is small, a few GB). How long it takes is the least certain part.
+- P-S1-5 the mon on ceph1 is lost but 2 of 3 mons keep quorum, so `ceph -s` keeps answering on ceph0.
+
+Prediction S2 (ceph1 and ceph2 hard stopped for 360 s, only ceph0 up):
+- P-S2-1 the mons have 1 of 3: no quorum, `ceph -s` hangs (the repair watch records NOQUORUM).
+- P-S2-2 every PG has at most one OSD pair on ceph0 and so fewer than min_size 2 replicas up, so PGs block: no write is acknowledged during the outage and reads of earlier objects (the seed set included) do not return either. The requests hang until the client time out (curl 000 or aws timeout), they are not refused quickly. This differs from SeaweedFS where ceph0 alone could still read the seed set.
+- P-S2-3 no acknowledged write is lost after the return of both nodes, and every object is readable through every endpoint.
+- P-S2-4 service comes back by itself after the two VMs have booted (the cephadm target is enabled), without a manual start on the nodes; the time from boot to the first acknowledged write is not predicted.
+
+Prediction for the performance series (same Warp series as for RustFS, SeaweedFS and Garage, load generator on ceph2):
+- P-PERF-1 Ceph is the slowest of the four systems for 50 KiB objects (small object write amplification measured in September: BlueStore deferred writes, 3 copies) and the fastest or close to the fastest for large objects at high concurrency. This is a guess from the September measurements and is judged only against the four VM series.
+- P-PERF-2 the load node ceph2 also runs a mon, two OSDs and an RGW, so CPU of ceph2 is high in the small object GET runs (as flagged for RustFS).
+
+Prediction for the security checks (sec.sh ceph):
+- P-SEC-1 anonymous access to the S3 port is refused (403), bad signatures are refused, as in the 5 October presign test.
+- P-SEC-2 SSE-S3 is refused with 400 because rgw_crypt_sse_s3_backend is vault and no Vault token file is set (proven on 2 October). SSE-C needs TLS in RGW by default (rgw_crypt_require_ssl); over plain http an SSE-C upload is expected to be refused. This is a prediction, not checked yet.
+- P-SEC-3 the plain object marker is found on the raw OSD devices (BlueStore, no encryption at rest unless OSD encryption is configured, which it is not).
+- P-SEC-4 the transport is plain http on port 80 (no TLS configured), and the wire test finds the marker in the capture.
+- P-SEC-5 several Ceph ports are open without S3 credentials (mon 3300 and 6789, mgr dashboard, OSD ports); they are listed in sec2, which of them accept unauthenticated requests is not predicted.

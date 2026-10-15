@@ -17,6 +17,11 @@
 # whose status does not answer is written as DOWN. Columns then mean: data dir = disk<id>, object folders = volumes.
 # Settings: RW_PORT (default 8080), RW_COLLECTION (default ftbucket).
 #
+# Mode ceph (added 15 October 2026): Ceph repairs by itself and reports it, so no files are counted. Every RW_INTERVAL seconds ceph0 (RW_SELF) runs
+# "timeout 20 cephadm shell -- ceph status -f json" (read only; without mon quorum the call times out and the row says NOQUORUM) and writes one row:
+# epoch, time, health, osds up, osds in, osds total, pgs total, pgs active+clean, degraded objects, misplaced objects, objects, acked writes so far
+# (output <run dir>/repairwatch.tsv, different columns from the other modes). The key prefix file is only checked for existence.
+#
 # Reads the key prefix of the run from <run dir>/prefix (written by scripts/ft.sh from commit f330983 on), and every
 # RW_INTERVAL seconds (default 20) counts, on every node and every data directory, the object folders, the files and the
 # bytes under <data dir>/<prefix>. A node that does not answer ssh is written as DOWN. The acknowledged writes of the
@@ -29,7 +34,7 @@ set -u
 D="${1:-}"
 [ -n "$D" ] && [ -d "$D" ] || { echo "usage: $0 <run dir of ft.sh>" >&2; exit 1; }
 SYS="${2:-rustfs}"
-case "$SYS" in rustfs|seaweedfs|garage) ;; *) echo "second argument: rustfs, seaweedfs or garage" >&2; exit 1 ;; esac
+case "$SYS" in rustfs|seaweedfs|garage|ceph) ;; *) echo "second argument: rustfs, seaweedfs, garage or ceph" >&2; exit 1 ;; esac
 [ -s "$D/prefix" ] || { echo "no $D/prefix (run made with a script older than f330983?)" >&2; exit 1; }
 P="$(cat "$D/prefix")"
 PORT="${RW_PORT:-8080}"
@@ -96,6 +101,40 @@ sample() {
         fi
     done
 }
+
+PYCEPH='
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    o = d.get("osdmap", {}); o = o.get("osdmap", o)
+    g = d.get("pgmap", {})
+    clean = sum(s.get("count", 0) for s in g.get("pgs_by_state", []) if s.get("state_name") == "active+clean")
+    print("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (d.get("health", {}).get("status", "n/a"), o.get("num_up_osds", "n/a"), o.get("num_in_osds", "n/a"), o.get("num_osds", "n/a"),
+          g.get("num_pgs", "n/a"), clean, g.get("degraded_objects", 0), g.get("misplaced_objects", 0), g.get("num_objects", "n/a")))
+except Exception:
+    print("PARSEFAIL\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a")
+'
+sample_ceph() {
+    local now t acked raw out
+    now="$(date +%s)"; t="$(date +%T)"
+    acked="$(awk -F'\t' '$4=="ACK"' "$D/ledger.tsv" 2>/dev/null | wc -l)"
+    raw="$(rx "$SELF" "timeout 20 cephadm shell -- ceph status -f json 2>/dev/null" 2>/dev/null)" || raw=""
+    if [ -n "$raw" ]; then out="$(printf '%s' "$raw" | python3 -c "$PYCEPH" 2>/dev/null)" || out=""; else out=""; fi
+    [ -n "$out" ] || out="$(printf 'NOQUORUM\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a')"
+    printf '%s\t%s\t%s\t%s\n' "$now" "$t" "$out" "$acked" >> "$OUT"
+}
+if [ "$SYS" = ceph ]; then
+    printf 'epoch\ttime\thealth\tosds_up\tosds_in\tosds_total\tpgs_total\tpgs_active_clean\tdegraded_objects\tmisplaced_objects\tobjects\tacked_so_far\n' > "$OUT"
+    echo "repairwatch: system ceph, run dir $D, via $SELF, every $INTERVAL s, output $OUT"
+    while :; do
+        sample_ceph
+        [ -e "$D/stop" ] && break
+        sleep "$INTERVAL"
+    done
+    sample_ceph
+    echo "repairwatch: stopped at $(date +%T), $(( $(wc -l < "$OUT") - 1 )) rows"
+    exit 0
+fi
 
 printf 'epoch\ttime\tnode\tdata_dir\tobject_folders\tfiles\tbytes\tacked_so_far\n' > "$OUT"
 echo "repairwatch: system $SYS, run dir $D, prefix $P, nodes $NODES, every $INTERVAL s, output $OUT"

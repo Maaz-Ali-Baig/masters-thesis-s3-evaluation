@@ -51,7 +51,7 @@ case "$SYSTEM" in
     rustfs)    STATUS_CMD="curl -s -m 5 -o /dev/null -w 'health %{http_code}' http://localhost:9000/health" ;;
     seaweedfs) STATUS_CMD="curl -s -m 5 http://localhost:9333/cluster/status | head -c 300" ;;
     garage)    STATUS_CMD="podman exec garage /garage -c /etc/garage.toml status 2>&1 | head -12" ;;
-    ceph)      STATUS_CMD="cephadm shell -- ceph -s 2>&1 | grep -E 'health|pgs|osd:|mon:'" ;;
+    ceph)      STATUS_CMD="timeout 20 cephadm shell -- ceph -s 2>&1 | grep -E 'health|pgs|osd:|mon:'" ;;   # timeout: without mon quorum (S2) ceph -s hangs
 esac
 STATUS_CMD="${FT_STATUS_CMD:-$STATUS_CMD}"
 
