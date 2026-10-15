@@ -155,3 +155,42 @@ of them is done separately, never inside the script.
 Two traps found while writing them. `curl -T file URL/` appends the file name when the URL ends in a slash, so
 uploads to a key ending in `/` must use `--data-binary`. The AWS CLI drops `KeyCount` from listings it paginates
 automatically, so count the listed keys or use `--no-paginate`.
+
+## VM series: performance, security, fault tolerance
+
+The scripts below produced the compared series on the three university VMs (ceph0 = 192.168.1.72,
+ceph1 = 192.168.1.71, ceph2 = 192.168.1.70). They are fetched on the VM by the full commit hash and
+the sha256 is compared with the repository file before a run; the hash is written into the result
+record. All of them take the system as first argument (`rustfs`, `seaweedfs`, `garage`, `ceph`), read
+the key from a file on the VM and never print it. Every run writes a folder with a `SHA256SUMS`
+file and a `.tar.gz`. The method behind them is in `performance_method.md`, `security_method.md` and
+`fault_tolerance_method.md`; the results are indexed in `results/README.md`.
+
+| Script | Where it runs | What it does |
+|---|---|---|
+| `perf-warp.sh` | ceph2 (load node) | Warp series for one system: `nodes`, `preflight`, `controls` (dd and iperf3), `size`, `conc`, `mixed`, `all`, `one`. Per configuration one discarded warm up run and three recorded runs of 60 s. Space guard before each run; on Ceph the wait runs `radosgw-admin gc process --include-all` (added after the first Ceph series stopped at the guard), on SeaweedFS it asks the master to vacuum |
+| `perf-table.sh` | the VM that holds the folder | Table of every recorded run and table of median, minimum and maximum per configuration, printed with their sha256 |
+| `perf-sar.sh` | each of the three VMs | Mean CPU, iowait, disk and network rates per recorded run from the `sar` log of that node and `runs.tsv` |
+| `sec.sh` | ceph0 | Security checks `sec1` to `sec6` and `sec8`: open ports and anonymous access, authentication, scoped key, wire capture, marker search for encryption at rest (random padded marker, positive control), failed attempts in the container logs |
+| `sec-ceph-replies.sh` | ceph0 | Ceph only. Records the HTTP status and error code of the checks in which AWS CLI 2.36.8 crashed on empty Ceph error messages (runs with `--debug`, keeps only the status line and the `<Code>`); sets `max_buckets` of the scoped user to -1; repeats the container log search with a positive control |
+| `ft.sh` | ceph0 (never stopped) | Fault tolerance: `seed`, `preflight`, `scenario S1` (ceph1 hard stopped) or `S2` (ceph1 and ceph2), `verify`, `summary`. Probe with `aws s3api put-object`, a write counts as acknowledged only if an ETag comes back. The user stops and starts the VMs in Proxmox at the printed "ACTION NOW" lines |
+| `ft-repairwatch.sh` | ceph0 | Recovery watch next to `ft.sh`: per node file counts for Garage and RustFS, volume status for SeaweedFS, `ceph status` rows for Ceph (mode `ceph`; without monitor quorum a row says NOQUORUM) |
+| `ft-ackcheck.sh` | ceph0 | Does an acknowledgement mean a stored object? Writes with three clients (`aws s3 cp`, `aws s3api put-object`, `curl --aws-sigv4`) during an outage and reads every key back afterwards. Systems `garage` and `ceph` |
+| `ft-diag.sh` | ceph0 | SeaweedFS only. Write and read back probe for one outage with plain curl, to see why a write was acknowledged but not stored |
+
+**Order of a VM series.** One system at a time, the others stopped: `perf-warp.sh <system> all` on
+ceph2 with `perf-sar.sh` on each VM and `perf-table.sh`; then `sec.sh <system> all`; then
+`ft.sh <system> seed`, `S1`, `S2`. The `verify-roundtrip.sh` and `security-presign-unsigned-header.sh`
+scripts are from the earlier phase (round trip integrity; presigned URL check with unsigned headers) and are not part of the VM series.
+
+**Traps recorded while running them.**
+
+1. `ft.sh` reads back every object during the outage. If the cluster blocks reads (Ceph without
+   monitor quorum) this can run for ten minutes and delay the "power on" prompt, so the outage
+   becomes longer than planned. This happened in Ceph S2 and is a stated deviation in the record.
+2. In `ft-ackcheck.sh` the `curl` client was refused with 403 on Ceph in every attempt, so its
+   column is not usable there. The cause is not proven (see the Ceph S1 record).
+3. `perf-sar.sh` tables were typed back into the repository by hand once and two values were
+   wrong. Compare the printed sha256 of the table with the repository copy.
+4. On Ceph, `sec.sh` cannot show server replies for the checks where the AWS CLI crashes. Run
+   `sec-ceph-replies.sh` next to it.
