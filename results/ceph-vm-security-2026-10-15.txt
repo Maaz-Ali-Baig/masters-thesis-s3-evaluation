@@ -1,0 +1,66 @@
+Ceph 20.2.4 (Tentacle, cephadm, RGW), three nodes on the university VMs: security checks (15 October 2026)
+========================================================================================================
+
+Cluster:   as in results/ceph-vm-performance-2026-10-15.txt (ceph0 = hostname debian 192.168.1.72, ceph1 .71, ceph2 .70, one RGW per node on port 80, plain http, no TLS configured on the RGW).
+           Bucket ftbucket (owner: the user "thesis" of /root/ceph-s3-credentials.txt). Client AWS CLI 2.36.8, checksum setting when_required.
+Method:    security_method.md. scripts/sec.sh at commit e35c2493f37407ec548021145b602e949a01871c, sha256 4997ebddecb7729fb4b17791ebe99f793b81f27225d0430a657be5b1e51e204b (fetched by the full hash into
+           /root/sec-deploy6 on ceph0, hash printed there equal to the repo file, 308 lines, bash -n ok), run on ceph0 as "bash sec.sh ceph all" with SEC_PAD=random SEC_DISTINCT=1 and the variables of the
+           scoped key (SCOPED_AK, SCOPED_SK from /root/secscoped.env, SCOPED_BUCKET=ftbucket, mode 600; keys never printed). Started 12:27:16, sec6 finished before 12:36:45, sec4 12:36:46 (VM clock UTC+2).
+           Output /root/sec-ceph-20261015-122716/ and .tar.gz (4506 bytes, sha256 5592f07d5908af8299649409c588c8653ffc155fcceb17dcc95b13f2c0c2b674, read from the screen); keys found in the output files: 0 and 0.
+           Because the AWS CLI crashed on error replies (see section CRASH), scripts/sec-ceph-replies.sh (commit bf4ce9b9f9e1fc12e051f77068246252f14a801b, sha256 899f0a51e2d2294b4b495cc20b510915f129db2cfafdfbbaa4a1c721e7403b50,
+           fetched by the full hash into /root/sec-deploy6, hash equal, 103 lines) was run afterwards at 12:44:14 (output /root/sec-ceph-replies-20261015-124414/, archive 1195 bytes, sha256
+           0f3641fc9fb4a338d8b9c5d77697782f13f0a7a7a1fc64a637fa61b910381c14, read from the screen; keys found in the output files: 0, 0, 0).
+Scoped key: made on ceph0 with "radosgw-admin user create --uid=secscoped --max-buckets=0" (keys written to a file with mode 600, not printed; key lengths 20 and 40 printed) and a bucket policy on
+           ftbucket (put-bucket-policy, read back: Allow s3:GetObject and s3:ListBucket for arn:aws:iam:::user/secscoped on ftbucket and ftbucket/*).
+
+CRASH: the AWS CLI 2.36.8 crashed ("argument of type 'NoneType' is not a container or iterable") on every error reply with an empty message in sec3, in the write and delete checks of sec4 and in the SSE uploads of
+sec6 (same crash as in results/aws-cli-crash-on-ceph-error-replies-2026-10-02.txt). The text in those lines of sec.sh is the CLIENT crash, not a refusal by Ceph. The server replies were therefore recorded
+with sec-ceph-replies.sh (--debug, only the HTTP status and the <Code> are kept).
+
+MY SETUP ERROR (kept as a record): I set max_buckets to 0 for the scoped user to forbid the creation of buckets. In RGW 0 means unlimited and -1 refuses creation (src/rgw/rgw_op.cc, v20.2.4,
+check_owner_max_buckets: "if (remaining < 0) return -EPERM; if (!remaining) { // unlimited"). In the first run the scoped key therefore created a bucket (secnew1792060612, no error printed). sec-ceph-replies.sh set
+max_buckets to -1 and removed that bucket ("removed stray test bucket secnew1792060612"). The create-bucket result of the first run is NOT used; the one below is.
+
+PROVEN (raw output of the two runs)
+-----------------------------------
+SEC1 Listening TCP ports (sec1, ss on every node): ceph0: 22 80 631 3000 3300 6789 6800 to 6817 7150 8443 8765 9093 9094 9095 9100 and more (the line is cut at 190 characters by the command that printed it; the
+     last port is not read); ceph1: 22 80 631 3300 6789 6800 to 6815 8443 9100 9283 9926; ceph2: 22 80 631 3300 6789 6800 to 6815 9100 9926.
+SEC2 Answers WITHOUT credentials (http code 200, bytes; the service names below are the usual cephadm services of those ports, the services were not identified in this run): the S3 port 80 answers "/" with 200 and 187 bytes on all three nodes (body not read). Without a signature, GET of the bucket 403 (241 bytes), GET of an
+     object 403 (272), PUT of an object 403 (241). Monitoring ports answer without credentials: node exporter 9100 ("/" 200 and "/metrics" 200, 82309 bytes on ceph0), Prometheus 9095 on ceph0 ("/metrics" 200 106674 bytes,
+     "/status" 200 1752 bytes), alertmanager 9093 on ceph0 ("/" 200, "/metrics" 200 50508 bytes), mgr prometheus module 9283 ("/metrics" 200 47558 bytes on ceph0), ceph exporter 9926 ("/metrics" 200 121375 bytes on ceph0,
+     121252 on ceph1). The anonymous PUT test against the non S3 ports that answered (sec2) got 404, 405 or 301 from every port, no 2xx: no anonymous write was accepted there.
+     NOT READ yet from the output: the anonymous PUT and DELETE on the S3 port in sec1, and the complete list of paths of sec1.tsv (288 rows in /root/sec-ceph-20261015-122716/sec1.tsv).
+SEC3 Authentication, raw replies (sec-ceph-replies.sh): right access key with a wrong secret: HTTP 403 SignatureDoesNotMatch; fake access key with a wrong secret: HTTP 403 InvalidAccessKeyId; fake key, list buckets:
+     HTTP 403 InvalidAccessKeyId; admin key (control): HTTP 200. Without any signature: 403 (see SEC2).
+SEC4 Scoped key (read only policy on ftbucket), raw replies: list objects HTTP 200; get object HTTP 200; put object HTTP 403 AccessDenied; delete object HTTP 403 AccessDenied (the object was still there afterwards,
+     ContentLength 11 read by the admin key); create bucket (max_buckets -1): HTTP 403 AccessDenied and the bucket does not exist afterwards. First run (sec.sh): read of an object in another bucket: 403 Forbidden
+     (HeadObject); list of all buckets: an empty list with owner secscoped. The policy therefore enforces read only on the one bucket for this key.
+SEC5 Transport (wire capture on ceph0, one upload to ceph1, plain http port 80): 199 of the 200 marker lines are in the capture. The content crosses the network in clear. (Why 199 and not 200: OPEN, not
+     examined; the capture holds a marker line that may be split between two packets.) The capture was deleted (it holds the access key id in the Authorization header). No TLS is configured on the RGW, so this is
+     the default of this deployment, not a test of TLS.
+SEC6 Encryption at rest (sec6, SEC_DISTINCT: three different random objects, one marker each: PLAIN, SSES, SSEC). Scan of every OSD block device on the three nodes (read only, reads each device once, about 9 minutes
+     in total): the PLAIN marker was found on one device of every node (/dev/dm-0 on ceph0, ceph1, ceph2; "8" hits on each, 4 marker lines in the object), on no other device. This is the positive control and
+     is as expected for three copies, one per node. The markers SSES and SSEC were not found anywhere, because those two uploads were refused by the server (next lines). So: an object stored without encryption is
+     readable on the raw device (no encryption at rest, no OSD encryption configured, which was not checked on the cluster in this run). The number 8 (twice the number of marker lines) is OPEN, not examined.
+SEC6b Raw replies for the encryption headers over plain http: SSE-S3 (header AES256): HTTP 400 InvalidArgument (as on 2 October: rgw_crypt_sse_s3_backend is vault and no Vault token file is set,
+     results/ceph-sse-s3-vault-check-2026-10-02.txt); SSE-C (customer key): HTTP 400 InvalidRequest; plain put (control): HTTP 200. The reason for the SSE-C refusal (RGW requires a secure connection for SSE-C by
+     default, option rgw_crypt_require_ssl) is a HYPOTHESIS here: the reply code is proven, the text of the refusal and the option were not read in this run.
+SEC8 Failed attempts in the container logs: 0 lines with the fake access key on all three nodes, BUT the control shows that nothing is logged at all: the RGW container log of ceph0 holds 0 lines in total, of ceph1
+     1 line and of ceph2 0 lines (podman logs), and the string "ftbucket" (present in every successful request) is found 0 times. So the failed attempts of SEC3 are NOT visible in the container log at the default
+     log level, and the same is true of successful requests. Whether the RGW writes them elsewhere (ops log, log level) was not examined. (Log time stamps are UTC, the VM clock is UTC+2.)
+
+OPEN / NOT TESTED
+-----------------
+O1. TLS: not configured, so no TLS test is possible on this deployment. O2. Encryption at rest with OSD encryption or SSE-S3 with a working key service: not tested (SSE-S3 is refused without Vault).
+O3. The ACL (not policy) path, presigned URL behaviour: the 5 October record results/security-presign-unsigned-header-ceph-2026-10-05.txt covers presigned URLs on the earlier Ceph cluster; not repeated here.
+O4. Ceph dashboard and mgr ports: port 8443 (dashboard) listens on ceph0 and ceph1; its answer without credentials was not part of the 190 character output read.
+
+Comparison with the predictions (written before the checks, results/ceph-vm-predictions-2026-10-15.txt)
+--------------------------------------------------------------------------------------------------------
+P-SEC-1 anonymous access to the S3 port is refused (403), bad signatures are refused: CONFIRMED for GET and PUT of bucket and object without signature (403) and for bad secrets and fake keys (403 with the codes above). The
+    anonymous GET of "/" returns 200 (187 bytes, not read), which the prediction did not cover.
+P-SEC-2 SSE-S3 refused with 400, SSE-C over plain http refused: CONFIRMED for the codes (400 InvalidArgument and 400 InvalidRequest); the reason for SSE-C is still a hypothesis (see SEC6b).
+P-SEC-3 the plain marker is found on the raw OSD devices: CONFIRMED (one device per node, three nodes).
+P-SEC-4 transport is plain http and the wire test finds the marker: CONFIRMED (199 of 200 lines).
+P-SEC-5 several Ceph ports are open without S3 credentials; which accept unauthenticated requests not predicted: the monitoring ports 9093, 9095, 9100, 9283 and 9926 answer metrics without credentials (SEC2); the
+    mon ports 3300 and 6789 and the OSD ports were listed but not probed with requests.

@@ -1,0 +1,64 @@
+Ceph 20.2.4 (Tentacle, cephadm, RGW), three nodes on the university VMs: fault tolerance scenario S2 (two nodes hard stopped, only ceph0 up), 15 October 2026
+======================================================================================================================================================
+
+Cluster:   as in results/ceph-vm-fault-tolerance-S1-2026-10-15.txt (ceph0 = hostname debian 192.168.1.72 stays up, ceph1 .71 and ceph2 .70 are hard stopped). HEALTH_OK, 6 of 6 OSDs up and in, 449 PGs
+           active+clean before the run (ceph -s on ceph0 at 15:43).
+Method:    scripts/ft.sh scenario S2 and scripts/ft-repairwatch.sh ceph (same hashes as in the S1 record). Baseline 300 s, hard stop of ceph1 and ceph2 in Proxmox by the user, planned outage 360 s counted from the
+           silence seen by the probe, power on by the user, recovery watch, read-back of every acknowledged object and the seed set (45 objects) through all three endpoints. No ack check in this scenario.
+Output:    /root/ft-ceph-S2-20261015-154345 and .tar.gz (114331 bytes, sha256 ae74e7a46edb3a53ac38f33914d573fc64174cc681f2cb2dab31dd5b141d8d8c, read from the screen twice, same value).
+
+DEVIATIONS FROM THE PROTOCOL (kept in the record)
+-------------------------------------------------
+D1. The "ACTION NOW" stop line was printed at 15:48:49 but both VMs were stopped only at about 15:54:13 (the script waited 324 s for the user; my reminder to the user came late). This does not change the outage
+    length, which starts at the silence seen by the probe, but the baseline before the stop was longer than the planned 300 s.
+D2. The planned outage of 360 s was exceeded. The script reads the seed set and the acknowledged objects through the endpoint of ceph0 during the outage, and that read-back ran from 15:55:13 until about
+    16:05:48 (reads against a cluster without monitor quorum wait for their client timeouts); the script prints "power on" only after it. At 16:02:47 the read-back was still running and I asked the user to power
+    on both VMs without waiting for the prompt (the user confirmed; the exact click time was not read). The monitors answered again in the repair watch at 16:04:19, so the outage lasted from 15:54:13 to roughly
+    16:03 to 16:04, about 9 to 10 minutes instead of 6. The "ssh answers" lines of the script (16:05:48) are therefore NOT the boot times of the nodes. The same effect made the Garage S2 outage longer (garage record).
+D3. Because of D2 the read-back "during the outage" ran partly after the power on: of 350 objects read through ceph0, 132 were ERROR_OR_EMPTY and 218 OK. That split is a TIMING artefact (reads before the monitors
+    returned failed, later reads succeeded), not a property of the objects, and is NOT used as a result. The timestamped probe (head_object of the fixed object every few seconds) is used instead.
+
+RESULTS (raw output of the run)
+-------------------------------
+Times:     "ACTION NOW" stop 15:48:49; all targets silent 15:54:13 (waited 324 s for the user); first NOQUORUM row of the repair watch 15:54:17; ceph1 endpoint silent 15:55:00, ceph2 endpoint silent 15:55:01
+           (probe times); endpoint of ceph0 head_object READ_FAIL from 15:55:20; the endpoint of ceph0 itself stopped answering at 16:00:00 ("live: SILENT") until 16:04:58; first read ok on ceph0 16:04:55, endpoint
+           answers again on ceph2 at 16:04:57, on ceph1 and ceph0 at 16:04:58; HEALTH_OK 16:05:48 (repair watch) and 16:05:50 (ft.sh).
+Ledger:    acknowledged writes 324, failed attempts 33, first failed attempt 15:54:26, last failed attempt 16:04:28, longest gap between acknowledged writes 657.7 s (after 15:53:58), that is no acknowledged write
+           between 15:53:58 and about 16:04:56.
+Repair watch (rows where health, OSDs up or in changed; columns as in the S1 record; 52 rows in all):
+           15:43:55 HEALTH_OK 6 6 6 449 449 0 0 1123 3
+           15:54:17 NOQUORUM n/a (the next row with values is at 16:04:19; the status command timed out in between, as predicted by the script)
+           16:04:19 HEALTH_WARN 4 6 6 449 449 0 0 1425 305
+           16:04:41 HEALTH_WARN 6 6 6 449 145 0 0 1426 305
+           16:05:02 HEALTH_WARN 4 6 6 449 0 1435 0 1435 307      (maximum degraded objects 1435)
+           16:05:25 HEALTH_WARN 6 6 6 449 407 46 0 1442 315
+           16:05:48 HEALTH_OK 6 6 6 449 449 0 0 1447 322
+           The number of OSDs up went 4, 6, 4, 6, 6 while the nodes booted; why it went down again is OPEN (not examined). The first row after the quorum returned (16:04:19) shows 449 active+clean while only 4 OSDs
+           are up: this is the status the monitors held from before the stop, not a measured state (HYPOTHESIS, not tested).
+Read after recovery through all three endpoints: 369 objects each, 369 OK on each (45 seed plus 324 acknowledged). No acknowledged write is missing.
+
+PROVEN
+------
+G1. With two of three nodes stopped no acknowledged write happened for 657.7 s: the failed attempts (33) lie between 15:54:26 and 16:04:28 and the writes resumed at about 16:04:56 after the return of the nodes.
+G2. The monitors had no quorum from the first repair watch row after the silence (NOQUORUM at 15:54:17; the row before, 15:53:56, was HEALTH_OK) and the status command did not answer until 16:04:19.
+G3. The one surviving node (ceph0) did not serve reads of the fixed object from 15:55:20 and its S3 endpoint stopped answering altogether from 16:00:00 to 16:04:58 (the probe got no HTTP answer). Why the endpoint
+    went silent 6 minutes after the loss is OPEN (HYPOTHESIS: the RGW of ceph0 stopped serving without a monitor quorum; test: read the RGW log and its state at that time, not done).
+G4. After the power on of both nodes the service came back without any command on the nodes (the cephadm target is enabled): the endpoints answered again within about 3 s of each other at 16:04:55 to 16:04:58 and the
+    cluster was HEALTH_OK at 16:05:48. The time from the boot to the first acknowledged write cannot be given, because the click time was not read; counted from the first row of the repair watch with
+    monitor quorum (16:04:19) the first acknowledged write came about 37 s later (16:04:56).
+G5. No acknowledged write was lost: 324 of 324 readable on all three endpoints, and the 45 seed objects too.
+
+Comparison with the predictions (written before the runs, results/ceph-vm-predictions-2026-10-15.txt)
+-----------------------------------------------------------------------------------------------------
+P-S2-1 the monitors have 1 of 3: no quorum, ceph -s hangs, NOQUORUM in the repair watch: CONFIRMED (15:54:17).
+P-S2-2 PGs block, no write is acknowledged during the outage, reads of earlier objects do not return either, the requests hang until the client timeout: CONFIRMED for writes (gap of 657.7 s, 33 failed attempts)
+       and for the read of the fixed object (READ_FAIL from 15:55:20). The prediction did not foresee that the endpoint of ceph0 would stop answering at all (16:00:00 to 16:04:58). That the requests "hang until the
+       client timeout and are not refused quickly" was not measured (the duration of the failed attempts was not read). The comparison with SeaweedFS (ceph0 alone could still read the seed set) holds in this
+       sense: Ceph on ceph0 alone could not read the fixed object.
+P-S2-3 no acknowledged write is lost and every object is readable through every endpoint: CONFIRMED (369 of 369 on three endpoints).
+P-S2-4 service comes back by itself after the boot, the time from boot to the first acknowledged write is not predicted: CONFIRMED for "by itself" (see G4); the time was not measured because of D2.
+
+OPEN
+----
+Q1 Why the OSD count went down again at 16:05:02. Q2 Why the endpoint of ceph0 went silent at 16:00:00. Q3 The duration of the failed attempts during the outage (ledger.tsv and probe.tsv in the archive, not read).
+Limits: one run; the outage was longer than planned (D2); the read-back during the outage is not usable (D3); the click times of the user were not recorded.

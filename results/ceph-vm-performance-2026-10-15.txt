@@ -1,0 +1,101 @@
+Ceph 20.2.4 (Tentacle, cephadm, RGW), three nodes on the university VMs: performance series (15 October 2026)
+==================================================================================================================
+
+Cluster:   ceph0 (hostname debian, 192.168.1.72), ceph1 (.71), ceph2 (.70); 3 mons, 2 mgrs, 6 OSDs (two per VM, BlueStore, the data disks of the VMs), one RGW per node (S3 on port 80, plain http),
+           8 pools, 449 PGs, replicated pools with size 3 and min_size 2, fsid 377124a6-acb5-11f1-b854-bc2411d95a65, HEALTH_OK and 449 active+clean before and after the series (ceph -s on
+           ceph0). 4 vCPU and 7.7 GiB RAM per node. The cluster is the one of the September records, with 2 OSDs per node and 4 vCPU per node (the "single vCPU era" runs of September are
+           earlier runs and are not compared here).
+Load:      Warp v1.8.0 (13c3b89) on ceph2, requests spread by Warp over the S3 endpoints of all three nodes (192.168.1.72:80, .71:80, .70:80, region us-east-1, bucket perfbench),
+           AWS CLI 2.36.8 for bucket handling, checksum setting when_required. ceph2 is also a storage node (mon, two OSDs, RGW), so it carries the client cost (limit L1).
+Method:    performance_method.md, script scripts/perf-warp.sh at commit ed917180b23eb64120764bd0630c563d4dacf7f1 mode "all". Tables with scripts/perf-table.sh
+           (sha256 797afb36c44de6a99df4be39d543e4d8b1b383bef21a1da555dd0190587cd644, printed on ceph2 on 15 October, equal to the repo file).
+           perf-warp.sh sha256 D529F834FB762CCBADC71E6EA67B310F83DC1B09EA00FCF7D2232A685CEB9660 (hash of /root/perf-deploy9/perf-warp.sh on ceph2, fetched by the full commit hash and compared).
+           New in this version for Ceph: while it waits for free space the script runs the RGW garbage collection (see section GC).
+Times:     VM clock, local time (UTC+2). Output folder /root/perf-ceph-20261015-103411 on ceph2: started 10:34 (folder name), finished before 12:17:41 (status check; the exact last end
+           time was not read), 68 runs (17 configurations of one discarded warm up and three recorded runs; the tables cover the 51 recorded runs), runs.tsv 69 lines. Duration 60 s per
+           recorded run, 30 s warm up.
+Output:    on ceph2 /root/perf-ceph-20261015-103411/ (console text per run, Warp benchdata, runs.tsv, header.txt, summary.txt, sar of ceph2, table-runs.tsv, table-configs.tsv, sar-runs-ceph2.tsv)
+           and /root/perf-ceph-20261015-103411.tar.gz (1731867 bytes, sha256 d1ff862d265790cca73ee6ff2410ea9c7e5f6a0049ee8e1067456f9dd6de5955, read from the screen twice with the
+           same value). The sar logs of ceph0 and ceph1 are in the folder of the same name on those nodes. Outer log /root/perf-ceph-outer2.log on ceph2: 0 lines with FAIL or failed
+           or exit code other than 0 (grep, read from the screen).
+Tables:    results/perf-ceph-vm-3node-20261015-table-runs.tsv     (sha256 8622184a04d1c8fc0ab689e57549b303616e0633665bcebb959d6cd4358cd88d)
+           results/perf-ceph-vm-3node-20261015-table-configs.tsv  (sha256 a21360dd0f2fd4a4f8e658969ac4727878636b25ac7b90fd58fad06cb29afaf4)
+           Both were read from the VM screen and typed into these files; the sha256 of both files equals the sha256 printed by the VM for its own files (compared, equal).
+Resources: results/ceph-vm-performance-sar-2026-10-15.txt (same series, sar of the three nodes).
+Predictions: results/ceph-vm-predictions-2026-10-15.txt, P-PERF-1 and P-PERF-2, written before the series; the comparison is in the last section of this file.
+
+Attempt 1 (NOT used): the series was first started on 15 October at 08:54 (output /root/perf-ceph-20261015-085413 on ceph2, 19 runs in runs.tsv). It stopped itself at the space guard (limit 50
+percent of the fullest OSD) because the data was still there after the wait: deleted object tails sit in the RGW garbage collection queue (default gc delay) and are freed late. The folder is kept as the
+aborted attempt. Two preparatory folders /root/perf-ceph-20261015-085118 (preflight) and /root/perf-ceph-20261015-085347 (controls) are also kept. The script was changed (commit ed91718: the space wait runs
+"radosgw-admin gc process --include-all" and prints the number of entries left) and the whole series was started again at 10:34.
+
+GC (what was proven about the stop of attempt 1 and about the fix)
+------------------------------------------------------------------
+G1. In attempt 1 the gc queue held 8430 entries and about 33 GiB were pending while the OSDs were at 58 percent used (read from the cluster during the stop; the value 33 GiB as printed then).
+G2. In the second series the space guard waited twice: at 64 percent and at 77 percent used (highest OSD), each time the first try of the wait loop (1 of 20) freed the space after the gc run and the series went on.
+    The true peak between two checks is unknown (77 percent is the highest value seen).
+G3. A claim about the cause of the slow freeing beyond "objects wait in the gc queue and gc process frees them" (for example the effect of rgw_gc_obj_min_wait) is NOT tested.
+
+Settings of the series
+----------------------
+Object size series, concurrency 8, PUT and GET: 50 KiB, 1 MiB, 16 MiB, 100 MiB. Concurrency series, 1 MiB, PUT and GET: 1, 4, 16, 64. Mixed workload (Warp default mix of GET, PUT, STAT, DELETE),
+1 MiB, concurrency 16. Same dataset sizes as for the other systems: GET datasets 50000 objects of 50 KiB, 8192 of 1 MiB, 512 of 16 MiB, 80 of 100 MiB, prepared in the warm up run and read with
+--list-existing. Before every GET run the script emptied the page cache on the three nodes over ssh (the success of each drop was not logged, so it is set, not proven, for every run). Before every run
+the script checked the space (highest %USE of the OSDs, limit 50 percent). The bucket was emptied after every configuration.
+
+Results (median, minimum and maximum of three recorded runs, MiB/s; full list with latencies in the two tables)
+------------------------------------------------------------------------------------------------------------
+Object size series (concurrency 8)         PUT median (min, max)       GET median (min, max)
+  50 KiB                                    28.65 (28.14, 28.85)        95.36 (93.66, 95.65)
+  1 MiB                                     191.71 (190.61, 192.93)     1004.41 (1000.63, 1014.60)
+  16 MiB                                    298.87 (288.59, 301.58)     1132.17 (1125.99, 1154.82)
+  100 MiB                                   306.83 (303.29, 308.87)     1173.02 (1163.54, 1181.68)
+Concurrency series (1 MiB)                 PUT median (min, max)       GET median (min, max)
+  1                                         34.16 (33.97, 35.75)        147.16 (145.85, 163.08)
+  4                                         118.26 (117.60, 119.91)     612.21 (609.81, 630.08)
+  8 (from the size series)                  191.71 (190.61, 192.93)     1004.41 (1000.63, 1014.60)
+  16                                        256.04 (255.77, 257.22)     1209.14 (1201.62, 1212.68)
+  64                                        277.35 (275.84, 277.55)     1119.56 (1103.90, 1130.34)
+Mixed, 1 MiB, concurrency 16 (Total)        585.87 (575.58, 587.58) MiB/s
+Objects per second at 50 KiB: PUT 576.40, 590.81, 586.85 (median 586.85), GET 1958.85, 1918.16, 1953.06 (median 1953.06).
+Errors: the error_lines column is 0 in all 51 recorded runs (perf-table.sh output, counted with cut and uniq on the VM: 51 of value 0).
+
+PROVEN (read from the tables, arithmetic mine)
+----------------------------------------------
+P1. Every recorded run finished without errors. The three runs of a configuration lie close together for most configurations. Largest spreads (maximum minus minimum, as percent of the minimum):
+    GET 1 MiB at concurrency 1, 145.85 to 163.08 MiB/s (11.8 percent), PUT 1 MiB at concurrency 1, 33.97 to 35.75 (5.2 percent), PUT 16 MiB, 288.59 to 301.58 (4.5 percent); all other
+    configurations 3.3 percent or less.
+P2. Latency and throughput agree with the concurrency (Little's law, concurrency divided by average latency): PUT 1 MiB concurrency 1: 1 MiB / 29.3, 29.4, 28.0 ms = 34.1, 34.0, 35.7 MiB/s
+    against 34.16, 33.97, 35.75; PUT 1 MiB concurrency 64: 64 / 225.4, 228.9, 222.3 ms = 284, 280, 288 MiB/s against 277.55, 275.84, 277.35 (2 to 4 percent above).
+P3. PUT throughput grows with concurrency from 34 MiB/s (1 user) to 256 (16 users) and 277 (64 users): between 16 and 64 users it grows by 8 percent only. GET grows to 1209 at 16 users and is lower at 64 (1120).
+P4. Drive writes against client volume (sum over the three nodes of wr_MiBs times the samples of the Warp window, divided by client MiB/s times 60 s; mean of the three runs; the window is the
+    whole Warp process and longer than the measured minute, so the ratio is up to a few percent off): 3.03 to 3.08 for every PUT configuration with objects of 1 MiB or more (3 copies would give 3.0),
+    7.81 for 50 KiB. For GET the drives read 0.41 to 0.47 of the client volume at 1 MiB, 0.75 at 16 and 100 MiB, 0.01 at 50 KiB.
+P5. CPU of the three nodes (mean of cpu_busy over the three runs of a configuration, ceph0 / ceph1 / ceph2, percent): PUT 50 KiB 64 / 63 / 67; GET 50 KiB 38 / 37 / 33; PUT 1 MiB 53 / 52 / 77;
+    GET 1 MiB 28 / 28 / 60; PUT 16 MiB 46 / 46 / 90; PUT 100 MiB 50 / 50 / 92; GET 100 MiB 23 / 21 / 55; PUT 1 MiB at 64 users 63 / 65 / 89; mixed 61 / 62 / 85. ceph2, the node that runs Warp, has the
+    highest CPU in every configuration except GET 50 KiB (PUT 50 KiB: 67 against 64 and 63).
+
+OPEN (observed, not explained)
+------------------------------
+Q1. Why the drives read only 0.41 to 0.75 of the bytes the client received in the GET runs (and 0.01 at 50 KiB). A cache hit in the page cache of the nodes or in the BlueStore cache is a HYPOTHESIS (test:
+    read the OSD cache and the page cache counters during a GET run); the page cache was dropped before each GET run, but the data set is read repeatedly within the run.
+Q2. Why PUT 50 KiB writes 7.8 times the client volume to the drives. The September record results/ceph-smallobject-writeamplification-2026-09-24.txt examined this on the earlier cluster; whether the
+    same cause (BlueStore deferred writes, three copies) holds here is a HYPOTHESIS, not tested on this series.
+Q3. Whether the PUT throughput at 90 percent CPU of ceph2 (16 MiB, 100 MiB, 64 users) is limited by the load node. HYPOTHESIS, untested; the test would need Warp on a host that is not a storage node, which is not
+    available on the three VMs (limit L1).
+
+Limits
+------
+L1. ceph2 is both load generator and storage node (see P5).
+L2. The space guard and gc: see section GC, the peak space use between two checks is not known.
+L3. The page cache drop before each GET run is set, not logged per run.
+
+Comparison with the predictions (written before the series, results/ceph-vm-predictions-2026-10-15.txt)
+-------------------------------------------------------------------------------------------------------
+P-PERF-1 "Ceph is the slowest of the four systems for 50 KiB objects and the fastest or close to the fastest for large objects at high concurrency": PARTLY WRONG.
+    50 KiB at concurrency 8, medians of three runs: PUT Ceph 28.65 MiB/s, SeaweedFS 46.14, Garage 14.98, RustFS 7.49: Ceph is second, not slowest. GET Ceph 95.36, SeaweedFS 193.46, RustFS 80.52,
+    Garage 59.01: Ceph is second. The large object part holds: PUT 16 MiB Ceph 298.87 (SeaweedFS 233.67, RustFS 200.30, Garage 128.04), PUT 100 MiB Ceph 306.83 (231.81, 216.17, 115.61), PUT 1 MiB at
+    64 users Ceph 277.35 (210.75, 130.29, 103.03): Ceph is first. GET 100 MiB Ceph 1173.02 against SeaweedFS 1302.15 (Ceph second, 10 percent lower); mixed Ceph 585.87 against SeaweedFS 580.94 (within 1 percent).
+    The wrong part stays in the thesis as wrong.
+P-PERF-2 "CPU of ceph2 is high in the small object GET runs": WRONG as written. In the GET 50 KiB runs ceph2 has the LOWEST CPU of the three nodes (33 percent against 38 and 37). ceph2 is the highest in
+    the large object and the 1 MiB runs and in PUT 50 KiB (P5).

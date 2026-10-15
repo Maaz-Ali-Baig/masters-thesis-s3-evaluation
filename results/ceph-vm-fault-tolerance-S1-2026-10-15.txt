@@ -1,0 +1,82 @@
+Ceph 20.2.4 (Tentacle, cephadm, RGW), three nodes on the university VMs: fault tolerance scenario S1 (one node hard stopped), two runs, 15 October 2026
+=====================================================================================================================================================
+
+Cluster:   as in results/ceph-vm-performance-2026-10-15.txt (ceph0 = hostname debian 192.168.1.72, ceph1 .71, ceph2 .70; 3 mons, 6 OSDs (two per VM), RGW on port 80 on every node, replicated pools size 3 and
+           min_size 2, 449 PGs). HEALTH_OK, 6 of 6 OSDs up and in, 449 PGs active+clean before each run (ceph -s on ceph0). The probe and all tools run on ceph0, which is never stopped.
+Method:    fault_tolerance_method.md. scripts/ft.sh (sha256 95f7af4fd16782bad2d688f23ab48ce617ac8acd6976494ebd34b185666fecac), scripts/ft-repairwatch.sh in mode ceph (sha256
+           15bff63171d3879e58b8057dabbf6ab800ab87826447a8e8b124b7110d15c750), scripts/ft-ackcheck.sh (sha256 c0ae80f9f3a354371cb626b44343e8b10f01bce0fc4891670278afaf53ab1b51), all from commit 230c99c, copies in
+           /root/ft-deploy9 on ceph0, hashes read there on 15 October and equal to the repo files. Probe: "aws s3api put-object" and a write counts as acknowledged only if an ETag comes back (commit 9cc5e7c),
+           endpoints 192.168.1.72:80, .71:80, .70:80 in rotation, AWS CLI 2.36.8, checksum setting when_required, one attempt, connect timeout 3 s, read timeout 25 s. Seed set: 45 objects (40 of 1 MiB, 3 of 6 MiB,
+           1 of 100 MiB) written on ceph0 before the runs, /root/ft-ceph-seed/seed.tsv sha256 3d0a432920b6be574d2f8882873ee28a313aed2719f76a3b508dd36f3e9dbc47. Bucket ftbucket.
+           Scenario S1: baseline 300 s, hard stop (power off, not shutdown) of ceph1 in Proxmox by the user at the line "ACTION NOW", outage 720 s counted from the moment the probe sees ceph1 silent, power on by
+           the user at the second "ACTION NOW" line, Ceph starts by itself (systemd, nothing is run on the node), recovery watch every 20 s until HEALTH_OK (limit 30 minutes), then every acknowledged object and the
+           seed set are read back through all three endpoints (sha256 compared). The failure time is bracketed by the probe (last answer to first silence), not taken from the clicks. Times: VM clock UTC+2.
+Predictions: results/ceph-vm-predictions-2026-10-15.txt, P-S1-1 to P-S1-5, written before the runs; the comparison is at the end.
+
+RUN A  (output /root/ft-ceph-S1-20261015-141623 and .tar.gz, 108006 bytes, sha256 02787f76b5f68d5862f425cbd71983fcb70ba134ac3ab956233f2b41fd28cf17, read from the screen twice, same value)
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Times:     baseline 14:16:36; "ACTION NOW" stop 14:21:26; all targets silent 14:22:06 (waited 40 s for the user); "ACTION NOW" power on 14:34:06; ssh answers on ceph1 14:34:51; HEALTH_OK 14:36:39 (ft.sh)
+           and in the repair watch row of 14:36:27; the whole run had finished before 14:41:06 (archive present).
+Ledger:    acknowledged writes 321, failed attempts 35, first failed attempt 14:22:46, last failed attempt 14:34:52, longest gap between acknowledged writes 28.0 s (after 14:22:01).
+Endpoints: head_object of the fixed object failed on ceph1 at 14:22:04, and on ceph0 and ceph2 at 14:22:26; it was readable again on ceph0 and ceph2 at 14:22:29 (a 3 s read failure on all endpoints); ceph1
+           endpoint silent from 14:22:35 until 14:34:53 (read ok at 14:34:53, answers at 14:34:53).
+Read during the outage (seed set and acknowledged objects so far, through the endpoint of ceph0): 217 objects, 217 OK.
+Read after recovery through all three endpoints: 366 objects each, 366 OK on each (45 seed plus 321 acknowledged). No acknowledged write is missing.
+Repair watch (repairwatch.tsv, 60 rows; columns epoch, time, health, OSDs up, in, total, PGs, PGs active+clean, degraded objects, misplaced objects, objects, acked so far; rows where health, up or in changed):
+           14:16:33 HEALTH_OK 6 6 6 449 449 0 0 399 4
+           14:22:15 HEALTH_WARN 6 6 6 449 441 0 0 562 167
+           14:22:36 HEALTH_WARN 4 6 6 449 0 565 0 565 169      (the two OSDs of ceph1 are down, still in)
+           14:32:34 HEALTH_WARN 4 4 6 449 0 648 0 648 251      (marked out: first row with 4 in; the row 20 s before still had 6 in; 10 min 8 s to 10 min 28 s after the silence of 14:22:06)
+           14:35:44 HEALTH_WARN 5 5 6 449 449 0 0 689 292
+           14:36:06 HEALTH_WARN 6 6 6 449 386 145 1 699 303
+           14:36:27 HEALTH_OK 6 6 6 449 449 0 0 710 314
+           The degraded object count was 565 at the first row and 684 at 14:35:23, the last row before the first OSD returned: it did not fall during the outage, it grew with the new writes. The row of
+           14:35:44 shows 449 PGs active+clean with 5 OSDs up; why the count of clean PGs jumps that fast is OPEN (not examined).
+
+RUN B  (output /root/ft-ceph-S1-20261015-144339 and .tar.gz, 129511 bytes, sha256 65ff24582825ebf60e38db0778f4340fb0980797a642a575e7fc97cbf9fef9d0, read twice, same value), with ft-ackcheck next to the probe
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Times:     baseline 14:43:41; "ACTION NOW" stop 14:48:42; all targets silent 14:49:06 (waited 24 s for the user); "ACTION NOW" power on 15:01:06; ssh answers on ceph1 15:02:04; HEALTH_OK 15:06:46.
+Ledger:    acknowledged writes 403, failed attempts 37, first failed attempt 14:49:28, last failed attempt 15:02:04, longest gap between acknowledged writes 31.7 s (after 14:49:00).
+Endpoints: ceph1 endpoint head_object READ_FAIL and silent from 14:49:38 until 15:02:05 (read ok) and 15:02:07 (answers). No read failure was recorded on the other two endpoints in this run.
+Read during the outage through the endpoint of ceph0: 208 objects, 208 OK. Read after recovery through all three endpoints: 448 objects each, 448 OK on each (45 seed plus 403 acknowledged). No acknowledged write is missing.
+Recovery: from 15:03:55 (the first row read) the repair watch shows 6 OSDs up and in, 449 of 449 PGs active+clean, 0 degraded, 0 misplaced, but the health stayed HEALTH_WARN until 15:06:46. "ceph health detail"
+           at 15:06:14 printed: HEALTH_WARN 1 hosts fail cephadm check; [WRN] CEPHADM_HOST_CHECK_FAILED: host ceph1 (192.168.1.71) failed check: Can't communicate with remote host `192.168.1.71`, possibly because the
+           host is not reachable or python3 is not installed on the host. [Errno 113] Connect c (cut at 200 characters). The warning is about the cephadm host check of the manager, not about data. That it clears
+           at the next periodic host check of the manager is an inference from the clearing between 15:06:26 and 15:06:48 (HYPOTHESIS, the interval was not read). It took 4 min 42 s from the ssh answer to HEALTH_OK in
+           run B against 1 min 48 s in run A.
+Ack check (scripts/ft-ackcheck.sh ceph, started at the "ACTION NOW" line, 600 s loop 14:48:42 to 14:58:42 over the endpoints 192.168.1.72:80 and .70:80, 366 rounds, settle 60 s, every key read with head-object
+           afterwards; folder /root/ackcheck-S1B-ceph-20261015 on ceph0, attempts.tsv 1099 lines, not archived in a tar file):
+           client   attempts  ACK  FAIL  ACK but missing  FAIL but present  longest ACK
+           api      366       365  1     0                1                 1.9 s
+           cp       366       366  0     0                0                 2.3 s
+           curl     366       0    366   0                0                 0.0 s
+           The one failed api attempt (round 13, 14:49:02, endpoint 192.168.1.72:80) ended after 25.6 s with the client read timeout and the object WAS stored (exists YES): a write that the client counted as failed.
+           It is the only attempt of the 1098 that took 10 s or more. The curl client got HTTP 403 in all 366 attempts, starting in round 1 before the outage (14:48:44), so it never wrote an object and is not
+           usable on Ceph in this run. Why: the 2 October record shows that Ceph refuses a curl PUT without an explicitly signed Content-Type (403) and accepts it with one (results/s3-compat-ceph-2026-10-02.txt); that this is the cause here is a
+           HYPOTHESIS (the reply body was not kept; test: repeat one curl PUT with the Content-Type header signed).
+
+PROVEN (from the raw outputs above)
+-----------------------------------
+F1. With one of three nodes hard stopped, writes and reads through the two surviving endpoints continued: one short interruption of 28.0 s (run A) and 31.7 s (run B) around the moment of the stop, otherwise
+    acknowledgements within 2.3 s at the longest in the ack check of run B. All objects written before and during the outage were readable during the outage (217 of 217, 208 of 208).
+F2. No acknowledged write was lost: 321 of 321 and 403 of 403 readable on all three endpoints after recovery, 731 of 731 acknowledgements of the ack check (api and cp) present. One write that the client
+    reported as failed (timeout at 25.6 s) was stored.
+F3. The OSDs of the stopped node were marked out about 10 minutes after the stop (run A, from the watch rows). The degraded object count did not fall during the outage.
+F4. After the power on Ceph started by itself and was HEALTH_OK after 1 min 48 s (A) and 4 min 42 s (B) counted from the first ssh answer of the node.
+
+Comparison with the predictions (written before the runs, results/ceph-vm-predictions-2026-10-15.txt)
+-----------------------------------------------------------------------------------------------------
+P-S1-1 writes and reads continue, one stall up to about 30 s, longest gap below 40 s: CONFIRMED (28.0 s and 31.7 s; reads of 217 and 208 objects ok).
+P-S1-2 no lost acknowledged write: CONFIRMED (321 of 321, 403 of 403, ack check 0 missing).
+P-S1-3 the endpoint of ceph1 does not answer, about a third of the attempts hit it and are retried on the next endpoint: the endpoint silence is CONFIRMED (14:22:35 to 14:34:53 and 14:49:38 to 15:02:07). The share
+       of attempts that hit the dead endpoint and what the probe does after a failed attempt was NOT examined (the ledger holds 35 and 37 failed attempts; their endpoints were not read).
+P-S1-4 after about 600 s the OSDs are marked out and Ceph starts to re-create the missing copies on the other hosts; HEALTH_OK within 30 minutes: PARTLY WRONG. The out mark after about 600 s is CONFIRMED, HEALTH_OK
+       within 30 minutes is CONFIRMED (1 min 48 s and 4 min 42 s after the ssh answer, far below my guess), but the copies were NOT re-created on the other hosts: the degraded count kept rising until ceph1 returned. The reason
+       (placement rule of the pools, host as failure domain, only two hosts left) is a HYPOTHESIS, the CRUSH rule was not read in this session.
+P-S1-5 the mon on ceph1 is lost, 2 of 3 mons keep quorum, ceph -s answers on ceph0: CONFIRMED (the repair watch got a status row every 20 s during the whole outage; no NOQUORUM row in S1).
+
+OPEN
+----
+Q1 The jump of the PG state in the row of 14:35:44 (run A). Q2 The attempts that failed in the ledger (endpoint, timing) were not analysed. Q3 The content of the cephadm warning of run B beyond 200 characters.
+Limits: the probe client is the AWS CLI (aws s3api put-object); the ack check uses the AWS CLI only (curl unusable here); one cluster, two runs; the fixed object and the seed set are small; the earlier Ceph fault
+tolerance runs of September (single vCPU era, older probe) are earlier runs and are not mixed into these numbers.
