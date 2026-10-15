@@ -119,20 +119,23 @@ wait_space() {
     # Garage gives the space of deleted objects back late (13 October 2026: 57 percent used 10 minutes after the
     # cleaning of the first PUT configuration, 23 to 27 percent about 20 minutes later, resync queue 0), so it may wait 60 minutes
     [ "$SYSTEM" = garage ] && max=120
+    # Ceph: the RGW garbage collector frees the space of deleted objects late (15 October 2026: after 19 runs 8430 gc entries and 33 GiB were still
+    # pending, the OSDs at 58 percent, and the first Ceph series stopped at 20 waits of 30 s). reclaim now also runs inside this loop for Ceph.
+    [ "$SYSTEM" = ceph ] && max=120
     [ -n "$NODES" ] || return 0
     while :; do
         u="$(used_pct)"; u="${u:-0}"
         [ "$u" -le "$limit" ] && return 0
         i=$((i+1)); [ "$i" -gt "$max" ] && die "data disks still ${u} percent used after $((max / 2)) minutes, stopping"
         echo "space: ${u} percent used, waiting 30 s for reclaim ($i/20)"
-        [ "$SYSTEM" = seaweedfs ] && reclaim
+        { [ "$SYSTEM" = seaweedfs ] || [ "$SYSTEM" = ceph ]; } && reclaim
         sleep 30
     done
 }
 drop_caches() { [ -n "$NODES" ] || return 0; on_nodes 'sync; echo 3 > /proc/sys/vm/drop_caches' >/dev/null 2>&1 || true; }
 reclaim() {
     if [ "$SYSTEM" = ceph ] && [ "$SSH_OK" = 1 ]; then
-        printf 'cephadm shell -- radosgw-admin gc process --include-all >/dev/null 2>&1; echo gc done\n' | node_sh 192.168.1.72 || true
+        printf 'cephadm shell -- radosgw-admin gc process --include-all >/dev/null 2>&1; echo "gc done, entries left: $(cephadm shell -- radosgw-admin gc list --include-all 2>/dev/null | grep -c oid)"\n' | node_sh 192.168.1.72 || true
     fi
     if [ "$SYSTEM" = seaweedfs ]; then
         # deleted objects only free disk space when the master vacuums the volumes; ask for it (garbage threshold 1 percent)
