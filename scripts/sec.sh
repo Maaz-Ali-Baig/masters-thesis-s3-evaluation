@@ -198,6 +198,20 @@ sec5() {
 # ------------------------------------------------------------------ sec6
 # SEC_DISTINCT=1 (added 14 October 2026 for Garage): the three objects get different random content with one marker each, because Garage stores blocks by
 # the hash of their content and three uploads of the same content share ONE block file (the search then cannot say which upload is stored in clear).
+# Ceph (added 15 October 2026): BlueStore keeps objects on raw devices, so the marker search is a READ ONLY scan of every OSD block device of every node
+# (the symlinks /var/lib/ceph/<fsid>/osd.N/block of cephadm, resolved to the logical volume). Each device is read once: zero bytes are turned into new lines
+# (tr) so that grep does not have to hold a 32 GB "line", then grep -o prints every marker found and sort | uniq -c counts them. Nothing is written to a device.
+# Per node a time box of 1500 s. One output line per device: its marker counts (no line = no marker found on that device).
+ceph_scan() { # marker...
+    local ip m args=""
+    for m in "$@"; do args="$args -e $m"; done   # markers hold only A-Z, 0-9 and - : no quoting needed inside the remote bash -c '...'
+    log "Ceph (BlueStore): read only scan of every OSD block device for the markers: $*"
+    for ip in $NODES; do
+        log "node $ip:"
+        rx "$ip" "timeout 1500 bash -c 'for b in /var/lib/ceph/*/osd.*/block; do d=\$(readlink -f \$b); echo \"device \$d\"; tr \"\\\\0\" \"\\\\n\" < \$d | LC_ALL=C grep -a -o -F $args | sort | uniq -c; done'" 2>&1 | sed 's/^/   /' | tee -a "$OUT/sec6.txt" || log "   scan failed on $ip"
+    done
+    log "(PLAIN is the positive control and must be found on three devices, one per copy, if the object is stored in clear; a marker that is not found is not stored in clear or not stored)"
+}
 sec6_distinct() {
     CUR=sec6; header
     local base="SECPROBE-REST-MARKER-$(date +%s)-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" ip n k m sse_c_key ext="${SEC_EXT:-txt}"
@@ -213,7 +227,7 @@ sec6_distinct() {
     log "(an empty text after an upload line means the upload was accepted; an error text means it was refused)"
     sleep 3
     if [ -z "$DATA" ]; then
-        log "Ceph stores on raw devices: the marker search is a separate read only scan, NOT done by this script"
+        ceph_scan "$base-PLAIN" "$base-SSES" "$base-SSEC"
     else
         for k in PLAIN SSES SSEC; do
             for ip in $NODES; do
@@ -249,7 +263,7 @@ sec6() {
     log "(an empty text after an upload line means the upload was accepted; an error text means it was refused)"
     sleep 3
     if [ -z "$DATA" ]; then
-        log "Ceph stores on raw devices: the marker search is a separate read only scan, NOT done by this script"
+        ceph_scan "$marker"
     else
         for ip in $NODES; do
             hits="$(rx "$ip" "grep -rlF '$marker' $DIRS 2>/dev/null | wc -l" 2>/dev/null || echo ssh-failed)"
