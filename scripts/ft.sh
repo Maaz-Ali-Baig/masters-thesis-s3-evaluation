@@ -124,9 +124,17 @@ probe() {
         for k in $(seq 0 $((n-1))); do
             idx=$(( ((i-1) + k) % n + 1 ))
             ep="$(echo $HOSTLIST | cut -d' ' -f$idx)"
-            if err="$(s3ep "$ep" s3 cp "$d/obj.tmp" "s3://$B/$pfx/$i" --only-show-errors 2>&1)"; then rc=0; else rc=1; fi
+            etag=""
+            if [ "${FT_PROBE:-api}" = cp ]; then
+                # the probe of the runs of 11 to 14 October 2026 (RustFS, SeaweedFS, Garage): "aws s3 cp", acknowledged = exit code 0
+                if err="$(s3ep "$ep" s3 cp "$d/obj.tmp" "s3://$B/$pfx/$i" --only-show-errors 2>&1)"; then rc=0; else rc=1; fi
+            else
+                # since 14 October 2026: "aws s3api put-object", acknowledged = exit code 0 AND an ETag in the answer. In the third Garage S1 run (results/garage-vm-fault-tolerance-S1-2026-10-14.txt)
+                # "aws s3 cp" reported success after its 25 s read timeout for an object that does not exist, while put-object and curl failed in the same stall
+                if err="$(s3ep "$ep" s3api put-object --bucket "$B" --key "$pfx/$i" --body "$d/obj.tmp" --query ETag --output text 2>&1)" && [ -n "$err" ] && [ "$err" != None ]; then rc=0; etag="$err"; else rc=1; fi
+            fi
             if [ "$rc" = 0 ]; then
-                printf '%s\t%s\t%s\tACK\t%s\t\n' "$(now)" "$i" "$ep" "$sha" >> "$d/ledger.tsv"; acked=1; break
+                printf '%s\t%s\t%s\tACK\t%s\t%s\n' "$(now)" "$i" "$ep" "$sha" "${etag:+etag:$etag}" >> "$d/ledger.tsv"; acked=1; break
             fi
             printf '%s\t%s\t%s\tFAIL\t%s\t%s\n' "$(now)" "$i" "$ep" "$sha" "$(echo "$err" | clean1)" >> "$d/ledger.tsv"
         done

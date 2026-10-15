@@ -13,7 +13,7 @@ Method:    scripts/ft.sh (sha256 5cbefc42e1cf6c52941865c0ad21c9c067e5d3a27ef3354
 Scenario:  S1. Node ceph1 (192.168.1.71) hard stopped (power off) by the user in Proxmox, later powered on; ceph0 and ceph2 stay up. All times are the VM clock (UTC+2); the Garage container logs are UTC.
 Predictions: results/garage-vm-predictions-2026-10-13.txt (written before the runs, unchanged).
 
-Two runs of S1 were made. Both are kept.
+Three runs of S1 were made. All are kept. READ THE CONCLUSION AT THE END FIRST: the "acknowledged but lost" writes of runs 1 and 2 are most likely false acknowledgements of the client "aws s3 cp" (run 3).
 
 RUN 1 (long outage, recovery watch aborted)  /root/ft-garage-S1-20261014-083928
 -----------------------------------------------------------------------------
@@ -58,9 +58,40 @@ Archive:   /root/ft-garage-S1-20261014-104306.tar.gz, 328373 bytes, sha256 1926c
 Client check (14 October 2026, ceph0, no Garage involved): the same aws command (read timeout 25 s, one attempt) against a local dummy listener that never answers gives "Read timeout", exit code 1, after 26.5 s;
 against a dummy that sends "100 Continue", reads the whole 1 MiB body and then never answers it gives the same, exit code 1 after 25.5 s. So a client time out alone does not produce an acknowledgement in the ledger.
 
+RUN 3 (planned S1, 12 minutes, with three clients side by side)  /root/ft-garage-S1-20261014-184630  (probe prefix probe-S1-20261014-184630)
+-----------------------------------------------------------------------------------------------------------------------------------------------
+Same ft.sh (sha256 5cbefc42...6788, probe with "aws s3 cp"), same repair watch, and scripts/ft-ackcheck.sh (commit 57b0e996f26fee6318d08aef0449763d1b7dd362, sha256 207352b3d6e372986205f0ff986c94ca423684aa052207ec16bb51d46250030b,
+fetched on ceph0 into /root/ft-deploy7, tested on the healthy cluster: 8 rounds, 24 of 24 acknowledged and present) started by a watcher at the ACTION NOW line (18:51:35) for 600 s. The ackcheck writes, in every round, a random
+1 MiB object three times through 192.168.1.72 and 192.168.1.70 in turn: with "aws s3 cp" (exactly the probe settings: read timeout 25 s, one attempt), with "aws s3api put-object" (same limits, ETag kept) and with curl (30 s, real
+x-amz-content-sha256, HTTP code and ETag kept). 400 s after the loop every key is read with head-object through 192.168.1.72 (after ceph1 was back).
+Timeline: 18:46:30 start, script signal stop ceph1 18:51:34, all targets silent 18:52:52 (waited 78 s), power on signal 19:04:52, ssh answers 19:05:31, Garage started by the script 19:05:32. Probe: 192.168.1.71 silent from
+18:52:55, head_object of the fixed object through 192.168.1.72 failed from 18:53:14 to 18:54:11 (57 s) and worked again.
+Probe of the script (ledger): 1192 acknowledged writes, 33 failed attempts (first 18:53:18, last 19:05:30), longest gap between acknowledged writes 30.9 s (after 18:52:47). Verification after the recovery watch (30 minutes, 19:05:32
+to about 19:35): 1237 objects (1192 acknowledged writes and 45 seed objects) readable through all three endpoints, 1237 OK per endpoint: NO acknowledged write of the script's probe is missing in this run.
+Archive /root/ft-garage-S1-20261014-184630.tar.gz, 322501 bytes, sha256 5fbb471d46bbb54aaa3513b9454e2a249607731754e25295848b193f6459932c (read from the screen). Secret key found in the output files: 0.
+Ackcheck (folder /root/ackcheck-S1c-20261014, 323 rounds, 969 writes, verification 19:08 to 19:19): per client attempts / acknowledged / failed / acknowledged but missing / failed but present / longest acknowledgement:
+    api   323 / 322 / 1 / 0 / 0 / 1.9 s
+    cp    323 / 323 / 0 / 1 / 0 / 25.7 s
+    curl  323 / 322 / 1 / 0 / 0 / 0.2 s
+  The three attempts of 10 s or more, all through 192.168.1.72, all in the stall: cp round 48 at 18:52:48, 25.7 s, ACKNOWLEDGED (exit code 0, no ETag recorded for cp), the object does NOT exist afterwards (head-object negative, column exists = NO);
+  curl round 48 at 18:53:14, 30.0 s, no answer (failed), object absent; api round 49 at 18:53:45, 25.6 s, failed (read timeout), object absent. (The tool output listed the api row twice; the table counts it once, 323 attempts.)
+  So in the same stall, on the same endpoint, "aws s3 cp" reported success after 25.7 s for an object that was never stored, while "aws s3api put-object" failed after 25.6 s and curl got no answer in 30 s.
+  The cp request started at 18:52:48, 4 s before the script saw ceph1 silent (18:52:52), i.e. it was in flight at the moment of the power off. No other acknowledgement of any client is missing.
+Test with a freeze instead of a stop (14 October, ceph0 and ceph1, scripts/ft-ackcheck.sh with AC_PAUSE_IP: "podman pause garage" on ceph1 at 30 s, "podman unpause" at 210 s, loop 300 s): 215 rounds, 215 of 215 acknowledged for
+  each of the three clients, no failure, no missing object, longest write 0.9 s, no attempt of 10 s or more. A frozen container does not cause the stall of a stopped VM. (A test with firewall rules that drop the traffic to ceph1
+  was planned, not run: adding firewall rules is not done by the assistant.)
+
+CONCLUSION (written after run 3)
+The writes that runs 1 and 2 (and the S2 run) counted as "acknowledged but lost" are most likely NOT acknowledgements of Garage. All of them (probes 214, 215, 169 and in S2 526, 527) were acknowledged by "aws s3 cp" about
+25 s after their request started, which is the read timeout of that client, and run 3 shows "aws s3 cp" returning exit code 0 at 25.7 s for an object that is absent while the other two clients fail in the same stall. What is proven: a
+client artefact of "aws s3 cp" exists in this setup. What is not proven: that every earlier case was this artefact (the earlier runs had no second client), and the mechanism in the AWS CLI (a dummy listener that never answers
+gives exit code 1). What Garage itself did in these cases is: no answer for about a minute after the power off (write diagnostic 000, curl 000), and no object stored; nothing shows that Garage acknowledged a write it did not store.
+Consequences: (1) do not write "Garage lost acknowledged writes" as a finding; (2) scripts/ft.sh now uses "aws s3api put-object" (acknowledged = exit code 0 and an ETag) as the default probe, FT_PROBE=cp restores the old one;
+(3) the SeaweedFS records got a correction paragraph; (4) RustFS had no acknowledged-but-missing write, so it is not affected in the observed numbers.
+
 PREDICTIONS COMPARED (the predictions file stays unchanged)
 P-S1-1 writes and reads continue through ceph0 and ceph2: right in general (1169 acknowledged writes), but with a stall of about a minute after the stop (longest gap 32.4 s in run 2, 55.0 s in run 1) and 32 failed attempts.
-P-S1-2 no acknowledged write is lost: WRONG. Run 1: 2 acknowledged writes lost (214, 215). Run 2: 1 acknowledged write lost (169).
+P-S1-2 no acknowledged write is lost: CANNOT BE JUDGED. Runs 1 and 2 show writes that "aws s3 cp" acknowledged and that do not exist (214, 215, 169); run 3 shows that "aws s3 cp" can report success for an object that was never stored, and run 3 itself had no missing write. See the CONCLUSION above.
 P-S1-3 the endpoint of ceph1 does not answer, a third of the attempts fail: right (32 failed attempts, all to ceph1).
 P-S1-4 ceph1 catches up within 30 minutes: partly. Resync queue 0 and no resync errors, ceph0 and ceph2 identical, but ceph1 differs from them in file count (disk1 +10 files) and in bytes (smaller) at the end of the watch.
 
@@ -68,14 +99,14 @@ PROVEN
 ------
 P1. With ceph1 down, writes and reads through ceph0 and ceph2 worked again after a stall of about one minute after the stop (the failure detection of Garage: pings every 15 s, the connection closed after five failed pings).
 P2. During that stall requests through the surviving endpoints do not answer (curl 000 after 30 s; aws client time out after 25 s); the ledger has 32 failed attempts, all to ceph1.
-P3. In both runs acknowledged writes (ledger, exit code 0) are not readable after the recovery: 2 in run 1, 1 in run 2 (about 0.1 percent of the acknowledged writes in run 2). In run 2 the object does not exist
+P3. In runs 1 and 2 writes that the probe counted as acknowledged (ledger, "aws s3 cp" exit code 0; false acknowledgements of the client are likely, see the CONCLUSION) are not readable after the recovery: 2 in run 1, 1 in run 2 (about 0.1 percent of the acknowledged writes in run 2). In run 2 the object does not exist
     afterwards on any endpoint (404), and the ceph0 log shows its PUT request 25.1 s before the acknowledgement.
 P4. The same stall of 192.168.1.72 caused the only two diagnostic writes that did not behave normally; the diagnostic write that was in the stall was not acknowledged (code 000) and is correctly absent.
 P5. After the return of ceph1 the resync queue is empty and without errors; ceph1 data directories are not identical to those of ceph0 and ceph2 (+10 files, fewer bytes) in both runs.
 
 NOT PROVEN, open (not to be written as findings)
 -------------------------------------------------
-Q1. Why was probe 169 (and in run 1 probes 214 and 215) acknowledged but not stored? All three acknowledged-but-missing writes were acknowledged about 25 s after their request started, which is also the read timeout
+Q1. (PARTLY ANSWERED by run 3, see the CONCLUSION: most likely a false acknowledgement of "aws s3 cp"; the mechanism in the AWS CLI is open.) Why was probe 169 (and in run 1 probes 214 and 215) acknowledged but not stored? All three acknowledged-but-missing writes were acknowledged about 25 s after their request started, which is also the read timeout
     of the client, so the time may be a coincidence or may be the point where Garage or the client gave up. The client check above rules out an aws exit code 0 after a plain timeout, but does not rule out
     other client behaviour. Settles: a probe that records the ETag and the elapsed time of every acknowledged PUT (aws s3api put-object, JSON answer) and heads the key right after any acknowledgement that took
     more than 10 s, in a repeat of S1.

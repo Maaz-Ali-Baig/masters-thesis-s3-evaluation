@@ -91,3 +91,13 @@ L4. The key list of the unreadable objects was read from the screen of the VM se
 L5. The result is for this configuration only (replication 002 on three nodes, filer with the embedded store on every node, S3 on every node, no load balancer). Another filer store or another replication
     setting is not tested.
 L6. No comparison between systems is made in this record. For the RustFS runs see results/rustfs-vm-fault-tolerance-S1-repeat-2026-10-12.txt (there every acknowledged write was readable afterwards).
+
+CORRECTION OF 14 OCTOBER 2026 (added after the third Garage S1 run, see results/garage-vm-fault-tolerance-S1-2026-10-14.txt)
+------------------------------------------------------------------------------------------------------------------------------
+The "acknowledged writes" of the ledger in this record come from the probe of scripts/ft.sh of that time, which used "aws s3 cp" and counted exit code 0 as an acknowledgement. In the third Garage S1 run, with
+three clients writing side by side during the same stall (aws s3 cp, aws s3api put-object, curl), "aws s3 cp" reported success after 25.7 s (its read timeout is 25 s) for an object that does not exist afterwards,
+while s3api put-object failed after 25.6 s and curl got no answer in 30 s. So an acknowledgement of "aws s3 cp" that follows a stall of about 25 s is not proven to be an acknowledgement of the storage system.
+The counts of "acknowledged but not readable writes" in this record (and its P-points and Q-points that rest on them) must therefore be read as "writes for which aws s3 cp returned 0 and the object is absent afterwards",
+and may be false acknowledgements of the client. This record was NOT re-run with a reliable probe; which of its lost writes are false acknowledgements is not known. What is not affected: the reads (verify uses a
+read of every key and reports ERROR_OR_EMPTY), the curl observations of the write diagnostic (no answer in 30 s, no object), the file counts, the unreadable objects themselves (they do not exist, whoever acknowledged them).
+The mechanism inside the AWS CLI that returns exit code 0 is not identified (a test against a dummy listener that never answers gave exit code 1 after the timeout).

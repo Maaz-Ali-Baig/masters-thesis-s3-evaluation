@@ -33,9 +33,9 @@ Repair watch by hand (13:15:00 to 13:15:24 sample, files / bytes disk1): ceph0 1
            had not converged at that time (the watch was started 10 minutes earlier; the close-out started at 13:21:35 and the file counts were not read again).
 
 PREDICTIONS COMPARED
-P-S2-1 writes through ceph0 are refused, no write acknowledged during the outage: PARTLY WRONG. Refused in the diagnostic (503 or no answer), but the probe ledger shows two acknowledged writes (526, 527) while only ceph0 was up.
+P-S2-1 writes through ceph0 are refused, no write acknowledged during the outage: PARTLY WRONG as measured by the probe, but the two acknowledgements are most likely false acknowledgements of "aws s3 cp" (see the CORRECTION below). Refused in the diagnostic (503 or no answer), but the probe ledger shows two acknowledged writes (526, 527) while only ceph0 was up.
 P-S2-2 reads of earlier objects are refused too: right (all 571 objects, seed set included, unreadable through ceph0 alone; this differs from SeaweedFS where the seed set stayed readable).
-P-S2-3 no acknowledged write is lost: WRONG (2 lost, 526 and 527).
+P-S2-3 no acknowledged write is lost: CANNOT BE JUDGED (the two missing writes, 526 and 527, were acknowledged only by "aws s3 cp", see the CORRECTION below).
 
 PROVEN
 ------
@@ -58,3 +58,9 @@ L3. Probe times are written when a probe round ends; with stopped nodes a round 
     (12:33:23 to 12:34:14) are not the same measurement.
 L4. Numbers were read from the console of the VM session; the archive stays on ceph0 and has not been copied to this repository.
 L5. No comparison between systems is made in this record. For SeaweedFS S2 see results/seaweedfs-vm-fault-tolerance-S2-2026-10-13.txt.
+
+CORRECTION OF 14 OCTOBER 2026 (after the third S1 run, see results/garage-vm-fault-tolerance-S1-2026-10-14.txt)
+-------------------------------------------------------------------------------------------------------------
+Probes 526 and 527 were acknowledged by "aws s3 cp" (exit code 0), 25 s or more after their request started, in a stall of the surviving node; at 12:35:03 curl got HTTP 503 from the same endpoint. In the third S1 run
+"aws s3 cp" reported success after 25.7 s for an object that does not exist while "aws s3api put-object" and curl failed in the same stall. So these two writes are most likely false acknowledgements of the client and are
+not a finding about Garage. What stays: with two nodes down Garage answered 503 or nothing, no object was stored from the writes of the outage, and all 571 earlier objects were unreadable through ceph0 alone.
