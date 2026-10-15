@@ -102,6 +102,14 @@ header | tee "$OUT/header.txt"
 # ---- space and cache control
 used_pct() {
     local ip
+    if [ "$SYSTEM" = ceph ]; then
+        # Ceph keeps its data on the OSD disks, not on /srv/s3 (added 15 October 2026): the highest %USE of any OSD, whole percent
+        # (columns of "ceph osd df" counted from the end: %USE is the fourth from last; rows of OSDs start with a number)
+        node_sh 192.168.1.72 2>/dev/null <<'EOS' || true
+cephadm shell -- ceph osd df 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {v=int($(NF-3)); if (v>m) m=v} END{print m+0}'
+EOS
+        return 0
+    fi
     for ip in $NODES; do
         printf 'df --output=pcent /srv/s3/disk1 /srv/s3/disk2 | tail -n +2 | tr -d " %%"\n' | node_sh "$ip" 2>/dev/null || true
     done | sort -n | tail -1
