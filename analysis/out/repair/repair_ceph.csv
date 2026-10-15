@@ -1,0 +1,4 @@
+run,peak_degraded_objects,peak_at_s_from_silence,min_osds_in,noquorum_rows,pgs_clean_after_return_s,health_ok_after_return_s
+ft-ceph-S1-20261015-141623,684,797.0,4,0,50.2,93.2
+ft-ceph-S1-20261015-144339,1712,780.0,4,0,43.1,282.1
+ft-ceph-S2-20261015-154345,1435,649.0,,15,49.9,49.9

@@ -39,6 +39,7 @@ For a clean manifest: commit the scripts first, run them, then commit `analysis/
 | `common.py` | none | helpers: hashes, file reading, manifest |
 | `build_perf.py` | `out/perf/` | performance comparison of the four systems on the VMs |
 | `build_ft.py` | `out/ft/` | fault tolerance runs S1 and S2 of the four systems, read from `results/ft-*.tar.gz` |
+| `build_repair.py` | `out/repair/` | what the repair watch recorded after the stopped node(s) came back: file count lag (Garage, RustFS, SeaweedFS) and Ceph health |
 
 Outputs of `build_perf.py`:
 
@@ -70,3 +71,13 @@ Input: the 13 run archives `results/ft-*.tar.gz` (hashes in `results/vm-archives
 7. **Censored values** are written with a greater or equal sign. Garage S1 run 1 and Garage S2 end before the stopped node answered again inside the probe, so their outage and write gap are lower bounds.
 8. **Run notes** (parallel writers, deviations) are typed in `RUN_NOTES` with the record they come from. They cannot be derived from the archive.
 9. A cross system statement about "lost acknowledged writes" is not allowed from these data (see 2 and 3). Statements about gaps, hard failed rounds, outage and read gaps are.
+
+## Recovery evidence (`build_repair.py`): definitions and limits
+
+Input: `repairwatch.tsv` in the 13 run archives (11 have one; the two RustFS runs of 11 October have none). Output in `analysis/out/repair/`: `repair_files.csv/.tex`, `repair_ceph.csv/.tex`, `repair_files.pdf`, `repair_ceph.pdf`.
+
+1. **File count lag** (Garage, RustFS, SeaweedFS): files on the returned node minus the mean of the nodes that stayed up, in the same 20 s sample, relative to the mean before the stop. The unit differs by system (Garage: all files of the data directories, RustFS: files of the run's key prefix, SeaweedFS: files of the bucket volumes), so only the shape (does the lag go back to zero?) is compared, not the number of files.
+2. **Closed** = from the first sample after the return, every later sample has a lag of at most 3 files (RustFS shows noise of up to 2 files, because the probe keeps writing). "Not closed" means the lag was still there at the end of the 30 minute watch.
+3. A closed lag is not a proof of repair or of integrity, and a lag that stays is not a proof of data loss: the objects of all runs were readable on all endpoints (`ft_runs.csv`).
+4. The repair watch of Garage run 1 and Garage S2 ends before the node answered again; they are not used. The last sample of every watch is written twice with the same time stamp (handled).
+5. **Ceph**: the status is not readable without monitor quorum, so no OSD count exists for S2 (n/a). The status rows before the first row with quorum are stale values of the monitors, not a measured state. HEALTH_OK can come later than all PGs clean (S1 run B: a cephadm host check warning, see the record).

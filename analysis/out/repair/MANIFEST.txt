@@ -1,0 +1,33 @@
+Recovery evidence of the fault tolerance runs: inputs and outputs
+=================================================================
+
+repository commit: 9e36137e6a5e462d74faaf4414f6a418da505a8d
+working tree (analysis, results): UNCOMMITTED CHANGES in analysis/ (outside out/) or results/
+python 3.12.3
+matplotlib 3.6.3
+
+INPUT FILES (results/)
+02787f76b5f68d5862f425cbd71983fcb70ba134ac3ab956233f2b41fd28cf17  results/ft-ceph-S1-20261015-141623.tar.gz
+65ff24582825ebf60e38db0778f4340fb0980797a642a575e7fc97cbf9fef9d0  results/ft-ceph-S1-20261015-144339.tar.gz
+ae74e7a46edb3a53ac38f33914d573fc64174cc681f2cb2dab31dd5b141d8d8c  results/ft-ceph-S2-20261015-154345.tar.gz
+7b18ef9a800c0af88678afd7203bc1ec1c6cef43d5f932da36cfb8923e869a31  results/ft-garage-S1-20261014-083928.tar.gz
+1926c7a2a109b765c5ede8eb30d93fa9fd8dc5441d23eab65f7b818514d26500  results/ft-garage-S1-20261014-104306.tar.gz
+5fbb471d46bbb54aaa3513b9454e2a249607731754e25295848b193f6459932c  results/ft-garage-S1-20261014-184630.tar.gz
+2fca860da3d30e7e8197d17e5c184cc4431163a4342a80f13b85b59963d0e9ae  results/ft-garage-S2-20261014-121535.tar.gz
+a0f523fd0c97b361ee9b20de05338fce9dadafd497e4fda8d27f9187d16e11cb  results/ft-rustfs-S1-20261011-145627.tar.gz
+4c93b443fd22cb570f997ea2b9e2c76ccdbee3e760c955a0503f4ec2c4df2d45  results/ft-rustfs-S1-20261012-204542.tar.gz
+33f5502120ea1327a6763325654e9c5b5385a92246acfd92040ffb0ed23d7748  results/ft-rustfs-S2-20261011-161345.tar.gz
+b660123dc77a9460f74ff801b9126c8248888316090a1e3e06c0ceae0029e20a  results/ft-seaweedfs-S1-20261013-093344.tar.gz
+c2994331d972fcaae4942b923b645b492e2cde4bcbec37306d3dace42ebba85a  results/ft-seaweedfs-S1-20261013-133927.tar.gz
+4ba9a29df9174c79495e82b74374e4eef8876c75a8c80a5be7796ab1fde3a2a1  results/ft-seaweedfs-S2-20261013-113256.tar.gz
+45c9aedba90183142bae80115560287837321555156879dbfe13fb6c3edf2157  results/vm-archives-ceph0-SHA256SUMS.txt
+
+OUTPUT FILES
+ec684f6567149eb88a5531ed70733e50a136f95e3876bdb2afe239fd266605d8  analysis/out/repair/repair_files.csv
+cec995fde18a16fffbefd6e48f0f2ce5dc1746ca2df26070e93ecb845f6a957e  analysis/out/repair/repair_ceph.csv
+34b9e215eab8829f8e28cc83ca401a94405edaae427f45866f765286557a5013  analysis/out/repair/repair_files.tex
+164f08adcd41b88717c5c69e021eadd6b70d5d8287401a9d26c21d289bc95322  analysis/out/repair/repair_ceph.tex
+17d039930b751e8c24eb22cf7b88d917c09b7282837145524c5bdc68de023669  analysis/out/repair/repair_files.pdf
+3cf05fca4a28ad9915ae55464b71cf038437206b01f9f1608c32e92169547f25  analysis/out/repair/repair_files.png
+a7b573d7f0a0ab43151c7cd7fb20937ebbe0b75a0c40135c14496d37e525db8c  analysis/out/repair/repair_ceph.pdf
+900e09880f68b35f085d697571a7c16c4b7efd25a613c25cb47ec40eea59caf7  analysis/out/repair/repair_ceph.png

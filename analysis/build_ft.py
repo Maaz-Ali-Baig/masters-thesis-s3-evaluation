@@ -57,6 +57,7 @@ RUN_NOTES = {
 }
 
 MEMBERS = ["ledger.tsv", "probe.tsv", "console.txt", "summary.txt", "verify.tsv", "verify-during-outage.tsv"]
+OPTIONAL = ["repairwatch.tsv"]  # not in every run
 
 
 # ------------------------------------------------------------------ reading
@@ -65,7 +66,7 @@ def read_archive(path):
     with tarfile.open(path, "r:gz") as tf:
         for m in tf.getmembers():
             base = m.name.split("/", 1)[-1]
-            if m.isfile() and base in MEMBERS:
+            if m.isfile() and (base in MEMBERS or base in OPTIONAL):
                 out[base] = tf.extractfile(m).read().decode("utf-8", errors="replace")
     missing = [m for m in MEMBERS if m not in out]
     if missing:
