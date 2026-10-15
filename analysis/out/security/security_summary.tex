@@ -1,0 +1,19 @@
+\begin{tabular}{@{}llllll@{}}
+\toprule
+Check & What & Ceph & SeaweedFS & RustFS & Garage \\
+\midrule
+SEC1 & S3 port refuses anonymous requests (no signature) & PASS & PASS & PASS & PASS \\
+SEC3 & wrong secret and unknown access key refused & PASS & PASS & PASS & PASS \\
+SEC3 & presigned PUT with a header outside the signature & PASS & PASS & PASS & PASS \\
+SEC1 & answers without credentials on non S3 ports & info & info & info & info \\
+SEC2 & anonymous write through a non S3 port & PASS & PASS & n.t. & n.t. \\
+SEC2 & anonymous read of object data through a non S3 port & info & FAIL & info & info \\
+SEC4 & key limited to read on one bucket & PASS & n.t. & n.t. & PASS \\
+SEC5 & object content on the wire (plain http) & FAIL & FAIL & FAIL & FAIL \\
+SEC6 & object stored without SSE on the data drives & FAIL & FAIL & FAIL & FAIL \\
+SEC6 & SSE-S3 request (header AES256) & refused & refused & not in clear & FAIL \\
+SEC6 & SSE-C request (customer key) & refused & not in clear & not in clear & not in clear \\
+SEC8 & failed attempt visible in the container log (default level) & FAIL & PASS & FAIL & PASS \\
+SEC7 & admin interface & info & info & info & info \\
+\bottomrule
+\end{tabular}

@@ -40,6 +40,7 @@ For a clean manifest: commit the scripts first, run them, then commit `analysis/
 | `build_perf.py` | `out/perf/` | performance comparison of the four systems on the VMs |
 | `build_ft.py` | `out/ft/` | fault tolerance runs S1 and S2 of the four systems, read from `results/ft-*.tar.gz` |
 | `build_repair.py` | `out/repair/` | what the repair watch recorded after the stopped node(s) came back: file count lag (Garage, RustFS, SeaweedFS) and Ceph health |
+| `build_security.py` | `out/security/` | security comparison table (13 rows by 4 systems, tables only), cells in `analysis/cells/security_cells.py` checked against the raw archives |
 
 Outputs of `build_perf.py`:
 
@@ -81,3 +82,11 @@ Input: `repairwatch.tsv` in the 13 run archives (11 have one; the two RustFS run
 3. A closed lag is not a proof of repair or of integrity, and a lag that stays is not a proof of data loss: the objects of all runs were readable on all endpoints (`ft_runs.csv`).
 4. The repair watch of Garage run 1 and Garage S2 ends before the node answered again; they are not used. The last sample of every watch is written twice with the same time stamp (handled).
 5. **Ceph**: the status is not readable without monitor quorum, so no OSD count exists for S2 (n/a). The status rows before the first row with quorum are stale values of the monitors, not a measured state. HEALTH_OK can come later than all PGs clean (S1 run B: a cephadm host check warning, see the record).
+
+## Security table (`build_security.py`): how the cells are made and checked
+
+Tables only, no figures. The 52 cells (13 rows by 4 systems) are written by hand in `analysis/cells/security_cells.py` from the four security records (`results/<system>-vm-security-*.txt`). Each cell carries its outcome word, a short text, the record and point it comes from (for example `SW-P4`), and the regular expressions that must be found in the raw output of the run archives (`results/sec-*.tar.gz`, `results/presign-*.tar.gz`). `build_security.py` stops if one pattern is not found. This protects the table against typing errors: it already stopped once, because the Garage archive cuts a line before the SSE-C field that the record had quoted.
+
+Outcome words: PASS and FAIL follow the pass conditions of `security_method.md` (a FAIL is a finding about the default deployment, not a judgement of the product); `refused` = the server refused the request that was meant to enable the feature; `not in clear` = SSE accepted and the marker was not found on the drives (the strength of the encryption is not shown); `info` = a fact without a pass condition; `n.t.` = not tested (the check was not run, or the script found nothing to test).
+
+Limits to state with the table: default deployments, plain http, no TLS (transport was tested at level 1 only); one run per check; the paths and ports tested are fixed lists; SEC4 was run for Ceph and Garage only; SEC7 (admin interfaces) is limited to the anonymous answers of SEC1; whether a marker that is not found means encryption is not shown. The presigned PUT test of Ceph is the run of 5 October on the same VMs (plain file in `results/`).

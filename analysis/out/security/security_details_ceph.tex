@@ -1,0 +1,19 @@
+\begin{tabular}{@{}p{3.6cm}lp{7.4cm}p{3.6cm}@{}}
+\toprule
+Ceph: what & Outcome & Evidence & Record \\
+\midrule
+SEC1 S3 port refuses anonymous requests (no signature) & PASS & 403 for GET bucket, GET object, PUT and DELETE (three nodes) & ceph-vm-security-2026-10-15 SEC2, P-SEC-1 \\
+SEC3 wrong secret and unknown access key refused & PASS & 403 SignatureDoesNotMatch and 403 InvalidAccessKeyId (raw replies; the AWS CLI crashed on them) & ceph-vm-security-2026-10-15 SEC3 \\
+SEC3 presigned PUT with a header outside the signature & PASS & p2 to p8 refused with 403; unsigned Content-Type also refused (p1 403); signed controls 200. Earlier run on the same VMs, 5 October & security-presign-unsigned-header-ceph-2026-10-05 \\
+SEC1 answers without credentials on non S3 ports & info & metrics text on 9093, 9095, 9100, 9283 and 9926 (service names not identified in this run); no status page of Ceph itself & ceph-vm-security-2026-10-15 SEC2, P-SEC-5 \\
+SEC2 anonymous write through a non S3 port & PASS & no 2xx: PUT answered 404, 405 or 301 by every non S3 port that answered & ceph-vm-security-2026-10-15 SEC2 \\
+SEC2 anonymous read of object data through a non S3 port & info & no non S3 data port in the SEC1 list & ceph-vm-security-2026-10-15 SEC1 (list of ports and 15 paths only) \\
+SEC4 key limited to read on one bucket & PASS & list and read 200; put, delete and create bucket 403 AccessDenied; object still there (read only bucket policy, max\_buckets -1) & ceph-vm-security-2026-10-15 SEC4, setup error kept \\
+SEC5 object content on the wire (plain http) & FAIL & plain http, no TLS configured; 199 of 200 marker lines in the capture & ceph-vm-security-2026-10-15 SEC5, P-SEC-4 \\
+SEC6 object stored without SSE on the data drives & FAIL & marker found on one raw OSD device (/dev/dm-0) of each of the three nodes (8 hits each) & ceph-vm-security-2026-10-15 SEC6, P-SEC-3 \\
+SEC6 SSE-S3 request (header AES256) & refused & 400 InvalidArgument (no key service for SSE-S3 configured) & ceph-vm-security-2026-10-15 SEC6b; ceph-sse-s3-vault-check-2026-10-02 \\
+SEC6 SSE-C request (customer key) & refused & 400 InvalidRequest over plain http (reason: HYPOTHESIS, not read) & ceph-vm-security-2026-10-15 SEC6b \\
+SEC8 failed attempt visible in the container log (default level) & FAIL & not visible: 0 lines with the fake key; the RGW container log holds 0 to 1 lines in total, also for successful requests (control) & ceph-vm-security-2026-10-15 SEC8 \\
+SEC7 admin interface & info & port 8443 (dashboard) listens on ceph0 and ceph1; its answer without credentials was not read & ceph-vm-security-2026-10-15 O4 \\
+\bottomrule
+\end{tabular}

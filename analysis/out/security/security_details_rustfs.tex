@@ -1,0 +1,19 @@
+\begin{tabular}{@{}p{3.6cm}lp{7.4cm}p{3.6cm}@{}}
+\toprule
+RustFS: what & Outcome & Evidence & Record \\
+\midrule
+SEC1 S3 port refuses anonymous requests (no signature) & PASS & 403 for GET bucket, GET object, PUT; PUT and DELETE 403 on all three nodes & rustfs-vm-security-2026-10-11 SE-P1 \\
+SEC3 wrong secret and unknown access key refused & PASS & SignatureDoesNotMatch and InvalidAccessKeyId & rustfs-vm-security-2026-10-11 SE-P1 \\
+SEC3 presigned PUT with a header outside the signature & PASS & p2 to p8 refused with 403; unsigned Content-Type accepted (p1 200); signed controls 200 & rustfs-vm-compat-and-presign-2026-10-09 \\
+SEC1 answers without credentials on non S3 ports & info & /health and /minio/health/cluster (readiness of storage, IAM and lock) on 9000 and 9001; the console page on 9001 & rustfs-vm-security-2026-10-11 SE-P2 \\
+SEC2 anonymous write through a non S3 port & n.t. & the script found no non S3 port that answered 200 or 3xx on /, so it made no write & rustfs-vm-security-2026-10-11 SEC2 \\
+SEC2 anonymous read of object data through a non S3 port & info & no non S3 data port in the SEC1 list (S3 on 9000, console on 9001) & rustfs-vm-security-2026-10-11 SEC1 \\
+SEC4 key limited to read on one bucket & n.t. & not run (needs a key made with the admin tool) & rustfs-vm-security-2026-10-11 SE-O6 \\
+SEC5 object content on the wire (plain http) & FAIL & plain http, no TLS configured; 264 marker lines for 200 uploaded (count above 200 not explained, OPEN) & rustfs-vm-security-2026-10-11 ADDENDUM SE-P7, SE-O8 \\
+SEC6 object stored without SSE on the data drives & FAIL & marker found in xl.meta of the plain object on one drive of each node (3 of 6 drives) & rustfs-vm-security-2026-10-11 SE-P3, SE-O1 \\
+SEC6 SSE-S3 request (header AES256) & not in clear & accepted; marker of the SSE object not found on the drives (strength of the encryption not shown) & rustfs-vm-security-2026-10-11 SE-P4, SE-O2 \\
+SEC6 SSE-C request (customer key) & not in clear & accepted; marker of the SSE-C object not found on the drives (not read back, encryption not proven) & rustfs-vm-security-2026-10-11 SE-P4, SE-O2 \\
+SEC8 failed attempt visible in the container log (default level) & FAIL & not visible: 0 log lines with the fake key on any node & rustfs-vm-security-2026-10-11 SE-P5 \\
+SEC7 admin interface & info & console page on 9001 is served without a login; the login itself was not tested & rustfs-vm-security-2026-10-11 SE-O3 \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,19 @@
+\begin{tabular}{@{}p{3.6cm}lp{7.4cm}p{3.6cm}@{}}
+\toprule
+Garage: what & Outcome & Evidence & Record \\
+\midrule
+SEC1 S3 port refuses anonymous requests (no signature) & PASS & 403 for GET bucket, GET object, PUT; PUT and DELETE 403 on all three nodes & garage-vm-security-2026-10-14 G-P1 \\
+SEC3 wrong secret and unknown access key refused & PASS & AccessDenied with the texts Invalid signature and No such key & garage-vm-security-2026-10-14 G-P1 \\
+SEC3 presigned PUT with a header outside the signature & PASS & p2 to p8 refused with 400 InvalidRequest (header should be signed); unsigned Content-Type accepted (p1 200); signed controls 200 & garage-vm-compat-and-presign-2026-10-08 \\
+SEC1 answers without credentials on non S3 ports & info & admin port 3902: /health and /metrics (194 to 359 KB) on every node & garage-vm-security-2026-10-14 G-P2 \\
+SEC2 anonymous write through a non S3 port & n.t. & the script found no non S3 port that answered 200 or 3xx on /; by hand: POST /v1/key on 3902 gave 403 and created no key (record only) & garage-vm-security-2026-10-14 SEC2 extension, G-P2 \\
+SEC2 anonymous read of object data through a non S3 port & info & no non S3 data port in the SEC1 list (S3 3900, RPC 3901, admin 3902) & garage-vm-security-2026-10-14 SEC1 \\
+SEC4 key limited to read on one bucket & PASS & list and read ok; write, delete, read of another bucket and create bucket refused (403 or AccessDenied); bucket list shows only its own bucket & garage-vm-security-2026-10-14 SEC4 run 2, G-P3 \\
+SEC5 object content on the wire (plain http) & FAIL & plain http, no TLS configured; 199 of 200 marker lines in the capture & garage-vm-security-2026-10-14 G-P4 \\
+SEC6 object stored without SSE on the data drives & FAIL & marker found in one zstd block file on each of the three nodes (three copies) & garage-vm-security-2026-10-14 G-P6 \\
+SEC6 SSE-S3 request (header AES256) & FAIL & accepted without an error, but the marker of the SSE-S3 object is stored in clear in a block file on every node (as the plain control) & garage-vm-security-2026-10-14 G-P5, run 3 \\
+SEC6 SSE-C request (customer key) & not in clear & accepted (ETag and VersionId returned; the archive line is cut before the SSE-C fields); marker of the SSE-C object found on no node (not read back, encryption not proven) & garage-vm-security-2026-10-14 Q1 \\
+SEC8 failed attempt visible in the container log (default level) & PASS & visible: 2 log lines on the node that served the request (content not read) & garage-vm-security-2026-10-14 G-P7, Q2 \\
+SEC7 admin interface & info & admin API on 3902 refuses calls without its token (403, by hand, record only); /health and /metrics are open & garage-vm-security-2026-10-14 G-P2 \\
+\bottomrule
+\end{tabular}

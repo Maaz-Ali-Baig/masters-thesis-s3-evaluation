@@ -62,3 +62,9 @@ OPEN
 ----
 Q1 Why the OSD count went down again at 16:05:02. Q2 Why the endpoint of ceph0 went silent at 16:00:00. Q3 The duration of the failed attempts during the outage (ledger.tsv and probe.tsv in the archive, not read).
 Limits: one run; the outage was longer than planned (D2); the read-back during the outage is not usable (D3); the click times of the user were not recorded.
+
+ADDENDUM (15 October 2026, later; found when the probe files of all runs were analysed by analysis/build_ft.py, see results/fault-tolerance-cross-system-2026-10-15.txt)
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+A1. D2 gives the outage as "about 9 to 10 minutes". That was an estimate of the time the VMs were down (the exact click times were not read). The probe measured how long the stopped endpoints were silent:
+    657.6 s (about 11 minutes), from the last successful read at 15:53:58 to the first successful read at 16:04:55 to 16:04:58. This includes the boot and the start of the cephadm services after the power on.
+A2. The longest interval without a confirmed write is 657.7 s (equal to A1 within 0.1 s); all 324 acknowledged writes and the 45 seed objects were readable on all three endpoints afterwards.

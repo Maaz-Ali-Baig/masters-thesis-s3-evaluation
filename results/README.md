@@ -67,6 +67,10 @@ No VM run of the 22 test probe on Ceph is in this folder; the Ceph compatibility
 4. `warp-raw/`: raw Warp output files (`.json.zst`) of the validation and September runs.
 5. SeaweedFS investigation files from 30 September and 1 October: `seaweedfs-serverlog-c18-c19-window-20260930.txt`, `seaweedfs-scratch-verbose-sse-acl-serverlog-20260930.txt`, `seaweedfs-sse-at-rest-check-scratch-20261001-002744.txt`.
 
+## Cross system fault tolerance record
+
+`fault-tolerance-cross-system-2026-10-15.txt`: analysis of the 13 run archives of the four systems (S1 and S2) with definitions, results, what may and may not be written across systems, open points and corrections. It is made by `analysis/build_ft.py` and `analysis/build_repair.py`; the tables and figures are in `analysis/out/ft/` and `analysis/out/repair/`.
+
 ## Raw run archives of the VM series (in this folder)
 
 The archives made by the scripts on the VMs (`ft.sh`, `sec.sh`, `security-presign-unsigned-header.sh`) are kept here as `.tar.gz`, 26 files, 3.5 MB in all, unchanged. They were copied from ceph0 on 15 October 2026. Their sha256 is in `vm-archives-ceph0-SHA256SUMS.txt` and in the records. `analysis/` reads them directly.

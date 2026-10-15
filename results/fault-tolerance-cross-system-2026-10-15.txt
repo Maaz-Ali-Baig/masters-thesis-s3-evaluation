@@ -1,0 +1,93 @@
+Fault tolerance S1 and S2, Ceph, SeaweedFS, RustFS and Garage on the same three VMs: analysis of the 13 run archives (15 October 2026)
+===============================================================================================================================
+
+Source:    the run archives results/ft-*.tar.gz (13 runs, made by scripts/ft.sh on ceph0; sha256 in results/vm-archives-ceph0-SHA256SUMS.txt, equal to the VM list) and the
+           records of the single runs (results/<system>-vm-fault-tolerance-*.txt). Nothing below is typed from those records except the run notes of section RUNS (marked with their source).
+Method:    analysis/build_ft.py and analysis/build_repair.py at commit 6380721 (definitions in analysis/README.md); outputs in analysis/out/ft/ and analysis/out/repair/ (tables as csv and tex, figures as pdf and png,
+           MANIFEST.txt with the sha256 of every input and output). The script stops if its recomputed numbers (acknowledged writes, failed attempts, longest gap) differ from the summary.txt of a run: all 13 are equal.
+Scope:     S1 = one node (ceph1) hard stopped, S2 = two nodes (ceph1 and ceph2) hard stopped, ceph0 stays up and runs the probe. One cluster, 2 to 4 runs per system and scenario, no statistics.
+
+DEFINITIONS (short; the full text is in analysis/README.md)
+-----------
+D1. Time zero = the moment ft.sh saw every stopped node silent. In S2 the first node can be down up to about 15 s earlier.
+D2. Acknowledgement type: Ceph runs use "aws s3api put-object" and count a write only with an ETag; the runs of Garage, RustFS and SeaweedFS use the exit code 0 of "aws s3 cp". After a stall of about 25 s the latter can report
+    success for an object that was never stored (results/garage-vm-fault-tolerance-S1-2026-10-14.txt, third run). So the COUNTS of acknowledged writes and of acknowledged but missing writes are NOT comparable between the two groups.
+D3. Confirmed write = an acknowledged write whose object is readable on all three endpoints after the recovery. The WRITE GAP = the longest interval between two confirmed writes. It does not depend on D2 (a false acknowledgement is
+    not readable afterwards) and is the write measure used below. A value marked ">=" is censored: no later confirmed write until the end of the run.
+D4. READ GAP = the longest time between two successful reads of the fixed object (head-object) at one surviving endpoint. OUTAGE = the same at the stopped endpoint (VM down, boot and start of the service). The client read time out is 25 s,
+    so a hanging request is seen as failed after 25 s: values of 25 to 32 s cannot be resolved further.
+D5. The ledger time is the end of an attempt; the probe round first waits for three head-object reads and then writes. This is the same loop for all systems.
+
+RUNS (computed from the archives; seconds; ack = acknowledgement type)
+----
+Run                          ack   planned  outage   read gap  write gap  hard failed  acked, not   outage reads   note (source)
+                                     outage   observed (survivor) (confirmed) rounds      readable     not ok/all
+ceph S1 20261015-141623      ETag  720      774      30        28         0            0            0/217          run A (Ceph S1 record)
+ceph S1 20261015-144339      ETag  720      784      31        32         0            0            0/208          run B; ft-ackcheck.sh in parallel (Ceph S1 record)
+ceph S2 20261015-154345      ETag  360      658      655       658        11           0            132/350        stop 5 min after the signal, power on by hand (Ceph S2 record, D1 to D3)
+seaweedfs S1 20261013-093344 cp    720      855      54        800        0            24           1/746          user stopped the VM 1107 s after the signal (SeaweedFS S1 record)
+seaweedfs S1 20261013-133927 cp    720      843      36        815        1            23           1/227          ft-diag.sh (curl writes) in parallel (SeaweedFS S1 repeat record)
+seaweedfs S2 20261013-113256 cp    360      829      39        810        11           16           430/475        outage about 13 min instead of 6 (SeaweedFS S2 record)
+rustfs S1 20261011-145627    cp    720      784      26        27         0            0            0/217          probe keys restart at 1 in every run (RustFS S1 record)
+rustfs S1 20261012-204542    cp    720      783      25        25         0            0            0/233          repeat with key prefix and repair watch (RustFS S1 repeat record)
+rustfs S2 20261011-161345    cp    360      536      546       534        32           0            207/207        probe keys restart at 1 (RustFS S2 record)
+garage S1 20261014-083928    cp    720      >=1626   83        108        0            2            7/259          run 1; long outage, the node did not answer again inside the probe (Garage S1 record)
+garage S1 20261014-104306    cp    720      740      62        62         0            1            7/214          run 2; ft-diag.sh in parallel (Garage S1 record)
+garage S1 20261014-184630    cp    720      767      85        31         0            0            6/234          run 3; ft-ackcheck.sh in parallel (Garage S1 record)
+garage S2 20261014-121535    cp    360      >=1276   >=1270    >=1282     90           2            571/571        outage about 29 min instead of 6, recovery by hand (Garage S2 record)
+The "outage reads" are the read back of the seed set and of the objects acknowledged so far through ceph0 during the outage (verify-during-outage.tsv). All values are also in analysis/out/ft/ft_runs.csv, the tables in
+analysis/out/ft/ft_s1.tex and ft_s2.tex, the time lines in ft_timeline_<system>.pdf and ft_gaps.pdf.
+
+PROVEN (from the archives; each point names the runs)
+------
+P1. S1, write gap (confirmed writes): Ceph 28 and 32 s, RustFS 27 and 25 s, Garage 108, 62 and 31 s, SeaweedFS 800 and 815 s. For Ceph and RustFS the values equal one client read time out (D4): writes resumed within about 25 to 32 s.
+P2. SeaweedFS S1: no confirmed write for 800 s (run 1) and 815 s (run 2), while the stopped endpoint was silent for 855 and 843 s. During this time every round was acknowledged by "aws s3 cp" after its time out, and 24 and 23 of these
+    acknowledged objects are not readable on any endpoint after the recovery (30 minute watch, full read back). SeaweedFS S2: write gap 810 s, 16 acknowledged objects not readable. So with replication 002 and one node down SeaweedFS
+    persisted no write in these runs. This agrees with the SeaweedFS record (master /dir/status listed two data nodes and no writable volume, results/seaweedfs-vm-fault-tolerance-S1-repeat-2026-10-13.txt, P3). Reads of the 45 seed objects
+    through ceph0 during the S1 outage were all OK.
+P3. S1, read gap of the fixed object at a surviving endpoint: Ceph 30 and 31 s, RustFS 26 and 25 s, SeaweedFS 54 and 36 s (starting 62 and 46 s after zero), Garage 83, 62 and 85 s. Garage reads at one surviving endpoint were unavailable
+    longer than its writes (write gap 31 to 108 s), because the write of a round moves on to the next endpoint.
+P4. S2, no system confirmed a write while two nodes were down: write gap Ceph 658 s, RustFS 534 s, SeaweedFS 810 s, Garage >= 1282 s (censored), each equal to the observed outage of the stopped endpoint within 20 s
+    (658, 536, 829, >= 1276 s). The outage was NOT the planned 360 s in any run (user reaction, deviations in the single records), so S2 durations are not comparable between systems.
+P5. A failed attempt is a certain failure; a failed attempt whose round was rescued by the next endpoint is a masked failure. Hard failed rounds (no acknowledged attempt in the round): S2 Ceph 11,
+    RustFS 32, SeaweedFS 11, Garage 90; S1 none except 1 round in SeaweedFS run 2. For the cp runs a round without a hard failure can still hold a false acknowledgement (P2), so use P1 and P4 for write availability.
+P6. Reads during the S2 outage through ceph0: RustFS 207 of 207 not readable (45 seed and 162 objects of the run), Garage 571 of 571, SeaweedFS 430 of 475 (the 45 seed objects were readable, the 430 objects written earlier in the same run were not),
+    Ceph 132 of 350 (a timing artefact: the read back ran partly after the power on, Ceph S2 record D3, not used).
+P7. Read back after the recovery through all three endpoints: every acknowledged object of the Ceph runs (366, 448 and 369 objects including the 45 seed objects) and of the RustFS runs (1224, 1232, 1110) was readable on every endpoint. Garage:
+    all objects of run 3 (1237); 2, 1 and 2 acknowledged objects not readable in run 1, run 2 and S2. SeaweedFS: 24, 23 and 16 (P2). The unreadable objects of the cp runs are acknowledgements by "aws s3 cp" and are NOT evidence of a lost write (D2);
+    they are an upper bound.
+P8. Recovery (analysis/out/repair/): Ceph, PGs active+clean 50, 43 and 50 s after the stopped endpoint answered again, HEALTH_OK after 93, 282 and 50 s (282 s in run B because of a cephadm host check warning, Ceph S1 record). File count lag of
+    the returned node against the nodes that stayed up, relative to the baseline before the stop: Garage run 2 and 3 lowest -192 and -397 files, back within 3 files after 659 and 1444 s and at 0 at the end of the 30 minute watch; RustFS
+    lowest -88 files, within 3 files after 26 s; SeaweedFS S1 -19 and -14 files and S2 -9 (ceph1) and -5 (ceph2) files, unchanged until the end of the watch (about 1820 s after the return), "not closed".
+P9. Ceph started by itself after the power on (cephadm target enabled, console.txt: "ceph starts by itself, nothing to run"). For the other three systems the script ran the node start script after ssh answered (that is part of the protocol);
+    whether they would have started by themselves was tested for RustFS only (it did not, RustFS S1 record F-S1-1).
+
+WHAT MAY BE WRITTEN ACROSS SYSTEMS, AND WHAT MAY NOT
+----------------------------------------------------
+Allowed: P1, P3, P4 (with the note on the outage lengths), P5 for the failed attempts, P6, P8 (each with its definition), P2 as a result about confirmed writes.
+Not allowed: any statement that a system "lost acknowledged writes" or "lost no acknowledged writes" in comparison with another (D2, P7). Not allowed: a write gap computed from "aws s3 cp" acknowledgements (it was 54 s instead of 800 s for SeaweedFS S1).
+Not allowed: S2 durations as a ranking (P4), "repair proven" or "data lost" from file counts (P8; the units differ per system: Garage all data files, RustFS the files of the run's key prefix, SeaweedFS the files of the bucket volumes).
+
+OPEN
+----
+Q1. Why Garage S1 reads at a surviving endpoint stay unavailable for 62 to 85 s (P3) and why 6 of the 45 seed objects were not readable through ceph0 during the outage in all three Garage S1 runs (analysis/out/ft/ft_runs.csv, columns outage_read_*); the reason
+    is not examined (Garage failure detection of 15 s pings is a candidate in the Garage record, not tested here).
+Q2. Why SeaweedFS S2 could read the 45 seed objects but not the 430 objects of the run during the outage (P6). Not examined.
+Q3. Why the file count lag of Garage closes in one step about 10 minutes after the return (run 3 is within 3 files only from 1444 s because of a later spike) (analysis/out/repair/repair_files.pdf). Not examined.
+Q4. Why the file count lag of SeaweedFS stays (P8): the SeaweedFS record names candidates (replication repair command not run); not tested.
+Q5. Whether Garage, RustFS and SeaweedFS acknowledge a write that they do not store, with a client that does not have the artefact of "aws s3 cp". Only a re-run of S1 with the ETag probe (the default of scripts/ft.sh since 14 October) answers it; not done. It does not change P1, P2 and P4.
+Q6. Whether the 25 s limit of P1 is a property of the systems or of the client time out. The runs with a longer time out were not made.
+
+LIMITS
+------
+L1. Acknowledgement types differ (D2). L2. Five of the 13 runs had an extra writer in parallel (Ceph run B, Garage run 2 and 3, Garage S2, SeaweedFS run 2); the effect on the numbers was not measured.
+L3. The outage of S2 was 9 to 29 minutes instead of 6 (P4); the S1 outage was 12 minutes plus boot in all runs. L4. One cluster, no clean up between the runs of a day (the records name the starting lag of ceph1 in SeaweedFS and Garage).
+L5. The RustFS runs of 11 October used an older ft.sh (keys restart at 1 in every run, no repair watch): the read back is valid, the repair evidence does not exist for them.
+L6. The probe reads and writes 1 MiB objects every 2 s through one client (AWS CLI 2.36.8); other object sizes and clients were not tested. L7. The stop is a hard stop in Proxmox, no network partition and no disk failure.
+L8. Garage run 1 and Garage S2 end before the stopped node answered again inside the probe, so their outage and write gap are lower bounds and their repair watch is not used.
+
+CORRECTIONS OF EARLIER STATEMENTS (made when this analysis was written)
+------------------------------------------------------------------------
+C1. results/ceph-vm-fault-tolerance-S2-2026-10-15.txt D2 gives the outage as "about 9 to 10 minutes" (an estimate of the VM down time). The probe measured 657.6 s of silence at the stopped endpoints (until 16:04:55 to 16:04:58), which includes boot and start.
+C2. The working notebook sentence "Unlike Garage and SeaweedFS, no acknowledged write was lost" compared two definitions (D2) and was removed on 15 October 2026.
+C3. The "longest gap between acknowledged writes" of summary.txt is a lower bound for the cp runs; P1 and P4 use confirmed writes instead.

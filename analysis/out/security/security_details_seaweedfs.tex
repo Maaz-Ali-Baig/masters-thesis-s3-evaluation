@@ -1,0 +1,19 @@
+\begin{tabular}{@{}p{3.6cm}lp{7.4cm}p{3.6cm}@{}}
+\toprule
+SeaweedFS: what & Outcome & Evidence & Record \\
+\midrule
+SEC1 S3 port refuses anonymous requests (no signature) & PASS & 403 for GET bucket, GET object, PUT; PUT and DELETE 403 on all three nodes & seaweedfs-vm-security-2026-10-13 SW-P1 \\
+SEC3 wrong secret and unknown access key refused & PASS & SignatureDoesNotMatch and InvalidAccessKeyId & seaweedfs-vm-security-2026-10-13 SW-P1 \\
+SEC3 presigned PUT with a header outside the signature & PASS & p2 to p8 refused with 403; unsigned Content-Type accepted (p1 200); signed controls 200 & seaweedfs-vm-compat-and-presign-2026-10-08 \\
+SEC1 answers without credentials on non S3 ports & info & master (cluster status, topology), volume server status and filer root page answer on every node & seaweedfs-vm-security-2026-10-13 SW-P2 \\
+SEC2 anonymous write through a non S3 port & PASS & filer PUT 401, master PUT 404, volume server upload with an assigned file id 401 & seaweedfs-vm-security-2026-10-13 SW-P3 \\
+SEC2 anonymous read of object data through a non S3 port & FAIL & the filer port 8888 returns object content without credentials (1 KiB object 200 on three nodes; 1 MiB object read with equal sha256, by hand) & seaweedfs-vm-security-2026-10-13 SW-P4, SW-O2 \\
+SEC4 key limited to read on one bucket & n.t. & not run (needs an identity made with the admin tool) & seaweedfs-vm-security-2026-10-13 SW-O6 \\
+SEC5 object content on the wire (plain http) & FAIL & plain http, no TLS configured; 199 of 200 marker lines in the capture & seaweedfs-vm-security-2026-10-13 SW-P5 \\
+SEC6 object stored without SSE on the data drives & FAIL & marker found in the volume file ftbucket\_69.dat on all three nodes (random padded object; repetitive text objects were not found: possible compression, OPEN) & seaweedfs-vm-security-2026-10-13 SW-P6, SW-O1 \\
+SEC6 SSE-S3 request (header AES256) & refused & InternalError in all three runs (cause not examined) & seaweedfs-vm-security-2026-10-13 SW-P7, SW-O3 \\
+SEC6 SSE-C request (customer key) & not in clear & accepted; no extra marker copy found in the volume file (4 occurrences = the plain object); not read back, encryption not proven & seaweedfs-vm-security-2026-10-13 SW-P7 \\
+SEC8 failed attempt visible in the container log (default level) & PASS & visible: 2 log lines on the node that served the request (InvalidAccessKeyId, no source address as read) & seaweedfs-vm-security-2026-10-13 SW-P8 \\
+SEC7 admin interface & info & master, volume server and filer pages open without a login (see row 4); no login tested & seaweedfs-vm-security-2026-10-13 SW-O6 \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,53 @@
+row,check,what,system,outcome,text,record,evidence_found
+r1,SEC1,S3 port refuses anonymous requests (no signature),ceph,PASS,"403 for GET bucket, GET object, PUT and DELETE (three nodes)","ceph-vm-security-2026-10-15 SEC2, P-SEC-1",1x 1x
+r1,SEC1,S3 port refuses anonymous requests (no signature),seaweedfs,PASS,"403 for GET bucket, GET object, PUT; PUT and DELETE 403 on all three nodes",seaweedfs-vm-security-2026-10-13 SW-P1,1x 1x
+r1,SEC1,S3 port refuses anonymous requests (no signature),rustfs,PASS,"403 for GET bucket, GET object, PUT; PUT and DELETE 403 on all three nodes",rustfs-vm-security-2026-10-11 SE-P1,1x 1x
+r1,SEC1,S3 port refuses anonymous requests (no signature),garage,PASS,"403 for GET bucket, GET object, PUT; PUT and DELETE 403 on all three nodes",garage-vm-security-2026-10-14 G-P1,1x 1x
+r2,SEC3,wrong secret and unknown access key refused,ceph,PASS,403 SignatureDoesNotMatch and 403 InvalidAccessKeyId (raw replies; the AWS CLI crashed on them),ceph-vm-security-2026-10-15 SEC3,1x 1x
+r2,SEC3,wrong secret and unknown access key refused,seaweedfs,PASS,SignatureDoesNotMatch and InvalidAccessKeyId,seaweedfs-vm-security-2026-10-13 SW-P1,1x 1x
+r2,SEC3,wrong secret and unknown access key refused,rustfs,PASS,SignatureDoesNotMatch and InvalidAccessKeyId,rustfs-vm-security-2026-10-11 SE-P1,1x 1x
+r2,SEC3,wrong secret and unknown access key refused,garage,PASS,AccessDenied with the texts Invalid signature and No such key,garage-vm-security-2026-10-14 G-P1,1x 1x
+r3,SEC3,presigned PUT with a header outside the signature,ceph,PASS,"p2 to p8 refused with 403; unsigned Content-Type also refused (p1 403); signed controls 200. Earlier run on the same VMs, 5 October",security-presign-unsigned-header-ceph-2026-10-05,1x 1x 1x
+r3,SEC3,presigned PUT with a header outside the signature,seaweedfs,PASS,p2 to p8 refused with 403; unsigned Content-Type accepted (p1 200); signed controls 200,seaweedfs-vm-compat-and-presign-2026-10-08,1x 1x 1x
+r3,SEC3,presigned PUT with a header outside the signature,rustfs,PASS,p2 to p8 refused with 403; unsigned Content-Type accepted (p1 200); signed controls 200,rustfs-vm-compat-and-presign-2026-10-09,1x 1x 1x
+r3,SEC3,presigned PUT with a header outside the signature,garage,PASS,p2 to p8 refused with 400 InvalidRequest (header should be signed); unsigned Content-Type accepted (p1 200); signed controls 200,garage-vm-compat-and-presign-2026-10-08,1x 1x 1x
+r4,SEC1,answers without credentials on non S3 ports,ceph,INFO,"metrics text on 9093, 9095, 9100, 9283 and 9926 (service names not identified in this run); no status page of Ceph itself","ceph-vm-security-2026-10-15 SEC2, P-SEC-5",1x 1x 1x
+r4,SEC1,answers without credentials on non S3 ports,seaweedfs,INFO,"master (cluster status, topology), volume server status and filer root page answer on every node",seaweedfs-vm-security-2026-10-13 SW-P2,1x 1x 1x
+r4,SEC1,answers without credentials on non S3 ports,rustfs,INFO,"/health and /minio/health/cluster (readiness of storage, IAM and lock) on 9000 and 9001; the console page on 9001",rustfs-vm-security-2026-10-11 SE-P2,1x 1x
+r4,SEC1,answers without credentials on non S3 ports,garage,INFO,admin port 3902: /health and /metrics (194 to 359 KB) on every node,garage-vm-security-2026-10-14 G-P2,1x 1x
+r5,SEC2,anonymous write through a non S3 port,ceph,PASS,"no 2xx: PUT answered 404, 405 or 301 by every non S3 port that answered",ceph-vm-security-2026-10-15 SEC2,1x 1x 1x
+r5,SEC2,anonymous write through a non S3 port,seaweedfs,PASS,"filer PUT 401, master PUT 404, volume server upload with an assigned file id 401",seaweedfs-vm-security-2026-10-13 SW-P3,1x 1x 1x
+r5,SEC2,anonymous write through a non S3 port,rustfs,NOT TESTED,"the script found no non S3 port that answered 200 or 3xx on /, so it made no write",rustfs-vm-security-2026-10-11 SEC2,1x
+r5,SEC2,anonymous write through a non S3 port,garage,NOT TESTED,the script found no non S3 port that answered 200 or 3xx on /; by hand: POST /v1/key on 3902 gave 403 and created no key (record only),"garage-vm-security-2026-10-14 SEC2 extension, G-P2",1x
+r6,SEC2,anonymous read of object data through a non S3 port,ceph,INFO,no non S3 data port in the SEC1 list,ceph-vm-security-2026-10-15 SEC1 (list of ports and 15 paths only),1x
+r6,SEC2,anonymous read of object data through a non S3 port,seaweedfs,FAIL,"the filer port 8888 returns object content without credentials (1 KiB object 200 on three nodes; 1 MiB object read with equal sha256, by hand)","seaweedfs-vm-security-2026-10-13 SW-P4, SW-O2",1x 1x
+r6,SEC2,anonymous read of object data through a non S3 port,rustfs,INFO,"no non S3 data port in the SEC1 list (S3 on 9000, console on 9001)",rustfs-vm-security-2026-10-11 SEC1,1x
+r6,SEC2,anonymous read of object data through a non S3 port,garage,INFO,"no non S3 data port in the SEC1 list (S3 3900, RPC 3901, admin 3902)",garage-vm-security-2026-10-14 SEC1,1x
+r7,SEC4,key limited to read on one bucket,ceph,PASS,"list and read 200; put, delete and create bucket 403 AccessDenied; object still there (read only bucket policy, max_buckets -1)","ceph-vm-security-2026-10-15 SEC4, setup error kept",1x 1x 1x 1x
+r7,SEC4,key limited to read on one bucket,seaweedfs,NOT TESTED,not run (needs an identity made with the admin tool),seaweedfs-vm-security-2026-10-13 SW-O6,sec4.txt absent
+r7,SEC4,key limited to read on one bucket,rustfs,NOT TESTED,not run (needs a key made with the admin tool),rustfs-vm-security-2026-10-11 SE-O6,sec4.txt absent
+r7,SEC4,key limited to read on one bucket,garage,PASS,"list and read ok; write, delete, read of another bucket and create bucket refused (403 or AccessDenied); bucket list shows only its own bucket","garage-vm-security-2026-10-14 SEC4 run 2, G-P3",1x 1x 1x 1x
+r8,SEC5,object content on the wire (plain http),ceph,FAIL,"plain http, no TLS configured; 199 of 200 marker lines in the capture","ceph-vm-security-2026-10-15 SEC5, P-SEC-4",1x
+r8,SEC5,object content on the wire (plain http),seaweedfs,FAIL,"plain http, no TLS configured; 199 of 200 marker lines in the capture",seaweedfs-vm-security-2026-10-13 SW-P5,1x
+r8,SEC5,object content on the wire (plain http),rustfs,FAIL,"plain http, no TLS configured; 264 marker lines for 200 uploaded (count above 200 not explained, OPEN)","rustfs-vm-security-2026-10-11 ADDENDUM SE-P7, SE-O8",1x
+r8,SEC5,object content on the wire (plain http),garage,FAIL,"plain http, no TLS configured; 199 of 200 marker lines in the capture",garage-vm-security-2026-10-14 G-P4,1x
+r9,SEC6,object stored without SSE on the data drives,ceph,FAIL,marker found on one raw OSD device (/dev/dm-0) of each of the three nodes (8 hits each),"ceph-vm-security-2026-10-15 SEC6, P-SEC-3",3x
+r9,SEC6,object stored without SSE on the data drives,seaweedfs,FAIL,"marker found in the volume file ftbucket_69.dat on all three nodes (random padded object; repetitive text objects were not found: possible compression, OPEN)","seaweedfs-vm-security-2026-10-13 SW-P6, SW-O1",1x 1x
+r9,SEC6,object stored without SSE on the data drives,rustfs,FAIL,marker found in xl.meta of the plain object on one drive of each node (3 of 6 drives),"rustfs-vm-security-2026-10-11 SE-P3, SE-O1",3x
+r9,SEC6,object stored without SSE on the data drives,garage,FAIL,marker found in one zstd block file on each of the three nodes (three copies),garage-vm-security-2026-10-14 G-P6,1x 1x
+r10,SEC6,SSE-S3 request (header AES256),ceph,REFUSED,400 InvalidArgument (no key service for SSE-S3 configured),ceph-vm-security-2026-10-15 SEC6b; ceph-sse-s3-vault-check-2026-10-02,1x
+r10,SEC6,SSE-S3 request (header AES256),seaweedfs,REFUSED,InternalError in all three runs (cause not examined),"seaweedfs-vm-security-2026-10-13 SW-P7, SW-O3",1x 1x
+r10,SEC6,SSE-S3 request (header AES256),rustfs,NOT IN CLEAR,accepted; marker of the SSE object not found on the drives (strength of the encryption not shown),"rustfs-vm-security-2026-10-11 SE-P4, SE-O2",1x 1x
+r10,SEC6,SSE-S3 request (header AES256),garage,FAIL,"accepted without an error, but the marker of the SSE-S3 object is stored in clear in a block file on every node (as the plain control)","garage-vm-security-2026-10-14 G-P5, run 3",1x 1x 1x
+r11,SEC6,SSE-C request (customer key),ceph,REFUSED,"400 InvalidRequest over plain http (reason: HYPOTHESIS, not read)",ceph-vm-security-2026-10-15 SEC6b,1x
+r11,SEC6,SSE-C request (customer key),seaweedfs,NOT IN CLEAR,"accepted; no extra marker copy found in the volume file (4 occurrences = the plain object); not read back, encryption not proven",seaweedfs-vm-security-2026-10-13 SW-P7,1x
+r11,SEC6,SSE-C request (customer key),rustfs,NOT IN CLEAR,"accepted; marker of the SSE-C object not found on the drives (not read back, encryption not proven)","rustfs-vm-security-2026-10-11 SE-P4, SE-O2",1x
+r11,SEC6,SSE-C request (customer key),garage,NOT IN CLEAR,"accepted (ETag and VersionId returned; the archive line is cut before the SSE-C fields); marker of the SSE-C object found on no node (not read back, encryption not proven)",garage-vm-security-2026-10-14 Q1,1x 1x
+r12,SEC8,failed attempt visible in the container log (default level),ceph,FAIL,"not visible: 0 lines with the fake key; the RGW container log holds 0 to 1 lines in total, also for successful requests (control)",ceph-vm-security-2026-10-15 SEC8,1x 1x
+r12,SEC8,failed attempt visible in the container log (default level),seaweedfs,PASS,"visible: 2 log lines on the node that served the request (InvalidAccessKeyId, no source address as read)",seaweedfs-vm-security-2026-10-13 SW-P8,1x 1x
+r12,SEC8,failed attempt visible in the container log (default level),rustfs,FAIL,not visible: 0 log lines with the fake key on any node,rustfs-vm-security-2026-10-11 SE-P5,1x 1x
+r12,SEC8,failed attempt visible in the container log (default level),garage,PASS,visible: 2 log lines on the node that served the request (content not read),"garage-vm-security-2026-10-14 G-P7, Q2",1x 1x
+r13,SEC7,admin interface,ceph,INFO,port 8443 (dashboard) listens on ceph0 and ceph1; its answer without credentials was not read,ceph-vm-security-2026-10-15 O4,1x 1x
+r13,SEC7,admin interface,seaweedfs,INFO,"master, volume server and filer pages open without a login (see row 4); no login tested",seaweedfs-vm-security-2026-10-13 SW-O6,1x
+r13,SEC7,admin interface,rustfs,INFO,console page on 9001 is served without a login; the login itself was not tested,rustfs-vm-security-2026-10-11 SE-O3,1x
+r13,SEC7,admin interface,garage,INFO,"admin API on 3902 refuses calls without its token (403, by hand, record only); /health and /metrics are open",garage-vm-security-2026-10-14 G-P2,1x
