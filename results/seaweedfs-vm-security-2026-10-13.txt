@@ -94,3 +94,15 @@ L3. The anonymous path list of sec1 is fixed (15 paths per node); other paths ma
 L4. The marker search covers /srv/s3/disk1/seaweedfs and /srv/s3/disk2/seaweedfs on each node only, not the system disk.
 L5. No comparison between systems is made in this record. For RustFS see results/rustfs-vm-security-2026-10-11.txt: there the S3 port was the only data port and the plain object was found in clear (xl.meta), the
     SSE-S3 and SSE-C objects were not.
+
+ADDENDUM 15 October 2026: SEC4 (scoped key), run after the Ceph runs
+====================================================================
+Setup:     scripts/sec.sh (sha256 4997ebddecb7729fb4b17791ebe99f793b81f27225d0430a657be5b1e51e204b, fetched on ceph0 by the commit hash 2f1f3041ac5264f3b762f4240bdf18d5c3c11e33, hash and syntax checked there) as "sec4" with SCOPED_BUCKET=ftbucket.
+           A second identity "secscoped" with the actions Read:ftbucket and List:ftbucket was added to /etc/seaweedfs/s3_config.json on the three nodes (original backed up, sha256 f6efcf5afa59cde4e9852bf3b9324d47f4808441abbfcc2dfd1b8dcbd67e01f,
+           restored afterwards, equal on all three nodes and equal to the backup). The keys of the identity were made by openssl rand and kept in a file with mode 600, never printed.
+           Ceph was stopped on the three nodes (noout and norebalance set) for this run, because the deploy script refuses to start SeaweedFS next to Ceph (one system at a time, as for all other series). Ceph was restarted by the user afterwards; the first status after the restart (15 October, about 22:45, pasted by the user): 6 of 6 OSDs up and in, 449 of 449 PGs active+clean, three monitors in quorum, RGW active on three hosts, HEALTH_WARN "2 failed cephadm daemon(s)" (not identified yet, see setup_notes.md).
+Output:    /root/sec-seaweedfs-20261015-221614.tar.gz on ceph0 (1000 bytes, sha256 cfe561aa75773984ed51f49ea078cd923f93b0eb3d4483336f97ebc90df8f84d); copy in results/sec-seaweedfs-20261015-221614.tar.gz (hash equal, transferred by e-mail by the user). Secret key found in the output files: 0, access key: 0.
+Result (raw sec4.txt of the archive, 15 October 22:16): list of ftbucket ok; read of an object in ftbucket ok; write to ftbucket AccessDenied; delete in ftbucket AccessDenied; read of an object in another bucket 403; list of all buckets shows only ftbucket; create a bucket AccessDenied.
+PROVEN     SW-P9. A SeaweedFS identity with the actions Read and List on one bucket can list and read that bucket and nothing else through the S3 port 8333: write, delete, creating a bucket and reading another bucket are refused, and the bucket list shows only its own bucket.
+NOT PROVEN SW-O9. SW-P9 holds for the S3 port. The anonymous read through the filer port 8888 (SW-P4) does not use the S3 identity at all, so a scoped key does not limit what a client that reaches port 8888 can read. Not tested with the scoped key.
+LIMIT      One run, one second identity, action syntax Read:bucket and List:bucket as in the SeaweedFS S3 configuration; the setup changed the configuration file of the thesis cluster temporarily (restored).

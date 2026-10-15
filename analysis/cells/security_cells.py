@@ -14,7 +14,8 @@ A cell whose evidence is not found stops the script. A cell without ev (hand tes
 
 CEPH, CEPH_R = "sec-ceph-20261015-122716", "sec-ceph-replies-20261015-124414"
 SW1, SW2, SW3 = "sec-seaweedfs-20261013-145754", "sec-seaweedfs-20261013-160404", "sec-seaweedfs-20261013-161312"
-RF1, RF2 = "sec-rustfs-20261011-180911", "sec-rustfs-20261012-102351"
+SW4 = "sec-seaweedfs-20261015-221614"
+RF1, RF2, RF3 = "sec-rustfs-20261011-180911", "sec-rustfs-20261012-102351", "sec-rustfs-20261015-222451"
 GA1, GA2, GA3 = "sec-garage-20261014-133307", "sec-garage-20261014-180515", "sec-garage-20261014-181146"
 PS_G, PS_R, PS_S = "presign-garage-vm-20261008-142536", "presign-rustfs-vm-20261009-130903", "presign-seaweedfs-vm-20261008-200028"
 PS_C = "file:results/security-presign-unsigned-header-ceph-20261005-230914.txt"
@@ -78,8 +79,11 @@ CELLS = {
         ev=[(SW1, "sec2.txt", r"192\.168\.1\.72:8888 PUT 401 21"), (SW1, "sec2.txt", r"192\.168\.1\.72:9333 PUT 404 19"), (SW1, "sec2.txt", r"volume server upload 401")]),
     ("seaweedfs", "r6"): dict(out="FAIL", text="the filer port 8888 returns object content without credentials (1 KiB object 200 on three nodes; 1 MiB object read with equal sha256, by hand)", src=REC["seaweedfs"] + " SW-P4, SW-O2",
         ev=[(SW2, "sec2.txt", r"filer read of ftbucket/fixed/head\.bin on 192\.168\.1\.72:8888: 200 1024"), (SW2, "sec2.txt", r"filer read of ftbucket/fixed/head\.bin on 192\.168\.1\.70:8888: 200 1024")]),
-    ("seaweedfs", "r7"): dict(out="NOT TESTED", text="not run (needs an identity made with the admin tool)", src=REC["seaweedfs"] + " SW-O6",
-        ev=[(SW1, "sec4.txt", "ABSENT")]),
+    ("seaweedfs", "r7"): dict(out="PASS", text="list and read ok; write, delete, read of another bucket and create bucket refused (AccessDenied or 403); bucket list shows only ftbucket (second S3 identity with Read and List on ftbucket; S3 port only, the filer port bypasses it, see row 6)", src=REC["seaweedfs"] + " ADDENDUM 15 October, SW-P9, SW-O9",
+        ev=[(SW4, "sec4.txt", r"list allowed bucket \(expect ok\): +PRE"), (SW4, "sec4.txt", r"read allowed object \(expect ok\): scoped key test"),
+          (SW4, "sec4.txt", r"write to allowed bucket \(expect refused\): upload failed.*AccessDenied"), (SW4, "sec4.txt", r"delete in allowed bucket \(expect refused\): delete failed.*AccessDenied"),
+          (SW4, "sec4.txt", r"read another bucket \(expect refused\): .*\(403\)"), (SW4, "sec4.txt", r"create a bucket \(expect refused\): make_bucket failed.*AccessDenied"),
+          (SW4, "sec4.txt", r"list all buckets \(expect refused or only the allowed one\): \{ +\"Buckets\": \[ +\{ +\"Name\": \"ftbucket\"")]),
     ("seaweedfs", "r8"): dict(out="FAIL", text="plain http, no TLS configured; 199 of 200 marker lines in the capture", src=REC["seaweedfs"] + " SW-P5",
         ev=[(SW1, "sec5.txt", r"marker lines found in the capture: 199")]),
     ("seaweedfs", "r9"): dict(out="FAIL", text="marker found in the volume file ftbucket_69.dat on all three nodes (random padded object; repetitive text objects were not found: possible compression, OPEN)", src=REC["seaweedfs"] + " SW-P6, SW-O1",
@@ -105,8 +109,11 @@ CELLS = {
         ev=[(RF1, "sec2.txt", r"== anonymous PUT of a marker file to every non S3 port")]),
     ("rustfs", "r6"): dict(out="INFO", text="no non S3 data port in the SEC1 list (S3 on 9000, console on 9001)", src=REC["rustfs"] + " SEC1",
         ev=[(RF1, "sec1.txt", r"listening tcp ports on 192\.168\.1\.72: 22 631 9000 9001")]),
-    ("rustfs", "r7"): dict(out="NOT TESTED", text="not run (needs a key made with the admin tool)", src=REC["rustfs"] + " SE-O6",
-        ev=[(RF1, "sec4.txt", "ABSENT")]),
+    ("rustfs", "r7"): dict(out="PASS", text="list and read ok; write, delete, read of another bucket and create bucket refused (AccessDenied or 403); bucket list shows only ftbucket (user with a policy GetObject and ListBucket on ftbucket, made with rc 0.1.36)", src=REC["rustfs"] + " ADDENDUM 15 October, SE-P8",
+        ev=[(RF3, "sec4.txt", r"list allowed bucket \(expect ok\): +PRE"), (RF3, "sec4.txt", r"read allowed object \(expect ok\): scoped key test"),
+          (RF3, "sec4.txt", r"write to allowed bucket \(expect refused\): upload failed.*AccessDenied"), (RF3, "sec4.txt", r"delete in allowed bucket \(expect refused\): delete failed.*AccessDenied"),
+          (RF3, "sec4.txt", r"read another bucket \(expect refused\): .*\(403\)"), (RF3, "sec4.txt", r"create a bucket \(expect refused\): make_bucket failed.*AccessDenied"),
+          (RF3, "sec4.txt", r"list all buckets \(expect refused or only the allowed one\): \{ +\"Buckets\": \[ +\{ +\"Name\": \"ftbucket\"")]),
     ("rustfs", "r8"): dict(out="FAIL", text="plain http, no TLS configured; 264 marker lines for 200 uploaded (count above 200 not explained, OPEN)", src=REC["rustfs"] + " ADDENDUM SE-P7, SE-O8",
         ev=[(RF2, "sec5.txt", r"marker lines found in the capture: 264")]),
     ("rustfs", "r9"): dict(out="FAIL", text="marker found in xl.meta of the plain object on one drive of each node (3 of 6 drives)", src=REC["rustfs"] + " SE-P3, SE-O1",

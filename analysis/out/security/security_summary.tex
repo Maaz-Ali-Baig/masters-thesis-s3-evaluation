@@ -8,7 +8,7 @@ SEC3 & presigned PUT with a header outside the signature & PASS & PASS & PASS & 
 SEC1 & answers without credentials on non S3 ports & info & info & info & info \\
 SEC2 & anonymous write through a non S3 port & PASS & PASS & n.t. & n.t. \\
 SEC2 & anonymous read of object data through a non S3 port & info & FAIL & info & info \\
-SEC4 & key limited to read on one bucket & PASS & n.t. & n.t. & PASS \\
+SEC4 & key limited to read on one bucket & PASS & PASS & PASS & PASS \\
 SEC5 & object content on the wire (plain http) & FAIL & FAIL & FAIL & FAIL \\
 SEC6 & object stored without SSE on the data drives & FAIL & FAIL & FAIL & FAIL \\
 SEC6 & SSE-S3 request (header AES256) & refused & refused & not in clear & FAIL \\

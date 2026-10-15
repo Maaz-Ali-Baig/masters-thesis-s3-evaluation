@@ -1,7 +1,7 @@
 Security comparison table: inputs and outputs
 =============================================
 
-repository commit: 63807219164585eefb16f1358b200a95002f028d
+repository commit: 4caa4fca4c4b67f765e54246540ad64eb134d776
 working tree (analysis, results): UNCOMMITTED CHANGES in analysis/ (outside out/) or results/
 python 3.12.3
 matplotlib 3.6.3
@@ -17,17 +17,19 @@ b99ed2ea3a6ec0b6e105573e02e136c0c2ae6471885b716e1ac3195b70eac6e1  results/presig
 24df0e4fa8ba89e64ae3c875b7cac7631b7388e8d0ba60020daf9de33134dc9e  results/sec-garage-20261014-181146.tar.gz
 20f531a259b03b25c8b6e29943c4e23128ef29a36a25d5d2b914d70b971434cc  results/sec-rustfs-20261011-180911.tar.gz
 650e32acb968dca3daebc1aeca3391b39c83d64b7fa3c4542d50e15f4800dc85  results/sec-rustfs-20261012-102351.tar.gz
+e64c7b4c9abbecbd397b000d7426d5ca55682ab147bd28d09d3401068ad2bae2  results/sec-rustfs-20261015-222451.tar.gz
 d69aa9af94cc3e3acb367331a8937cc1e4d6501a32b4ca8dd2a163487ff9c86a  results/sec-seaweedfs-20261013-145754.tar.gz
 15d6ca7995e70c171da66121142c0b7f0c6704604b9fed182347d1571f9cc8d7  results/sec-seaweedfs-20261013-160404.tar.gz
 562bb7382915f4f970ce4ced82399723737b7c123d6c1212f4248fc9e987fecb  results/sec-seaweedfs-20261013-161312.tar.gz
+cfe561aa75773984ed51f49ea078cd923f93b0eb3d4483336f97ebc90df8f84d  results/sec-seaweedfs-20261015-221614.tar.gz
 0c9d51ba3593b9e46661341d6643bd8d78de5d0017069c75947995eced776476  results/security-presign-unsigned-header-ceph-20261005-230914.txt
-45c9aedba90183142bae80115560287837321555156879dbfe13fb6c3edf2157  results/vm-archives-ceph0-SHA256SUMS.txt
-1a25c5e0f755096f0c377452a894f988ff27691d5c343e996fefdf3420338f90  analysis/cells/security_cells.py
+348c848efdc92db18d4be8d04c0dc44ed7e95a7797c7dcec5398e02cabb2d347  results/vm-archives-ceph0-SHA256SUMS.txt
+008eeb86b77ed78a2d29de27e2bef1f46c7e6d4e0f53704b37048996b183e5fd  analysis/cells/security_cells.py
 
 OUTPUT FILES
-5028a283d335d6ca37389eef3a953220d810bfabc391417f6c427d954584f3a4  analysis/out/security/security_cells.csv
-e2509b67af93af93cfb90379029626b55797757027af3d36f18e57a8de3e3913  analysis/out/security/security_summary.tex
+dbb5e6618c2b55b2b68f3b64efa64dcc0a5052779721a69e5e33e3e8097a08d5  analysis/out/security/security_cells.csv
+ad6132aa8d5bb4cc7d865a8d4f2a1336d737358e698b5842c9fc8d51174aa7ba  analysis/out/security/security_summary.tex
 da064780ef42f2a34826e47491f317689b493bfdfbdab807d8f2c4bf749f8f0f  analysis/out/security/security_details_ceph.tex
-030699a133995f190cb807adb36b1f0752fd1af1e654339b5cf7e952d4b63d43  analysis/out/security/security_details_seaweedfs.tex
-9227cd10d5efd85d6d0297802a9b53871cac67273fcae74b975ceb42a1f92691  analysis/out/security/security_details_rustfs.tex
+1690865a451a5e8892c9b4be7b40fdc17053cd6c81efb851e5d481e6f4f5db8d  analysis/out/security/security_details_seaweedfs.tex
+52b5c29e48b63dc0ed984e2e35fde054c3b1f8d60a8302b2be30c4708a0e222e  analysis/out/security/security_details_rustfs.tex
 e8fe439296cc9388a2786e07920c8c362406066157f295767c745f4efba6d36a  analysis/out/security/security_details_garage.tex
