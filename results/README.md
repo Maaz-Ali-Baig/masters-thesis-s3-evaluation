@@ -66,3 +66,13 @@ No VM run of the 22 test probe on Ceph is in this folder; the Ceph compatibility
 3. Pipeline validation, August 2026: `2026-08-03_warp_pipeline_validation_seaweedfs.txt` and `2026-08-09_warp_pipeline_validation_all_three.txt`. Marked NOT MEASUREMENT DATA, DO NOT CITE.
 4. `warp-raw/`: raw Warp output files (`.json.zst`) of the validation and September runs.
 5. SeaweedFS investigation files from 30 September and 1 October: `seaweedfs-serverlog-c18-c19-window-20260930.txt`, `seaweedfs-scratch-verbose-sse-acl-serverlog-20260930.txt`, `seaweedfs-sse-at-rest-check-scratch-20261001-002744.txt`.
+
+## Raw run archives of the VM series (in this folder)
+
+The archives made by the scripts on the VMs (`ft.sh`, `sec.sh`, `security-presign-unsigned-header.sh`) are kept here as `.tar.gz`, 26 files, 3.5 MB in all, unchanged. They were copied from ceph0 on 15 October 2026. Their sha256 is in `vm-archives-ceph0-SHA256SUMS.txt` and in the records. `analysis/` reads them directly.
+
+1. `ft-<system>-<scenario>-<date>-<time>.tar.gz` (13 files): one fault tolerance run. Inside: `ledger.tsv` (every write attempt), `probe.tsv` (probe of the fixed object), `repairwatch.tsv`, `verify*.tsv` (read back), `summary.txt`, `console.txt`.
+2. `sec-<system>-<date>-<time>.tar.gz` (10 files): one security run (`sec.sh`, and `sec-ceph-replies` for Ceph).
+3. `presign-<system>-vm-<date>-<time>.tar.gz` (3 files): the presigned PUT test with unsigned headers on the VMs.
+
+Not in the repository (kept on the VMs and on the author's laptop): the performance series archives with the Warp raw data (1.7 to 2.6 MB each), the sar logs of the three nodes (8 to 20 MB each) and five `compat-*` archives, which are held back because a key value was found in them. The performance tables that the records cite are in this folder.

@@ -23,3 +23,9 @@ results/ft-seaweedfs-vm-S*-filecounts.txt -text
 results/perf-ceph-vm-3node-20261015-*.tsv -text
 results/perf-garage-vm-3node-20261013-*.tsv -text
 analysis/out/** -text
+
+# Raw run archives of the VM series are cited by sha256 in the records: never convert them
+results/ft-*.tar.gz -text
+results/sec-*.tar.gz -text
+results/presign-*.tar.gz -text
+results/vm-archives-ceph0-SHA256SUMS.txt -text
