@@ -1,0 +1,18 @@
+\begin{tabular}{llrrrrrr}
+\toprule
+System & Ack & Outage (s) & Read gap (s) & Write gap (s) & Hard failed rounds & Acked, not readable & Back (s) \\
+\midrule
+Ceph 141623 & ETag & 774 & 30 & 28 & 0 & 0 & 768 \\
+Ceph 144339 & ETag & 784 & 31 & 32 & 0 & 0 & 780 \\
+\midrule
+SeaweedFS 093344 & cp$^{*}$ & 855 & 54 & 800 & 0 & 24 & 848 \\
+SeaweedFS 133927 & cp$^{*}$ & 843 & 36 & 815 & 1 & 23 & 837 \\
+\midrule
+RustFS 145627 & cp$^{*}$ & 784 & 26 & 27 & 0 & 0 & 781 \\
+RustFS 204542 & cp$^{*}$ & 783 & 25 & 25 & 0 & 0 & 779 \\
+\midrule
+Garage 083928 & cp$^{*}$ & $\geq$1626 & 83 & 108 & 0 & 2 & n/a \\
+Garage 104306 & cp$^{*}$ & 740 & 62 & 62 & 0 & 1 & 736 \\
+Garage 184630 & cp$^{*}$ & 767 & 85 & 31 & 0 & 0 & 762 \\
+\bottomrule
+\end{tabular}

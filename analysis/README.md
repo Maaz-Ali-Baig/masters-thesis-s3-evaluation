@@ -38,6 +38,7 @@ For a clean manifest: commit the scripts first, run them, then commit `analysis/
 |---|---|---|
 | `common.py` | none | helpers: hashes, file reading, manifest |
 | `build_perf.py` | `out/perf/` | performance comparison of the four systems on the VMs |
+| `build_ft.py` | `out/ft/` | fault tolerance runs S1 and S2 of the four systems, read from `results/ft-*.tar.gz` |
 
 Outputs of `build_perf.py`:
 
@@ -55,3 +56,17 @@ Outputs of `build_perf.py`:
 4. A client limited cell (dagger) is not used for a ranking, as the method says. Whether a statement can still be made about such a cell is decided in the text, with the reason.
 5. In most GET runs the drives delivered less than the client received (resource records), so part of the data came from memory; the cause for Ceph is OPEN. The exception is RustFS at 16 and 100 MiB, where the drives read about 1.8 times the client volume. The text must say so.
 6. The write volume ratios of the resource records use different sar windows per system (Garage record, limit L6). They are not put side by side in one table.
+
+## Fault tolerance (`build_ft.py`): definitions and limits
+
+Input: the 13 run archives `results/ft-*.tar.gz` (hashes in `results/vm-archives-ceph0-SHA256SUMS.txt`). Output in `analysis/out/ft/`: `ft_runs.csv` (all metrics per run), `ft_s1.tex`, `ft_s2.tex`, `ft_timeline_<system>.pdf` (every run on a time axis), `ft_gaps.pdf`. The script stops if the recomputed numbers differ from the `summary.txt` of a run.
+
+1. **Time zero** is the moment `ft.sh` saw every stopped node silent. In S2 the first node went down up to about 15 s earlier, so a gap can start slightly before zero.
+2. **Acknowledgement type.** Ceph runs: `aws s3api put-object` with an ETag. Garage, RustFS, SeaweedFS runs: exit code 0 of `aws s3 cp`. A `cp` acknowledgement after a stall of about 25 s can be false (Garage record, 14 October). The two types are not compared by their counts.
+3. **Confirmed write** = an acknowledged write whose object is readable on all three endpoints after the recovery. The main write measure ("write gap") is the longest interval between two confirmed writes. It does not depend on the acknowledgement type, because false acknowledgements are not readable afterwards. "Acked, not readable" is the count of acknowledgements that are not confirmed; for `cp` runs this is an upper bound of lost writes, not a finding.
+4. **Round.** One pass of the probe loop. A hard failed round has no acknowledged attempt. A failed attempt that the next endpoint rescued is a masked failure.
+5. **Read gap** = longest time between two successful reads of the fixed object (`head-object`) at one surviving endpoint. A gap of about 25 s means a request hung until the client read time out.
+6. **Outage** = the longest gap of successful reads at a stopped endpoint, measured by the probe (VM down time plus boot and start). The `ssh answers` lines of `console.txt` are not used, because the read back during the outage can delay them (Ceph S2, deviation D2).
+7. **Censored values** are written with a greater or equal sign. Garage S1 run 1 and Garage S2 end before the stopped node answered again inside the probe, so their outage and write gap are lower bounds.
+8. **Run notes** (parallel writers, deviations) are typed in `RUN_NOTES` with the record they come from. They cannot be derived from the archive.
+9. A cross system statement about "lost acknowledged writes" is not allowed from these data (see 2 and 3). Statements about gaps, hard failed rounds, outage and read gaps are.
