@@ -49,6 +49,8 @@ def summary_bytes(src):
             if len(names) != 1:
                 sys.exit(f"{src['file']}: expected one {src['member']}, found {names}")
             data = tf.extractfile(names[0]).read()
+        if "sha_archive" in src and sha256(RESULTS / src["file"]) != src["sha_archive"]:
+            sys.exit(f"{src['file']} differs from the pinned archive sha256 {src['sha_archive']}")
         return data, hashlib.sha256(data).hexdigest(), src["sha_summary"]
     got_file = sha256(RESULTS / src["file"])
     if got_file != src["sha_file"]:
@@ -58,6 +60,17 @@ def summary_bytes(src):
     end = next(i for i in range(start, len(text)) if text[i].startswith("### "))
     data = ("\n".join(text[start:end]) + "\n").encode("utf-8")
     return data, got_file, src["sha_file"]
+
+
+def evidence_text_summary(c):
+    """sha256 of the summary.tsv section of the text copy of the Ceph run of 2 October, after the pinned sha256 of the file."""
+    got_file = sha256(RESULTS / c["file"])
+    if got_file != c["sha_file"]:
+        sys.exit(f"{c['file']} differs from the pinned sha256\n  expected {c['sha_file']}\n  found    {got_file}")
+    text = (RESULTS / c["file"]).read_text(encoding="utf-8").split("\n")
+    start = text.index("### " + c["member"]) + 1
+    end = next(i for i in range(start, len(text)) if text[i].startswith("### "))
+    return hashlib.sha256(("\n".join(text[start:end]) + "\n").encode("utf-8")).hexdigest()
 
 
 def subchecks(detail):
@@ -100,6 +113,11 @@ def build():
                 sys.exit(f"{key} {test}: the probe wrote {written}, the rule gives {calc}")
             what.setdefault(test, title)
             cells[(key, test)] = dict(verdict=calc, subs=subs, detail=detail, title=title)
+    old2 = evidence_text_summary(cc.CROSS_CHECK)
+    if old2 != cc.SOURCES["ceph"]["sha_summary"]:
+        sys.exit(f"summary.tsv of the Ceph run of 2 October ({old2}) differs from the repeat of 16 October")
+    inputs.append(RESULTS / cc.CROSS_CHECK["file"])
+    print("Ceph: summary.tsv of the repeat of 16 October equals the summary.tsv of the run of 2 October")
     print(f"summary check: {len(cc.SOURCES)} runs, every sha256 equals the record, every verdict follows from its sub-checks")
 
     for key, want in cc.TOTALS_RECORD.items():

@@ -29,3 +29,5 @@ results/ft-*.tar.gz -text
 results/sec-*.tar.gz -text
 results/presign-*.tar.gz -text
 results/vm-archives-ceph0-SHA256SUMS.txt -text
+results/compat-ceph-vm-*.tar.gz -text
+results/acl-ceph-vm-*.tar.gz -text

@@ -94,7 +94,7 @@ Limits to state with the table: default deployments, plain http, no TLS (transpo
 
 ## S3 compatibility table (`build_compat.py`): how the table is made and checked
 
-Tables only, no figures. Input: the `summary.tsv` of five probe runs (Ceph from the text copy `results/compat-ceph-20261002-072634-evidence.txt`, SeaweedFS, Garage and RustFS from the `compat-*.tar.gz` in `results/`; RustFS twice, with and without the SSE-S3 master key). The script stops if
+Tables only, no figures. Input: the `summary.tsv` of five probe runs (Ceph from the archive of the repeat of 16 October `compat-ceph-vm-20261016-095804.tar.gz` (its summary must equal the one of the run of 2 October in the text copy `compat-ceph-20261002-072634-evidence.txt`), SeaweedFS, Garage and RustFS from the `compat-*.tar.gz` in `results/`; RustFS twice, with and without the SSE-S3 master key). The script stops if
 
 1. a `summary.tsv` does not have the sha256 written in the records (for SeaweedFS, RustFS and Garage the records state that the summary of the VM run has the same sha256, so the VM result equals the file here; the VM archives stay on ceph0),
 2. a verdict does not follow from its sub-checks (rule of the records: a sub-check that answered NotImplemented = UNSUPPORTED, else a failed sub-check = FAIL, else PASS),

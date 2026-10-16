@@ -13,7 +13,9 @@ Probe:     scripts/s3-compat.sh (22 tests, C01 to C22), AWS CLI 2.36.8, run from
 
 WHAT IS IN EACH COLUMN (counter check of the earlier matrix of 2 October)
 -------------------------------------------------------------------------
-Ceph       Ceph 20.2.4 RGW on the VMs, run ceph-20261002-072634 (2 October). The archive is on ceph0 only; the repository holds a text copy of all 559 files.
+Ceph       Ceph 20.2.4 RGW on the VMs, 6 OSDs, HEALTH_OK, repeat of 16 October 07:58 UTC (archive results/compat-ceph-vm-20261016-095804.tar.gz, 23661 bytes, sha256 b5b57bba...c3b0, read and
+           verified after the Gmail transfer). Its summary.tsv (sha256 5e23204b...a4ee0) equals, byte for byte, the summary.tsv of the first run of 2 October (run ceph-20261002-072634, text copy of its
+           559 files in results/compat-ceph-20261002-072634-evidence.txt; the script checks the equality).
 SeaweedFS  4.25. The file in the repository is the laptop single node run of 30 September. The record of 8 October states that the summary.tsv of the VM run has the
            same sha256, so the VM result equals it. The VM archive is on ceph0 only.
 RustFS     1.0.1 with the SSE-S3 master key set (the state of every later VM series: performance, security, fault tolerance). Laptop single node file with the same sha256
@@ -66,8 +68,8 @@ LIMITS
 L1. One probe run per system, one request sequence per test, AWS CLI 2.36.8 as the only client in the probe. Garage C13 (expired URL answers 400) and C20 (CRC64NVME) rest on the AWS CLI run only.
 L2. Three of the four columns are files of laptop single node runs that equal the VM run by sha256 (as stated in the records). The VM archives are on ceph0 and are not in the repository
     (five compat archives are held back because a key value was found in them, see results/README.md). Ceph is the VM run itself.
-L3. The Ceph probe is of 2 October and ran against the RGW on ceph0 from ceph0 only (record O4). The Ceph cluster was stopped on 6 October and started again on 15 October; the probe was not
-    repeated after that, and the RGW settings of 15 October were not compared with those of 2 October. The other three probes are of 8 and 9 October.
+L3. The Ceph probe ran against the RGW on ceph0 from ceph0 only (record O4); the gateways on ceph1 and ceph2 were not probed. It was run on 2 October and repeated on 16 October after the cluster
+    was stopped (6 October) and started again (15 October), with the same probe file (sha256 6dabde8f...) and the same result. The other three probes are of 8 and 9 October.
 L4. ACL tests measure legacy AWS behaviour (AWS disabled ACLs on new buckets in 2023). Lifecycle (C16) is a round trip, not enforcement. SSE (C18) is the API only.
 L5. 22 tests are not the whole S3 API. A count of PASS cells weights every test the same and is not a ranking of the systems. A weighted view depends on the use case and is a separate decision.
 L6. The curl 7.88.1 on ceph0 signs a query parameter without value (?acl) wrongly (shown for SeaweedFS, RustFS and Garage); the compatibility probe uses the AWS CLI and is not affected.
@@ -76,8 +78,22 @@ OPEN
 ----
 Q1. Ceph: C20 H1 (RGW ignores the checksum request headers) and the trailer form were not tested (Ceph record H1, O1).
 Q2. Ceph and SeaweedFS C18 with a key service or a key on the VM cluster: not tested (RustFS only).
-Q3. Ceph ACL read with ?acl= on ceph0 (Ceph security record O6): settling test not run yet; it concerns the presigned PUT test, not this table.
-Q4. Optional: a repeat of the 22 tests on Ceph in its final state (VMs, after 15 October). It would replace L3 by a dated VM run; it needs the probe on ceph0 (about 10 minutes) and the approval of the user.
+Q3. The raw lines of the ACL read check of 16 October (below) were printed to the terminal only, the mode did not write them to its archive. They are read from the session text, which the VM session
+    retyped. The archive of the run holds the cluster state and two empty error files (create bucket and put object gave no error). Settling: run the mode again with the output saved.
+Q4. Why the two failed cephadm daemons (HEALTH_WARN on 15 October after the restart) cleared is not known; their names were never read. HEALTH_OK in both runs of 16 October (cluster-state.txt in the archives).
+
+REPEAT ON CEPH, 16 OCTOBER 2026 (ceph0 = hostname debian, 192.168.1.72, wrapper deploy/ceph/ceph-tests.sh at commit 896c00b, sha256 9df024b4...a228, 97 lines, probe s3-compat.sh sha256 6dabde8f...)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+R1. 22 tests: 20 PASS, 2 FAIL (C18, C20), 0 unsupported. summary.tsv sha256 5e23204bcca8763eb3f6707e6d48dbf66df8c37843dfe2e9b1ac6a40c92a4ee0, equal to the summary.tsv of 2 October (PROVEN by
+    the script: archive read here, text copy of the first run read here). The C18 and C20 sub-check lines are the same, including the AWS CLI crash text of C18 (the AWS CLI crashes on the empty
+    error message of RGW; the cause of the FAIL is the missing Vault token, record of 2 October).
+R2. Cluster state at the start of both runs (cluster-state.txt in the archives): HEALTH_OK, all daemons 20.2.4 (3 mon, 2 mgr, 6 osd, 3 rgw), no daemon in a state other than running. The probe
+    ran with the AWS CLI 2.36.8 and the user "thesis" of /root/ceph-s3-credentials.txt; the key is in none of the archive files (the run counted 0 files, and the archives were not searched again here).
+R3. ACL read of an object on ceph0 (acl mode, 08:00 UTC; session text, see Q3): curl 7.88.1 GET of the key 200; GET key?acl 403 SignatureDoesNotMatch; GET key?acl= 200 with an
+    AccessControlPolicy; aws s3api get-object-acl: 1 grant. Reading: the 403 of the Ceph presign test (O6 of results/security-presign-unsigned-header-ceph-2026-10-05.txt) is the same
+    artefact as for SeaweedFS, RustFS and Garage (curl 7.88.1 signs a valueless ?acl wrongly), not a Ceph behaviour. This rests on the session text (Q3); the pattern is the same as in the three
+    other systems whose raw outputs are in their records.
+R3a. Not tested: that curl 8.5.0 signs ?acl correctly (as for the other systems).
 
 CORRECTIONS OF EARLIER STATEMENTS
 ---------------------------------

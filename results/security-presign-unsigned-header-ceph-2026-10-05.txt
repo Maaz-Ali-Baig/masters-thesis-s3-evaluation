@@ -87,3 +87,10 @@ PROCESS NOTES
 - The page text of the VM output shows each blank line twice. Halving them gave text whose sha256 equals the
   hash printed on ceph0 (checked in the page, then again on the written file), so the copy is exact.
 - Cleanup deleted every object and both buckets (all 204), nothing was left on the cluster.
+
+ADDENDUM A1 (16 October 2026): O6 settled by a check on ceph0 (session text, not archived)
+------------------------------------------------------------------------------------------
+acl mode of deploy/ceph/ceph-tests.sh (commit 896c00b), temporary bucket and object, removed afterwards, curl 7.88.1 with --aws-sigv4: GET key 200; GET key?acl 403 SignatureDoesNotMatch;
+GET key?acl= 200 AccessControlPolicy; aws s3api get-object-acl 1 grant. So the 403 of p0, s2 and s3 above is the client (curl 7.88.1 with a valueless ?acl), as for SeaweedFS, RustFS and Garage, and
+the line "AllUsers grants in ACL 0" of this file carries no information for Ceph. The lines were printed to the terminal only (the mode did not save them), read from the session text; archive
+results/acl-ceph-vm-20261016-100048.tar.gz holds the cluster state only. NOT PROVEN: curl 8.5.0 signs ?acl correctly. See results/compatibility-cross-system-2026-10-15.txt, R3.

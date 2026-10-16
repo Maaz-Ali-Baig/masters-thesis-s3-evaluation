@@ -9,11 +9,11 @@ A column of the table is a deployment, not a product: see `deploy` of each sourc
 
 SOURCES = {
     "ceph": dict(
-        label="Ceph", kind="evidence_text", file="compat-ceph-20261002-072634-evidence.txt", member="summary.tsv",
-        sha_file="2dd6b3a5cab6a0726a559a50260b95e432c63265569bea762bc39b1bbc62bb1c",
-        deploy="Ceph 20.2.4 RGW, 3 VMs, probe run on ceph0 against the RGW on ceph0 (localhost:80), 2 October 2026 (run ceph-20261002-072634)",
-        vm="The run itself is the VM run. The archive is on ceph0 only, the repository holds a text copy of all 559 files checked block by block with sha256 against ceph0 (record, header).",
-        record="s3-compat-ceph-2026-10-02"),
+        label="Ceph", kind="tar", file="compat-ceph-vm-20261016-095804.tar.gz", member="summary.tsv",
+        sha_summary="5e23204bcca8763eb3f6707e6d48dbf66df8c37843dfe2e9b1ac6a40c92a4ee0", sha_archive="b5b57bbae632fa37486a1602120506b376a956e581d826cfa7516690abe5c3b0",
+        deploy="Ceph 20.2.4 RGW, 3 VMs, 6 OSDs, replicated 3, probe run on ceph0 against the RGW on ceph0 (localhost:80), 16 October 2026 07:58 UTC, HEALTH_OK (repeat of the run of 2 October)",
+        vm="The run is the VM run itself (archive in results/, sha256 in vm-archives-ceph0-SHA256SUMS.txt). Its summary.tsv equals the summary.tsv of the run of 2 October (see CROSS_CHECK).",
+        record="compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"),
     "seaweedfs": dict(
         label="SeaweedFS", kind="tar", file="compat-seaweedfs-20260930-205945.tar.gz", member="summary.tsv",
         sha_summary="ab8f15223ef382852a4835bbfc2d7918a764d07eb70979545c109a073a81eb61",
@@ -39,6 +39,9 @@ SOURCES = {
         vm="Record: summary.tsv of the VM run has the same sha256 (sha256 compared with the laptop file). The VM archive is on ceph0 only.",
         record="garage-vm-compat-and-presign-2026-10-08"),
 }
+
+# The Ceph probe of 2 October (text copy of the run, pinned sha256 of the file) must have a summary.tsv equal to the one of the repeat of 16 October.
+CROSS_CHECK = dict(file="compat-ceph-20261002-072634-evidence.txt", sha_file="2dd6b3a5cab6a0726a559a50260b95e432c63265569bea762bc39b1bbc62bb1c", member="summary.tsv")
 
 # Totals written in the records (PASS, FAIL, UNSUPPORTED). The script stops if its own count differs.
 TOTALS_RECORD = {"ceph": (20, 2, 0), "seaweedfs": (18, 4, 0), "rustfs": (20, 2, 0), "rustfs_default": (19, 3, 0), "garage": (7, 9, 6)}

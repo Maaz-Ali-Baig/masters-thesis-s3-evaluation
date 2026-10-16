@@ -178,3 +178,10 @@ results/compat-seaweedfs-20260930-233601, results/compat-rustfs-20260930-234432 
 results/compat-garage-20260930-235310, the reruns with the patched probe (identical verdicts).
 The first laptop outputs of verify-checksum-header.sh were deleted, they used the version without
 the explicit Content-Type and are replaced by identical reruns.
+
+ADDENDUM A1 (16 October 2026): repeat of the 22 tests on the same VMs
+--------------------------------------------------------------------
+Run on ceph0 (192.168.1.72) at 07:58 UTC with deploy/ceph/ceph-tests.sh (commit 896c00b), the same probe file (sha256 6dabde8f...), AWS CLI 2.36.8, cluster HEALTH_OK, after the stop of 6 October
+and the start of 15 October. Result 20 PASS, 2 FAIL (C18, C20). summary.tsv sha256 5e23204b...a4ee0, equal to the summary.tsv of the canonical run above (the text copy in
+results/compat-ceph-20261002-072634-evidence.txt gives the same sha256). Archive results/compat-ceph-vm-20261016-095804.tar.gz (23661 bytes, sha256 b5b57bbae632...e5c3b0). Analysis:
+results/compatibility-cross-system-2026-10-15.txt. O4 stays open (only the RGW on ceph0, from ceph0). O3 is answered for the repeat (the archive is in the repository).

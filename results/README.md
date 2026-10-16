@@ -81,10 +81,11 @@ No VM run of the 22 test probe on Ceph is in this folder; the Ceph compatibility
 
 ## Raw run archives of the VM series (in this folder)
 
-The archives made by the scripts on the VMs (`ft.sh`, `sec.sh`, `security-presign-unsigned-header.sh`) are kept here as `.tar.gz`, 28 files, unchanged. They were copied from ceph0 on 15 October 2026. Their sha256 is in `vm-archives-ceph0-SHA256SUMS.txt` and in the records. `analysis/` reads them directly.
+The archives made by the scripts on the VMs (`ft.sh`, `sec.sh`, `security-presign-unsigned-header.sh`) are kept here as `.tar.gz`, 30 files, unchanged. They were copied from ceph0 on 15 October 2026. Their sha256 is in `vm-archives-ceph0-SHA256SUMS.txt` and in the records. `analysis/` reads them directly.
 
 1. `ft-<system>-<scenario>-<date>-<time>.tar.gz` (13 files): one fault tolerance run. Inside: `ledger.tsv` (every write attempt), `probe.tsv` (probe of the fixed object), `repairwatch.tsv`, `verify*.tsv` (read back), `summary.txt`, `console.txt`.
 2. `sec-<system>-<date>-<time>.tar.gz` (12 files): one security run (`sec.sh`, and `sec-ceph-replies` for Ceph; the two `sec-seaweedfs-20261015-*` and `sec-rustfs-20261015-*` archives are the SEC4 runs of 15 October).
 3. `presign-<system>-vm-<date>-<time>.tar.gz` (3 files): the presigned PUT test with unsigned headers on the VMs.
+4. `compat-ceph-vm-20261016-095804.tar.gz` and `acl-ceph-vm-20261016-100048.tar.gz`: the repeat of the 22 test probe on Ceph and the ACL read check of 16 October (made by `deploy/ceph/ceph-tests.sh`; the ACL mode archive holds the cluster state only).
 
 Not in the repository (kept on the VMs and on the author's laptop): the performance series archives with the Warp raw data (1.7 to 2.6 MB each), the sar logs of the three nodes (8 to 20 MB each) and five `compat-*` archives, which are held back because a key value was found in them. The performance tables that the records cite are in this folder.
