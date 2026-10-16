@@ -1,110 +1,110 @@
 test,what,deployment,verdict,sub_checks,failed_sub_checks,depends_on_setting,reading_from_record,reading_source,record
-C01,"Bucket create, head, list, delete",ceph,PASS,5,,,,,s3-compat-ceph-2026-10-02
+C01,"Bucket create, head, list, delete",ceph,PASS,5,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C01,"Bucket create, head, list, delete",seaweedfs,PASS,5,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C01,"Bucket create, head, list, delete",rustfs,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C01,"Bucket create, head, list, delete",rustfs_default,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C01,"Bucket create, head, list, delete",garage,PASS,5,,,,,garage-vm-compat-and-presign-2026-10-08
-C02,"PUT, HEAD, GET object with content integrity",ceph,PASS,4,,,,,s3-compat-ceph-2026-10-02
+C02,"PUT, HEAD, GET object with content integrity",ceph,PASS,4,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C02,"PUT, HEAD, GET object with content integrity",seaweedfs,PASS,4,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C02,"PUT, HEAD, GET object with content integrity",rustfs,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C02,"PUT, HEAD, GET object with content integrity",rustfs_default,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C02,"PUT, HEAD, GET object with content integrity",garage,PASS,4,,,,,garage-vm-compat-and-presign-2026-10-08
-C03,"Content-Type, user metadata and cache headers round trip",ceph,PASS,1,,,,,s3-compat-ceph-2026-10-02
+C03,"Content-Type, user metadata and cache headers round trip",ceph,PASS,1,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C03,"Content-Type, user metadata and cache headers round trip",seaweedfs,PASS,1,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C03,"Content-Type, user metadata and cache headers round trip",rustfs,PASS,1,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C03,"Content-Type, user metadata and cache headers round trip",rustfs_default,PASS,1,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C03,"Content-Type, user metadata and cache headers round trip",garage,PASS,1,,,,,garage-vm-compat-and-presign-2026-10-08
-C04,"Range GET: bounded, suffix, open ended, unsatisfiable",ceph,PASS,4,,,,,s3-compat-ceph-2026-10-02
+C04,"Range GET: bounded, suffix, open ended, unsatisfiable",ceph,PASS,4,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C04,"Range GET: bounded, suffix, open ended, unsatisfiable",seaweedfs,PASS,4,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C04,"Range GET: bounded, suffix, open ended, unsatisfiable",rustfs,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C04,"Range GET: bounded, suffix, open ended, unsatisfiable",rustfs_default,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C04,"Range GET: bounded, suffix, open ended, unsatisfiable",garage,PASS,4,,,,,garage-vm-compat-and-presign-2026-10-08
-C05,Server-side CopyObject with content integrity,ceph,PASS,3,,,,,s3-compat-ceph-2026-10-02
+C05,Server-side CopyObject with content integrity,ceph,PASS,3,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C05,Server-side CopyObject with content integrity,seaweedfs,PASS,3,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C05,Server-side CopyObject with content integrity,rustfs,PASS,3,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C05,Server-side CopyObject with content integrity,rustfs_default,PASS,3,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C05,Server-side CopyObject with content integrity,garage,PASS,3,,,,,garage-vm-compat-and-presign-2026-10-08
-C06,"Listing: v2 prefix and delimiter, pagination, start-after, v1",ceph,PASS,4,,,,,s3-compat-ceph-2026-10-02
+C06,"Listing: v2 prefix and delimiter, pagination, start-after, v1",ceph,PASS,4,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C06,"Listing: v2 prefix and delimiter, pagination, start-after, v1",seaweedfs,PASS,4,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C06,"Listing: v2 prefix and delimiter, pagination, start-after, v1",rustfs,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C06,"Listing: v2 prefix and delimiter, pagination, start-after, v1",rustfs_default,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C06,"Listing: v2 prefix and delimiter, pagination, start-after, v1",garage,PASS,4,,,,,garage-vm-compat-and-presign-2026-10-08
-C07,"DeleteObject, DeleteObjects, delete of a missing key",ceph,PASS,6,,,,,s3-compat-ceph-2026-10-02
+C07,"DeleteObject, DeleteObjects, delete of a missing key",ceph,PASS,6,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C07,"DeleteObject, DeleteObjects, delete of a missing key",seaweedfs,PASS,6,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C07,"DeleteObject, DeleteObjects, delete of a missing key",rustfs,PASS,6,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C07,"DeleteObject, DeleteObjects, delete of a missing key",rustfs_default,PASS,6,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C07,"DeleteObject, DeleteObjects, delete of a missing key",garage,PASS,6,,,,,garage-vm-compat-and-presign-2026-10-08
-C08,"Multipart upload: complete, list, abort, minimum part size",ceph,PASS,10,,,,,s3-compat-ceph-2026-10-02
+C08,"Multipart upload: complete, list, abort, minimum part size",ceph,PASS,10,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C08,"Multipart upload: complete, list, abort, minimum part size",seaweedfs,PASS,10,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C08,"Multipart upload: complete, list, abort, minimum part size",rustfs,PASS,10,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C08,"Multipart upload: complete, list, abort, minimum part size",rustfs_default,PASS,10,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C08,"Multipart upload: complete, list, abort, minimum part size",garage,FAIL,10,min_part_size_enforced,,Two parts of 1 MiB are accepted in a multipart upload (AWS: EntityTooSmall). Other multipart steps pass.,s3-compat-three-systems-2026-09-30 Garage PROVEN 2,garage-vm-compat-and-presign-2026-10-08
-C09,"Object tagging: put, get, header form, delete",ceph,PASS,4,,,,,s3-compat-ceph-2026-10-02
+C09,"Object tagging: put, get, header form, delete",ceph,PASS,4,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C09,"Object tagging: put, get, header form, delete",seaweedfs,PASS,4,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C09,"Object tagging: put, get, header form, delete",rustfs,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C09,"Object tagging: put, get, header form, delete",rustfs_default,PASS,4,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C09,"Object tagging: put, get, header form, delete",garage,UNSUPPORTED,1,put_tagging,,NotImplemented (the Garage documentation lists tagging as missing).,s3-compat-three-systems-2026-09-30 Garage PROVEN 1,garage-vm-compat-and-presign-2026-10-08
-C10,"Versioning: versions, delete marker, restore",ceph,PASS,7,,,,,s3-compat-ceph-2026-10-02
+C10,"Versioning: versions, delete marker, restore",ceph,PASS,7,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C10,"Versioning: versions, delete marker, restore",seaweedfs,PASS,7,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C10,"Versioning: versions, delete marker, restore",rustfs,PASS,7,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C10,"Versioning: versions, delete marker, restore",rustfs_default,PASS,7,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C10,"Versioning: versions, delete marker, restore",garage,UNSUPPORTED,1,enable,,NotImplemented when versioning is enabled.,s3-compat-three-systems-2026-09-30 Garage PROVEN 1,garage-vm-compat-and-presign-2026-10-08
-C11,"Conditional GET: If-Match, If-None-Match, date conditions",ceph,PASS,5,,,,,s3-compat-ceph-2026-10-02
+C11,"Conditional GET: If-Match, If-None-Match, date conditions",ceph,PASS,5,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C11,"Conditional GET: If-Match, If-None-Match, date conditions",seaweedfs,PASS,5,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C11,"Conditional GET: If-Match, If-None-Match, date conditions",rustfs,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C11,"Conditional GET: If-Match, If-None-Match, date conditions",rustfs_default,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C11,"Conditional GET: If-Match, If-None-Match, date conditions",garage,FAIL,5,if_match_mismatch_412; if_unmodified_since_412,,"If-Match with a wrong ETag and If-Unmodified-Since in the year 2000 are accepted and ignored (200, AWS 412). If-None-Match on GET works (304).",s3-compat-three-systems-2026-09-30 Garage PROVEN 2,garage-vm-compat-and-presign-2026-10-08
-C12,Conditional PUT with If-None-Match: * (create only if absent),ceph,PASS,2,,,,,s3-compat-ceph-2026-10-02
+C12,Conditional PUT with If-None-Match: * (create only if absent),ceph,PASS,2,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C12,Conditional PUT with If-None-Match: * (create only if absent),seaweedfs,PASS,2,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C12,Conditional PUT with If-None-Match: * (create only if absent),rustfs,PASS,2,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C12,Conditional PUT with If-None-Match: * (create only if absent),rustfs_default,PASS,2,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C12,Conditional PUT with If-None-Match: * (create only if absent),garage,FAIL,2,second_write_refused,,"If-None-Match: * on PUT of an existing key is ignored (200, AWS 412).",s3-compat-three-systems-2026-09-30 Garage PROVEN 2,garage-vm-compat-and-presign-2026-10-08
-C13,"Presigned GET URL: works, expires, rejects a tampered signature",ceph,PASS,3,,,,,s3-compat-ceph-2026-10-02
+C13,"Presigned GET URL: works, expires, rejects a tampered signature",ceph,PASS,3,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C13,"Presigned GET URL: works, expires, rejects a tampered signature",seaweedfs,PASS,3,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C13,"Presigned GET URL: works, expires, rejects a tampered signature",rustfs,PASS,3,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C13,"Presigned GET URL: works, expires, rejects a tampered signature",rustfs_default,PASS,3,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C13,"Presigned GET URL: works, expires, rejects a tampered signature",garage,FAIL,3,expired_rejected,,The URL works and a tampered signature is refused. An expired URL is refused with HTTP 400 where AWS answers 403 (the URL is refused either way; AWS CLI run only).,s3-compat-three-systems-2026-09-30 Garage OPEN O2,garage-vm-compat-and-presign-2026-10-08
-C14,Bucket policy: roundtrip and enforcement for anonymous reads,ceph,PASS,6,,,,,s3-compat-ceph-2026-10-02
+C14,Bucket policy: roundtrip and enforcement for anonymous reads,ceph,PASS,6,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C14,Bucket policy: roundtrip and enforcement for anonymous reads,seaweedfs,PASS,6,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C14,Bucket policy: roundtrip and enforcement for anonymous reads,rustfs,PASS,6,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C14,Bucket policy: roundtrip and enforcement for anonymous reads,rustfs_default,PASS,6,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C14,Bucket policy: roundtrip and enforcement for anonymous reads,garage,UNSUPPORTED,2,put_policy,,NotImplemented (PutBucketPolicy).,s3-compat-three-systems-2026-09-30 Garage PROVEN 1,garage-vm-compat-and-presign-2026-10-08
-C15,CORS: configuration roundtrip and preflight behaviour,ceph,PASS,5,,,,,s3-compat-ceph-2026-10-02
+C15,CORS: configuration roundtrip and preflight behaviour,ceph,PASS,5,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C15,CORS: configuration roundtrip and preflight behaviour,seaweedfs,PASS,5,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C15,CORS: configuration roundtrip and preflight behaviour,rustfs,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C15,CORS: configuration roundtrip and preflight behaviour,rustfs_default,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C15,CORS: configuration roundtrip and preflight behaviour,garage,FAIL,5,preflight_allowed_origin; preflight_other_origin_refused; delete_cors,,"CORS is applied on real requests, but the preflight answer is allow-origin * for allowed, unlisted and unconfigured origins, and reading the CORS configuration after deleting it returns 204 (AWS 404).",s3-compat-three-systems-2026-09-30 Garage PROVEN 3 and 4,garage-vm-compat-and-presign-2026-10-08
-C16,Lifecycle configuration roundtrip (enforcement not tested),ceph,PASS,3,,,,,s3-compat-ceph-2026-10-02
+C16,Lifecycle configuration roundtrip (enforcement not tested),ceph,PASS,3,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C16,Lifecycle configuration roundtrip (enforcement not tested),seaweedfs,PASS,3,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C16,Lifecycle configuration roundtrip (enforcement not tested),rustfs,PASS,3,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C16,Lifecycle configuration roundtrip (enforcement not tested),rustfs_default,PASS,3,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C16,Lifecycle configuration roundtrip (enforcement not tested),garage,FAIL,3,delete_lifecycle,,Reading the lifecycle configuration after deleting it returns 204 (AWS 404 NoSuchLifecycleConfiguration).,s3-compat-three-systems-2026-09-30 Garage PROVEN 4,garage-vm-compat-and-presign-2026-10-08
-C17,"Object lock (GOVERNANCE): retention enforced, bypass works",ceph,PASS,5,,,,,s3-compat-ceph-2026-10-02
+C17,"Object lock (GOVERNANCE): retention enforced, bypass works",ceph,PASS,5,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C17,"Object lock (GOVERNANCE): retention enforced, bypass works",seaweedfs,PASS,5,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C17,"Object lock (GOVERNANCE): retention enforced, bypass works",rustfs,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C17,"Object lock (GOVERNANCE): retention enforced, bypass works",rustfs_default,PASS,5,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C17,"Object lock (GOVERNANCE): retention enforced, bypass works",garage,UNSUPPORTED,5,lock_enabled; mode_returned; delete_blocked,,"NotImplemented for the object lock configuration; lock headers on a normal bucket are accepted (200, AWS 400).",s3-compat-three-systems-2026-09-30 Garage PROVEN 1 and 2,garage-vm-compat-and-presign-2026-10-08
-C18,"SSE-S3 header and bucket default encryption (API only, at-rest not verified)",ceph,FAIL,4,put_sse; sse_echoed; sse_roundtrip,yes,HTTP 400 InvalidArgument with an empty message. Cause: rgw_crypt_sse_s3_backend is vault and no Vault token file is configured (RGW log and source v20.2.4). Bucket default encryption round trip passes. SSE-S3 with a key service was not tested.,"s3-compat-ceph-2026-10-02 CEPH PROVEN 4, OPEN O2",s3-compat-ceph-2026-10-02
+C18,"SSE-S3 header and bucket default encryption (API only, at-rest not verified)",ceph,FAIL,4,put_sse; sse_echoed; sse_roundtrip,yes,HTTP 400 InvalidArgument with an empty message. Cause: rgw_crypt_sse_s3_backend is vault and no Vault token file is configured (RGW log and source v20.2.4). Bucket default encryption round trip passes. SSE-S3 with a key service was not tested.,"s3-compat-ceph-2026-10-02 CEPH PROVEN 4, OPEN O2","compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C18,"SSE-S3 header and bucket default encryption (API only, at-rest not verified)",seaweedfs,FAIL,4,put_sse; sse_echoed; sse_roundtrip,yes,"Header answered with HTTP 500 InternalError, nothing stored. Same image with an SSE key set: 200. The deployment has no SSE key; the key was not tested on the VM cluster.","s3-compat-three-systems-2026-09-30 SeaweedFS PROVEN 2, OPEN O4",seaweedfs-vm-compat-and-presign-2026-10-08
 C18,"SSE-S3 header and bucket default encryption (API only, at-rest not verified)",rustfs,PASS,4,,yes,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C18,"SSE-S3 header and bucket default encryption (API only, at-rest not verified)",rustfs_default,FAIL,4,put_sse; sse_echoed; sse_roundtrip,yes,"Header refused with InvalidRequest: SSE-S3 needs RUSTFS_SSE_S3_MASTER_KEY when KMS is not configured. With the key set on all three nodes C18 passes (API only, encryption at rest not shown).",rustfs-vm-compat-and-presign-2026-10-09 sections 1 and 4,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C18,"SSE-S3 header and bucket default encryption (API only, at-rest not verified)",garage,UNSUPPORTED,4,sse_echoed; bucket_default_roundtrip,,"SSE-S3 header accepted but not echoed; bucket default encryption NotImplemented. The documentation says server side encryption is not implemented. On the VMs the marker of an SSE-S3 object was found in clear on the drives (security table, SEC6).",s3-compat-three-systems-2026-09-30 Garage PROVEN 1 and 2; garage-vm-security-2026-10-14 G-P5,garage-vm-compat-and-presign-2026-10-08
-C19,"ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)",ceph,PASS,9,,,,,s3-compat-ceph-2026-10-02
+C19,"ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)",ceph,PASS,9,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C19,"ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)",seaweedfs,FAIL,6,public_read_enforced_flat; put_acl_prefixed,,Canned ACL on a key with a path prefix returns 500 (flat key 200). Object ACL public-read is listed but anonymous GET stays 403 (public read is decided per bucket).,s3-compat-three-systems-2026-09-30 SeaweedFS PROVEN 3 and 4,seaweedfs-vm-compat-and-presign-2026-10-08
 C19,"ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)",rustfs,FAIL,9,allusers_grant_listed_flat; public_read_enforced_flat; allusers_grant_listed_prefixed; public_read_enforced_prefixed,,ACL calls succeed and change nothing: no AllUsers grant is shown and anonymous access stays 403 (RustFS ignores ACLs and fails closed). Bucket policy works (C14 PASS).,"s3-compat-three-systems-2026-09-30 RustFS PROVEN 3 (beta.8, cross checks); the 1.0.1 summary line is byte identical to the beta.8 line (rustfs-vm-compat-and-presign-2026-10-09 section 1)",rustfs-vm-compat-and-presign-2026-10-09 section 4
 C19,"ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)",rustfs_default,FAIL,9,allusers_grant_listed_flat; public_read_enforced_flat; allusers_grant_listed_prefixed; public_read_enforced_prefixed,,Same as RustFS with key.,rustfs-vm-compat-and-presign-2026-10-09 section 1,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C19,"ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)",garage,UNSUPPORTED,3,get_bucket_acl; put_acl_flat; put_acl_prefixed,,NotImplemented for ACL reads and writes.,s3-compat-three-systems-2026-09-30 Garage PROVEN 1,garage-vm-compat-and-presign-2026-10-08
-C20,"Integrity checksums: default CLI upload, algorithms, bad values refused",ceph,FAIL,8,wrong_sha256_refused,,"A wrong SHA-256 sent as a header is accepted (success and ETag); curl shows the same for SHA-1 and no checksum header on HEAD. In the curl control the three laptop systems answered 400. That RGW ignores these headers entirely is HYPOTHESIS H1, not proven. The trailer form was not tested.","s3-compat-ceph-2026-10-02 CEPH PROVEN 2, HYPOTHESIS H1, OPEN O1",s3-compat-ceph-2026-10-02
+C20,"Integrity checksums: default CLI upload, algorithms, bad values refused",ceph,FAIL,8,wrong_sha256_refused,,"A wrong SHA-256 sent as a header is accepted (success and ETag); curl shows the same for SHA-1 and no checksum header on HEAD. In the curl control the three laptop systems answered 400. That RGW ignores these headers entirely is HYPOTHESIS H1, not proven. The trailer form was not tested.","s3-compat-ceph-2026-10-02 CEPH PROVEN 2, HYPOTHESIS H1, OPEN O1","compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C20,"Integrity checksums: default CLI upload, algorithms, bad values refused",seaweedfs,PASS,8,,,,,seaweedfs-vm-compat-and-presign-2026-10-08
 C20,"Integrity checksums: default CLI upload, algorithms, bad values refused",rustfs,PASS,8,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C20,"Integrity checksums: default CLI upload, algorithms, bad values refused",rustfs_default,PASS,8,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C20,"Integrity checksums: default CLI upload, algorithms, bad values refused",garage,FAIL,8,CRC64NVME,,"CRC64NVME is accepted but the checksum is not returned (AWS CLI run only, no second client). Wrong SHA-256 and wrong MD5 are refused.",s3-compat-three-systems-2026-09-30 Garage OPEN O2,garage-vm-compat-and-presign-2026-10-08
-C21,"Awkward object keys: symbols, depth, folder marker, component and total length",ceph,PASS,2,,,,,s3-compat-ceph-2026-10-02
+C21,"Awkward object keys: symbols, depth, folder marker, component and total length",ceph,PASS,2,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C21,"Awkward object keys: symbols, depth, folder marker, component and total length",seaweedfs,FAIL,3,trailing_slash; component_256,,A key ending in / reads back as 0 bytes. A path component of 256 bytes is refused (KeyTooLongError); total key length 1024 is accepted.,s3-compat-three-systems-2026-09-30 SeaweedFS PROVEN 5 and 6,seaweedfs-vm-compat-and-presign-2026-10-08
 C21,"Awkward object keys: symbols, depth, folder marker, component and total length",rustfs,FAIL,2,component_256,,"A path component of 256 bytes is refused (InvalidArgument); component limit 255 bytes, total key 1024 accepted and 1025 refused.",s3-compat-three-systems-2026-09-30 RustFS PROVEN 4 (beta.8); the 1.0.1 summary line is byte identical (rustfs-vm-compat-and-presign-2026-10-09 section 1),rustfs-vm-compat-and-presign-2026-10-09 section 4
 C21,"Awkward object keys: symbols, depth, folder marker, component and total length",rustfs_default,FAIL,2,component_256,,Same as RustFS with key.,rustfs-vm-compat-and-presign-2026-10-09 section 1,rustfs-vm-compat-and-presign-2026-10-09 section 1
 C21,"Awkward object keys: symbols, depth, folder marker, component and total length",garage,FAIL,2,total_917_in_10_parts,,"Keys up to 479 bytes work; 480 bytes and above fail with HTTP 503 ServiceUnavailable (server message: LMDB MDB_BAD_VALSIZE). AWS allows 1024 and answers 400. The 479 = 511 minus 32 explanation is HYPOTHESIS H1, not proven.","s3-compat-three-systems-2026-09-30 Garage PROVEN 5, HYPOTHESIS H1",garage-vm-compat-and-presign-2026-10-08
-C22,Error code fidelity against documented AWS S3 codes,ceph,PASS,8,,,,,s3-compat-ceph-2026-10-02
+C22,Error code fidelity against documented AWS S3 codes,ceph,PASS,8,,,,,"compatibility-cross-system-2026-10-15 (Ceph repeat), s3-compat-ceph-2026-10-02"
 C22,Error code fidelity against documented AWS S3 codes,seaweedfs,FAIL,9,delete_nonempty_BucketNotEmpty; data_survives_delete,,"DeleteBucket of a bucket that still holds objects succeeds and destroys the data (HTTP 204). Cause: server option -s3.allowDeleteBucketNotEmpty, default true. Not an error code difference only.",s3-compat-three-systems-2026-09-30 SeaweedFS PROVEN 1,seaweedfs-vm-compat-and-presign-2026-10-08
 C22,Error code fidelity against documented AWS S3 codes,rustfs,PASS,8,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 4
 C22,Error code fidelity against documented AWS S3 codes,rustfs_default,PASS,8,,,,,rustfs-vm-compat-and-presign-2026-10-09 section 1
