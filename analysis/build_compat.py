@@ -163,9 +163,10 @@ def build():
             c = cells[(key, t)]
             rd = cc.READINGS.get((key, t))
             failed = "; ".join(n for n, s in c["subs"] if s != "ok")
-            rows.append([t, what[t], key, c["verdict"], len(c["subs"]), failed, "yes" if (key, t) in CONFIG_DEPENDENT or (key == "rustfs_default" and t == "C18") else "",
+            okn = "; ".join(n for n, s in c["subs"] if s == "ok")
+            rows.append([t, what[t], key, c["verdict"], len(c["subs"]), failed, okn, "yes" if (key, t) in CONFIG_DEPENDENT or (key == "rustfs_default" and t == "C18") else "",
                          rd["text"] if rd else "", rd["src"] if rd else "", src["record"]])
-    write_csv(p, ["test", "what", "deployment", "verdict", "sub_checks", "failed_sub_checks", "depends_on_setting", "reading_from_record", "reading_source", "record"], rows)
+    write_csv(p, ["test", "what", "deployment", "verdict", "sub_checks", "failed_sub_checks", "ok_sub_checks", "depends_on_setting", "reading_from_record", "reading_source", "record"], rows)
     outputs.append(p)
 
     lines = ["\\begin{tabular}{@{}llllll@{}}", "\\toprule", "Test & What & " + " & ".join(n for _, n in SYSTEMS) + " \\\\", "\\midrule"]

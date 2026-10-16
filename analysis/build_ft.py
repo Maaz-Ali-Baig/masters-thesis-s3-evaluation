@@ -212,6 +212,8 @@ def analyse(name, parts):
     cgaps = [(b - a, a) for a, b in zip(conf, conf[1:])]
     cgap, cgap_at = max(cgaps)
     ctail = led[-1]["t"] - conf[-1]
+    # confirmed writes from 60 s after time zero until the stopped endpoint answered again (to the end of the ledger if it did not)
+    conf_in_outage = sum(1 for t in conf if t >= t0 + 60 and (t_back is None or t <= t_back))
     do = tsv(parts["verify-during-outage.tsv"], header=False, names=["endpoint", "key", "expected", "got", "status"])
     do_bad = [r for r in do if r["status"] != "OK"]
 
@@ -237,6 +239,7 @@ def analyse(name, parts):
         not_readable_acked=sum(1 for k in bad_keys if not is_seed(k)), not_readable_seed=sum(1 for k in bad_keys if is_seed(k)),
         outage_read_objects=len(do), outage_read_not_ok=len(do_bad),
         outage_read_not_ok_seed=sum(1 for r in do_bad if is_seed(r["key"])),
+        confirmed_in_outage_after_60s=conf_in_outage,
         _unconf=unconf, _led=led, _probe=probe, _t0=t0, _ev=ev, _targets=targets, _rounds=rounds, _hard=hard,
     )
 
