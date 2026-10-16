@@ -75,12 +75,16 @@ No VM run of the 22 test probe on Ceph is in this folder; the Ceph compatibility
 
 `fault-tolerance-cross-system-2026-10-15.txt`: analysis of the 13 run archives of the four systems (S1 and S2) with definitions, results, what may and may not be written across systems, open points and corrections. It is made by `analysis/build_ft.py` and `analysis/build_repair.py`; the tables and figures are in `analysis/out/ft/` and `analysis/out/repair/`.
 
+## Cross system compatibility record
+
+`compatibility-cross-system-2026-10-15.txt`: the 22 probe tests (C01 to C22) for the four systems, with the deployment behind each column, what is proven, limits and open points. Made by `analysis/build_compat.py` from the `summary.tsv` of five probe runs; the script checks each file against the sha256 in the records and recomputes every verdict from its sub-checks. Tables in `analysis/out/compat/`. The RustFS column of `compat-matrix-four-systems-2026-10-02.tsv` is RustFS 1.0.0-beta.8 on the laptop and is superseded by RustFS 1.0.1 in this record.
+
 ## Raw run archives of the VM series (in this folder)
 
-The archives made by the scripts on the VMs (`ft.sh`, `sec.sh`, `security-presign-unsigned-header.sh`) are kept here as `.tar.gz`, 26 files, 3.5 MB in all, unchanged. They were copied from ceph0 on 15 October 2026. Their sha256 is in `vm-archives-ceph0-SHA256SUMS.txt` and in the records. `analysis/` reads them directly.
+The archives made by the scripts on the VMs (`ft.sh`, `sec.sh`, `security-presign-unsigned-header.sh`) are kept here as `.tar.gz`, 28 files, unchanged. They were copied from ceph0 on 15 October 2026. Their sha256 is in `vm-archives-ceph0-SHA256SUMS.txt` and in the records. `analysis/` reads them directly.
 
 1. `ft-<system>-<scenario>-<date>-<time>.tar.gz` (13 files): one fault tolerance run. Inside: `ledger.tsv` (every write attempt), `probe.tsv` (probe of the fixed object), `repairwatch.tsv`, `verify*.tsv` (read back), `summary.txt`, `console.txt`.
-2. `sec-<system>-<date>-<time>.tar.gz` (10 files): one security run (`sec.sh`, and `sec-ceph-replies` for Ceph).
+2. `sec-<system>-<date>-<time>.tar.gz` (12 files): one security run (`sec.sh`, and `sec-ceph-replies` for Ceph; the two `sec-seaweedfs-20261015-*` and `sec-rustfs-20261015-*` archives are the SEC4 runs of 15 October).
 3. `presign-<system>-vm-<date>-<time>.tar.gz` (3 files): the presigned PUT test with unsigned headers on the VMs.
 
 Not in the repository (kept on the VMs and on the author's laptop): the performance series archives with the Warp raw data (1.7 to 2.6 MB each), the sar logs of the three nodes (8 to 20 MB each) and five `compat-*` archives, which are held back because a key value was found in them. The performance tables that the records cite are in this folder.

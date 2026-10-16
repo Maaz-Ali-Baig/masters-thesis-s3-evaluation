@@ -41,6 +41,7 @@ For a clean manifest: commit the scripts first, run them, then commit `analysis/
 | `build_ft.py` | `out/ft/` | fault tolerance runs S1 and S2 of the four systems, read from `results/ft-*.tar.gz` |
 | `build_repair.py` | `out/repair/` | what the repair watch recorded after the stopped node(s) came back: file count lag (Garage, RustFS, SeaweedFS) and Ceph health |
 | `build_security.py` | `out/security/` | security comparison table (13 rows by 4 systems, tables only), cells in `analysis/cells/security_cells.py` checked against the raw archives |
+| `build_compat.py` | `out/compat/` | S3 compatibility table (22 probe tests by 4 systems), verdicts recomputed from the sub-checks of five `summary.tsv`, readings in `analysis/cells/compat_cells.py` |
 
 Outputs of `build_perf.py`:
 
@@ -89,4 +90,15 @@ Tables only, no figures. The 52 cells (13 rows by 4 systems) are written by hand
 
 Outcome words: PASS and FAIL follow the pass conditions of `security_method.md` (a FAIL is a finding about the default deployment, not a judgement of the product); `refused` = the server refused the request that was meant to enable the feature; `not in clear` = SSE accepted and the marker was not found on the drives (the strength of the encryption is not shown); `info` = a fact without a pass condition; `n.t.` = not tested (the check was not run, or the script found nothing to test).
 
-Limits to state with the table: default deployments, plain http, no TLS (transport was tested at level 1 only); one run per check; the paths and ports tested are fixed lists; SEC4 was run for Ceph and Garage only; SEC7 (admin interfaces) is limited to the anonymous answers of SEC1; whether a marker that is not found means encryption is not shown. The presigned PUT test of Ceph is the run of 5 October on the same VMs (plain file in `results/`).
+Limits to state with the table: default deployments, plain http, no TLS (transport was tested at level 1 only); one run per check; the paths and ports tested are fixed lists; SEC4 (scoped key) was run for all four systems, for SeaweedFS it protects the S3 port only; SEC7 (admin interfaces) is limited to the anonymous answers of SEC1; whether a marker that is not found means encryption is not shown. The presigned PUT test of Ceph is the run of 5 October on the same VMs (plain file in `results/`).
+
+## S3 compatibility table (`build_compat.py`): how the table is made and checked
+
+Tables only, no figures. Input: the `summary.tsv` of five probe runs (Ceph from the text copy `results/compat-ceph-20261002-072634-evidence.txt`, SeaweedFS, Garage and RustFS from the `compat-*.tar.gz` in `results/`; RustFS twice, with and without the SSE-S3 master key). The script stops if
+
+1. a `summary.tsv` does not have the sha256 written in the records (for SeaweedFS, RustFS and Garage the records state that the summary of the VM run has the same sha256, so the VM result equals the file here; the VM archives stay on ceph0),
+2. a verdict does not follow from its sub-checks (rule of the records: a sub-check that answered NotImplemented = UNSUPPORTED, else a failed sub-check = FAIL, else PASS),
+3. a column differs from the old matrix `compat-matrix-four-systems-2026-10-02.tsv` (Ceph, SeaweedFS, Garage must be equal; RustFS must differ exactly in C08 and C20, and in C18 without the key, because the old column is 1.0.0-beta.8), or the totals differ from the totals in the records,
+4. a cell that is not PASS has no reading, or its reading names a sub-check that did not fail.
+
+The readings are typed in `analysis/cells/compat_cells.py` with the record and point they come from. Only the sub-check they name is checked; the cause in the text is the claim of the record. State with the table: a FAIL means "differs from documented AWS S3 behaviour", not "defective"; the columns are deployments (C18 depends on a key or key service in Ceph, SeaweedFS and RustFS); the number of PASS cells weights all tests equally and is not a ranking; Ceph was probed on 2 October and not again; AWS CLI is the only client of the probe.

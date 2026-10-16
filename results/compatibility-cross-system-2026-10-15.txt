@@ -1,0 +1,84 @@
+S3 API compatibility, Ceph, SeaweedFS, RustFS and Garage: cross system table of the 22 probe tests (15 October 2026)
+===================================================================================================================
+
+Source:    the summary.tsv of five probe runs (hashes in analysis/cells/compat_cells.py and in analysis/out/compat/MANIFEST.txt), the old matrix
+           results/compat-matrix-four-systems-2026-10-02.tsv, and the records named per point (results/s3-compat-three-systems-2026-09-30.txt,
+           results/s3-compat-ceph-2026-10-02.txt, results/<system>-vm-compat-and-presign-*.txt).
+Method:    analysis/build_compat.py, outputs analysis/out/compat/ (compat_cells.csv, compat_summary.tex, compat_details_<system>.tex, MANIFEST.txt).
+           The script (1) checks every summary.tsv against the sha256 written in the records, (2) splits each test into its sub-checks and recomputes the verdict
+           with the rule of the records (NotImplemented = UNSUPPORTED, else any failed sub-check = FAIL, else PASS) and stops if it differs from the verdict the probe wrote,
+           (3) compares with the old matrix and with the totals of the records (all equal), (4) requires a reading for every cell that is not PASS.
+Probe:     scripts/s3-compat.sh (22 tests, C01 to C22), AWS CLI 2.36.8, run from ceph0 against the S3 endpoint of ceph0 itself. FAIL = differs from documented AWS S3
+           behaviour, not "defective". UNSUPPORTED = the server answered NotImplemented. One request sequence per test.
+
+WHAT IS IN EACH COLUMN (counter check of the earlier matrix of 2 October)
+-------------------------------------------------------------------------
+Ceph       Ceph 20.2.4 RGW on the VMs, run ceph-20261002-072634 (2 October). The archive is on ceph0 only; the repository holds a text copy of all 559 files.
+SeaweedFS  4.25. The file in the repository is the laptop single node run of 30 September. The record of 8 October states that the summary.tsv of the VM run has the
+           same sha256, so the VM result equals it. The VM archive is on ceph0 only.
+RustFS     1.0.1 with the SSE-S3 master key set (the state of every later VM series: performance, security, fault tolerance). Laptop single node file with the same sha256
+           as the VM run (record of 9 October, section 4).
+Garage     v1.0.0. Laptop single node file of 30 September; the record of 8 October states the same sha256 for the VM run.
+The old matrix (2 October) has a RustFS column from 1.0.0-beta.8 on the laptop. It is superseded: against it, 1.0.1 differs in C08 (now PASS) and C20 (now PASS), and in
+C18 without the key (FAIL). The script checks exactly these differences. Ceph, SeaweedFS and Garage equal the old matrix in all 22 tests.
+
+RESULTS (verdict per test; * = depends on a setting of the deployment, see P3)
+-------
+Test  What                                                        Ceph    SeaweedFS  RustFS   Garage
+C01 to C07  bucket, object, metadata, range, copy, listing, delete   PASS    PASS       PASS     PASS
+C08   Multipart (complete, list, abort, minimum part size)          PASS    PASS       PASS     FAIL
+C09   Object tagging                                                PASS    PASS       PASS     unsupported
+C10   Versioning                                                    PASS    PASS       PASS     unsupported
+C11   Conditional GET                                               PASS    PASS       PASS     FAIL
+C12   Conditional PUT (If-None-Match: *)                            PASS    PASS       PASS     FAIL
+C13   Presigned GET URL                                             PASS    PASS       PASS     FAIL
+C14   Bucket policy                                                 PASS    PASS       PASS     unsupported
+C15   CORS                                                          PASS    PASS       PASS     FAIL
+C16   Lifecycle configuration (round trip only)                     PASS    PASS       PASS     FAIL
+C17   Object lock (GOVERNANCE)                                      PASS    PASS       PASS     unsupported
+C18   SSE-S3 header and bucket default encryption (API only)        FAIL*   FAIL*      PASS*    unsupported
+C19   ACLs                                                          PASS    FAIL       FAIL     unsupported
+C20   Integrity checksums                                           FAIL    PASS       PASS     FAIL
+C21   Awkward object keys                                           PASS    FAIL       FAIL     FAIL
+C22   Error code fidelity                                           PASS    FAIL       PASS     FAIL
+PASS / FAIL / unsupported (of 22)                                   20/2/0  18/4/0     20/2/0   7/9/6
+RustFS without the SSE key (first VM run of 9 October): 19/3/0 (C18 FAIL in addition).
+
+PROVEN (from the tables and the records)
+------
+P1. C01 to C07 (the basic object operations) pass in all four systems. Everything that differs is in C08 to C22.
+P2. Ceph passes 20 of 22, SeaweedFS 18, RustFS 20 (19 without the key), Garage 7. Garage answers NotImplemented in six tests (tagging, versioning, bucket policy, object lock, SSE-S3
+    bucket default, ACLs) and fails nine. In three of the nine (C08, C11, C12) Garage accepts and ignores a request that AWS refuses (minimum part size, wrong If-Match or
+    If-Unmodified-Since, If-None-Match: * on an existing key), so a client gets no error (Garage record of 30 September, PROVEN 2). The other six are differences in status code,
+    in the answer after a delete, or in a limit (C13, C15, C16, C20, C21, C22).
+P3. C18 depends on a setting in three systems. As deployed, only RustFS (with its key) passes: SeaweedFS answers HTTP 500 when no SSE key is set (200 with a key on a scratch
+    container, not tested on the VM cluster); Ceph refuses with HTTP 400 because rgw_crypt_sse_s3_backend is vault and no Vault token file exists (no key service tested); RustFS
+    refuses without RUSTFS_SSE_S3_MASTER_KEY and passes with it on the three nodes. The column therefore compares deployments, not features. The probe tests the API only.
+    For encryption at rest see the security table (SEC6).
+P4. The failures are different in kind, so the number of FAIL cells is not a ranking. SeaweedFS C22 is a deletion of a non empty bucket with its data (option allowDeleteBucketNotEmpty,
+    default true); Ceph C20 is a wrong checksum header that is accepted; RustFS C19 and SeaweedFS C19 are ACLs that do not enforce or break on prefixed keys; C21 is a limit on a path
+    component (SeaweedFS, RustFS: 256 bytes refused) or on the total key (Garage: 503 from 480 bytes), and in SeaweedFS also a key ending in / that reads back as 0 bytes.
+P5. RustFS C19 (ACLs) and C21 differ from AWS in the same way in 1.0.1 as in beta.8: the summary lines are byte identical (RustFS record, 9 October, section 1). The curl cross
+    checks behind the readings of C19 and C21 were made on beta.8.
+
+LIMITS
+------
+L1. One probe run per system, one request sequence per test, AWS CLI 2.36.8 as the only client in the probe. Garage C13 (expired URL answers 400) and C20 (CRC64NVME) rest on the AWS CLI run only.
+L2. Three of the four columns are files of laptop single node runs that equal the VM run by sha256 (as stated in the records). The VM archives are on ceph0 and are not in the repository
+    (five compat archives are held back because a key value was found in them, see results/README.md). Ceph is the VM run itself.
+L3. The Ceph probe is of 2 October and ran against the RGW on ceph0 from ceph0 only (record O4). The Ceph cluster was stopped on 6 October and started again on 15 October; the probe was not
+    repeated after that, and the RGW settings of 15 October were not compared with those of 2 October. The other three probes are of 8 and 9 October.
+L4. ACL tests measure legacy AWS behaviour (AWS disabled ACLs on new buckets in 2023). Lifecycle (C16) is a round trip, not enforcement. SSE (C18) is the API only.
+L5. 22 tests are not the whole S3 API. A count of PASS cells weights every test the same and is not a ranking of the systems. A weighted view depends on the use case and is a separate decision.
+L6. The curl 7.88.1 on ceph0 signs a query parameter without value (?acl) wrongly (shown for SeaweedFS, RustFS and Garage); the compatibility probe uses the AWS CLI and is not affected.
+
+OPEN
+----
+Q1. Ceph: C20 H1 (RGW ignores the checksum request headers) and the trailer form were not tested (Ceph record H1, O1).
+Q2. Ceph and SeaweedFS C18 with a key service or a key on the VM cluster: not tested (RustFS only).
+Q3. Ceph ACL read with ?acl= on ceph0 (Ceph security record O6): settling test not run yet; it concerns the presigned PUT test, not this table.
+Q4. Optional: a repeat of the 22 tests on Ceph in its final state (VMs, after 15 October). It would replace L3 by a dated VM run; it needs the probe on ceph0 (about 10 minutes) and the approval of the user.
+
+CORRECTIONS OF EARLIER STATEMENTS
+---------------------------------
+C1. The RustFS column of results/compat-matrix-four-systems-2026-10-02.tsv is RustFS 1.0.0-beta.8 on the laptop. For the thesis the RustFS column is 1.0.1 (this record, analysis/out/compat/).
