@@ -36,7 +36,7 @@ r9,SEC6,object stored without SSE on the data drives,seaweedfs,FAIL,"marker foun
 r9,SEC6,object stored without SSE on the data drives,rustfs,FAIL,marker found in xl.meta of the plain object on one drive of each node (3 of 6 drives),"rustfs-vm-security-2026-10-11 SE-P3, SE-O1",3x
 r9,SEC6,object stored without SSE on the data drives,garage,FAIL,marker found in one zstd block file on each of the three nodes (three copies),garage-vm-security-2026-10-14 G-P6,1x 1x
 r10,SEC6,SSE-S3 request (header AES256),ceph,REFUSED,400 InvalidArgument (no key service for SSE-S3 configured),ceph-vm-security-2026-10-15 SEC6b; ceph-sse-s3-vault-check-2026-10-02,1x
-r10,SEC6,SSE-S3 request (header AES256),seaweedfs,REFUSED,InternalError in all three runs (cause not examined),"seaweedfs-vm-security-2026-10-13 SW-P7, SW-O3",1x 1x
+r10,SEC6,SSE-S3 request (header AES256),seaweedfs,REFUSED,InternalError in all three runs. Cause shown on the laptop with the same version: no SSE key set (with a key the header was accepted); not tested on the VM cluster,"seaweedfs-vm-security-2026-10-13 SW-P7, SW-O3; s3-compat-three-systems-2026-09-30 SeaweedFS PROVEN 2",1x 1x
 r10,SEC6,SSE-S3 request (header AES256),rustfs,NOT IN CLEAR,accepted; marker of the SSE object not found on the drives (strength of the encryption not shown),"rustfs-vm-security-2026-10-11 SE-P4, SE-O2",1x 1x
 r10,SEC6,SSE-S3 request (header AES256),garage,FAIL,"accepted without an error, but the marker of the SSE-S3 object is stored in clear in a block file on every node (as the plain control)","garage-vm-security-2026-10-14 G-P5, run 3",1x 1x 1x
 r11,SEC6,SSE-C request (customer key),ceph,REFUSED,"400 InvalidRequest over plain http (reason: HYPOTHESIS, not read)",ceph-vm-security-2026-10-15 SEC6b,1x

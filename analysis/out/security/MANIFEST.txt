@@ -1,8 +1,8 @@
 Security comparison table: inputs and outputs
 =============================================
 
-repository commit: 4caa4fca4c4b67f765e54246540ad64eb134d776
-working tree (analysis, results): UNCOMMITTED CHANGES in analysis/ (outside out/) or results/
+repository commit: 30b924f64d1ae6c88775b420bb947a0ece050b62
+working tree (analysis, results): clean
 python 3.12.3
 matplotlib 3.6.3
 
@@ -23,13 +23,13 @@ d69aa9af94cc3e3acb367331a8937cc1e4d6501a32b4ca8dd2a163487ff9c86a  results/sec-se
 562bb7382915f4f970ce4ced82399723737b7c123d6c1212f4248fc9e987fecb  results/sec-seaweedfs-20261013-161312.tar.gz
 cfe561aa75773984ed51f49ea078cd923f93b0eb3d4483336f97ebc90df8f84d  results/sec-seaweedfs-20261015-221614.tar.gz
 0c9d51ba3593b9e46661341d6643bd8d78de5d0017069c75947995eced776476  results/security-presign-unsigned-header-ceph-20261005-230914.txt
-348c848efdc92db18d4be8d04c0dc44ed7e95a7797c7dcec5398e02cabb2d347  results/vm-archives-ceph0-SHA256SUMS.txt
-008eeb86b77ed78a2d29de27e2bef1f46c7e6d4e0f53704b37048996b183e5fd  analysis/cells/security_cells.py
+6d2251f92a5241273ab2f54362737995288ec4b0de909303ea32b84309d6f21d  results/vm-archives-ceph0-SHA256SUMS.txt
+06f32e6c7f2ee1c95ca303d95634c324a769cc43c6ac10eef9da57db0a3eec9a  analysis/cells/security_cells.py
 
 OUTPUT FILES
-dbb5e6618c2b55b2b68f3b64efa64dcc0a5052779721a69e5e33e3e8097a08d5  analysis/out/security/security_cells.csv
+3e78405d8c35bbd2051943b1e5ca3bb84bc87386edabdea1d1cda3a7caa0a163  analysis/out/security/security_cells.csv
 ad6132aa8d5bb4cc7d865a8d4f2a1336d737358e698b5842c9fc8d51174aa7ba  analysis/out/security/security_summary.tex
 da064780ef42f2a34826e47491f317689b493bfdfbdab807d8f2c4bf749f8f0f  analysis/out/security/security_details_ceph.tex
-1690865a451a5e8892c9b4be7b40fdc17053cd6c81efb851e5d481e6f4f5db8d  analysis/out/security/security_details_seaweedfs.tex
+808d35413f0c6c78a756c53c2dfe4403c95eff3abf59f1209fe5c5754ae9a696  analysis/out/security/security_details_seaweedfs.tex
 52b5c29e48b63dc0ed984e2e35fde054c3b1f8d60a8302b2be30c4708a0e222e  analysis/out/security/security_details_rustfs.tex
 e8fe439296cc9388a2786e07920c8c362406066157f295767c745f4efba6d36a  analysis/out/security/security_details_garage.tex
