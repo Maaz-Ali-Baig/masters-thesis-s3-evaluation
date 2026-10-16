@@ -88,7 +88,7 @@ CELLS = {
         ev=[(SW1, "sec5.txt", r"marker lines found in the capture: 199")]),
     ("seaweedfs", "r9"): dict(out="FAIL", text="marker found in the volume file ftbucket_69.dat on all three nodes (random padded object; repetitive text objects were not found: possible compression, OPEN)", src=REC["seaweedfs"] + " SW-P6, SW-O1",
         ev=[(SW3, "sec6.txt", r"files containing the marker on 192\.168\.1\.72 .*: 1\n +/srv/s3/disk2/seaweedfs/ftbucket_69\.dat"), (SW3, "sec6.txt", r"files containing the marker on 192\.168\.1\.70 .*: 1\n +/srv/s3/disk2/seaweedfs/ftbucket_69\.dat")]),
-    ("seaweedfs", "r10"): dict(out="REFUSED", text="InternalError in all three runs (cause not examined)", src=REC["seaweedfs"] + " SW-P7, SW-O3",
+    ("seaweedfs", "r10"): dict(out="REFUSED", text="InternalError in all three runs. Cause shown on the laptop with the same version: no SSE key set (with a key the header was accepted); not tested on the VM cluster", src=REC["seaweedfs"] + " SW-P7, SW-O3; s3-compat-three-systems-2026-09-30 SeaweedFS PROVEN 2",
         ev=[(SW1, "sec6.txt", r"SSE-S3 upload: upload failed:.*InternalError"), (SW3, "sec6.txt", r"SSE-S3 upload: upload failed:.*InternalError")]),
     ("seaweedfs", "r11"): dict(out="NOT IN CLEAR", text="accepted; no extra marker copy found in the volume file (4 occurrences = the plain object); not read back, encryption not proven", src=REC["seaweedfs"] + " SW-P7",
         ev=[(SW3, "sec6.txt", r"SSE-C upload: \{.*SSECustomerAlgorithm")]),

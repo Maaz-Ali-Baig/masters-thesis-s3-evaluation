@@ -1,0 +1,69 @@
+Security, Ceph, SeaweedFS, RustFS and Garage on the same three VMs: cross system table of 13 checks (15 October 2026)
+===================================================================================================================
+
+Source:    the four security records (results/<system>-vm-security-*.txt, with the addenda of 15 October), the raw run archives results/sec-*.tar.gz and results/presign-*.tar.gz
+           (hashes in results/vm-archives-ceph0-SHA256SUMS.txt) and the Ceph presigned PUT file of 5 October (results/security-presign-unsigned-header-ceph-20261005-230914.txt).
+Method:    analysis/build_security.py, cells in analysis/cells/security_cells.py, outputs analysis/out/security/ (security_cells.csv, security_summary.tex, security_details_<system>.tex,
+           MANIFEST.txt). Every cell has an outcome word, a text, the record and point it comes from, and regular expressions that must be found in the raw output of the archives; the script
+           stops if one is missing (52 cells, all verified). Checks: security_method.md. VM series: same three VMs, plain http, default deployments, one run per check.
+Outcome:   PASS and FAIL follow the pass conditions of security_method.md. A FAIL is a finding about the default deployment, not a judgement of the product. REFUSED = the server refused the request
+           that was meant to enable the feature. NOT IN CLEAR = SSE accepted and the marker not found on the drives (strength not shown). INFO = a fact without a pass condition. n.t. = not tested.
+
+RESULTS
+-------
+Check  What                                                         Ceph        SeaweedFS   RustFS        Garage
+SEC1   S3 port refuses anonymous requests                           PASS        PASS        PASS          PASS
+SEC3   wrong secret and unknown access key refused                  PASS        PASS        PASS          PASS
+SEC3   presigned PUT with a header outside the signature            PASS        PASS        PASS          PASS
+SEC1   answers without credentials on non S3 ports                  info        info        info          info
+SEC2   anonymous write through a non S3 port                        PASS        PASS        n.t.          n.t.
+SEC2   anonymous read of object data through a non S3 port          info        FAIL        info          info
+SEC4   key limited to read on one bucket                            PASS        PASS        PASS          PASS
+SEC5   object content on the wire (plain http)                      FAIL        FAIL        FAIL          FAIL
+SEC6   object stored without SSE on the data drives                 FAIL        FAIL        FAIL          FAIL
+SEC6   SSE-S3 request                                              refused     refused     not in clear  FAIL
+SEC6   SSE-C request                                                refused     not in clear not in clear not in clear
+SEC8   failed attempt visible in the container log                  FAIL        PASS        FAIL          PASS
+SEC7   admin interface                                              info        info        info          info
+Totals: PASS 20, FAIL 12, info 11, not in clear 4, refused 3, not tested 2 (52 cells).
+
+PROVEN (from the table, the cells and the records)
+------
+P1. Authentication on the S3 port: anonymous requests, a wrong secret and an unknown access key are refused in all four systems (rows 1 and 2). A presigned PUT with an x-amz header outside the
+    signature is refused in all four (row 3), with 403 in Ceph, SeaweedFS and RustFS 1.0.1 and with 400 InvalidRequest in Garage. An unsigned Content-Type is refused by Ceph and accepted by the other three.
+    Version dependence: RustFS 1.0.0-beta.8 accepted all unsigned header cases (laptop, 2 October); 1.0.1 refuses them. The Ceph file is the run of 5 October on the same VMs.
+P2. A key limited to read on one bucket works in all four systems (row 7): list and read succeed; write, delete, read of another bucket and bucket creation are refused. In SeaweedFS this holds for the S3
+    port only, because the filer port 8888 serves data without credentials (P5). In Ceph the first run created a bucket because of a setup error of mine (max_buckets 0 means unlimited); the run that is used is the corrected one.
+P3. Nothing is encrypted on the wire: all four systems run plain http and the marker of the uploaded objects is in the capture (rows 8; 199 of 200 marker lines in Ceph, SeaweedFS and Garage, 264 in RustFS).
+    This is a property of the deployments (no TLS configured), not of the products. TLS was not tested.
+P4. Nothing is encrypted at rest by default: the marker of a plain object was found on the data drives of all four systems (row 9; Ceph on the raw OSD device, SeaweedFS in the volume file, RustFS in xl.meta, Garage in a
+    block file; on all three nodes in Ceph, SeaweedFS and Garage, on 3 of 6 drives in RustFS).
+P5. Only SeaweedFS serves object data on a port other than the S3 port without credentials: the filer port 8888 returned the stored objects (row 6). For the other three systems no non S3 data port was in the port list.
+P6. Server side encryption (rows 10 and 11) differs by system and is not comparable as a score. Ceph refuses SSE-S3 (no Vault key service, record of 2 October) and SSE-C over plain http. SeaweedFS answers SSE-S3 with an
+    InternalError (laptop, same version: no SSE key set; not tested on the VMs). RustFS accepts both and the marker was not found on the drives (strength not shown; the SSE-S3 master key was set). Garage accepts SSE-S3 without an
+    error and stores the marker in clear (its documentation says server side encryption is not implemented), and accepts SSE-C with the marker not found. A "not in clear" cell is not proof of encryption.
+P7. Failed attempts: SeaweedFS and Garage log a wrong key at default level on the node that served it; Ceph (RGW container) and RustFS log nothing about it (row 12; Ceph control: even successful requests leave 0 to 1 lines).
+P8. Admin and status ports: every system answers some request on a non S3 port without credentials (row 4: status, metrics, health, console pages). SeaweedFS master, volume and filer pages and the RustFS console page are served
+    without a login; Garage's admin API refuses calls without its token (record only). A login was not tested (row 13).
+
+LIMITS
+------
+L1. Default deployments on plain http; no TLS tested. The wire result is the same for all four by construction.
+L2. One run per check, one day per system (RustFS 11 October, SeaweedFS 13 October, Garage 14 October, Ceph 15 October; SEC4 for SeaweedFS and RustFS on 15 October). The paths and ports tested are fixed lists.
+L3. A marker that is not found is not a proof of encryption (rows 10 and 11), and a marker that is found shows no encryption only for the object tested (random padded marker; repetitive text objects were not found in
+    SeaweedFS, possible compression, OPEN).
+L4. The counts (20 PASS, 12 FAIL) weight every check the same and are not a ranking. The rows are not equal in impact (a data port without credentials is not the same as a missing TLS configuration).
+L5. SEC7 is limited to the anonymous answers of SEC1. The two n.t. cells are "the script found no candidate port", not "passed".
+L6. The Ceph presigned PUT test is of 5 October. The AWS CLI 2.36.8 crashes on empty Ceph error messages; the Ceph server replies were recorded with a second script (sec-ceph-replies.sh).
+L7. The key of the scoped users and the test bucket policies were set by hand for these runs (see the records for each system); the scoped key of RustFS was made with rc 0.1.36 because the MinIO client could not be downloaded.
+
+OPEN
+----
+Q1. The count of 264 marker lines against 200 uploads in RustFS (SE-O8). Q2. Port identities in Ceph (ports 9093, 9095, 9100, 9283, 9926 answered with metrics text; the dashboard on 8443 was not read).
+Q3. SSE-S3 for Ceph with a key service, and for SeaweedFS with a key on the VM cluster (RustFS only was tested with a key). Q4. TLS for each system. Q5. Anonymous write on RustFS and Garage (the two n.t. cells).
+Q6. Whether SeaweedFS has an option to protect the filer port (not examined).
+
+CORRECTIONS OF EARLIER STATEMENTS
+---------------------------------
+C1. The RustFS presigned PUT result of 2 October (unsigned headers accepted) belongs to 1.0.0-beta.8; the VM result for 1.0.1 is a refusal (results/rustfs-vm-compat-and-presign-2026-10-09.txt).
+C2. The SeaweedFS SSE-S3 InternalError was recorded as "cause not examined" (SW-O3); the compatibility record shows the cause on the laptop with the same version (no SSE key set). The cell of the table says so.

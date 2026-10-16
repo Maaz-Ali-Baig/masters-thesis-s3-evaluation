@@ -75,6 +75,10 @@ No VM run of the 22 test probe on Ceph is in this folder; the Ceph compatibility
 
 `fault-tolerance-cross-system-2026-10-15.txt`: analysis of the 13 run archives of the four systems (S1 and S2) with definitions, results, what may and may not be written across systems, open points and corrections. It is made by `analysis/build_ft.py` and `analysis/build_repair.py`; the tables and figures are in `analysis/out/ft/` and `analysis/out/repair/`.
 
+## Cross system security record
+
+`security-cross-system-2026-10-15.txt`: the 13 security checks for the four systems (52 cells, outcome words only), with what is proven, limits, open points and corrections. Made by `analysis/build_security.py`; every cell is checked against the raw archives. Tables in `analysis/out/security/`.
+
 ## Cross system compatibility record
 
 `compatibility-cross-system-2026-10-15.txt`: the 22 probe tests (C01 to C22) for the four systems, with the deployment behind each column, what is proven, limits and open points. Made by `analysis/build_compat.py` from the `summary.tsv` of five probe runs; the script checks each file against the sha256 in the records and recomputes every verdict from its sub-checks. Tables in `analysis/out/compat/`. The RustFS column of `compat-matrix-four-systems-2026-10-02.tsv` is RustFS 1.0.0-beta.8 on the laptop and is superseded by RustFS 1.0.1 in this record.
