@@ -1,0 +1,30 @@
+Scoring matrix (scoring_method.md revision 2): inputs and outputs
+=================================================================
+
+repository commit: 1f44d3f91259baa7d6f69c27fc3ae387c9a41bcf
+working tree (analysis, results): clean
+python 3.12.3
+matplotlib 3.6.3
+
+INPUT FILES (results/)
+9384f16196b823b7107bee90a0520a3275c6bf4c1230f2f05fb93204a1fbdbc9  analysis/out/perf/perf_long.csv
+c526ab6c2ab24741fd0d8150499d36a2610ca5263ec26ed176a4b3e557ec57ff  analysis/out/compat/compat_cells.csv
+3e78405d8c35bbd2051943b1e5ca3bb84bc87386edabdea1d1cda3a7caa0a163  analysis/out/security/security_cells.csv
+7a8cc327d8f8b1235c716fc25520d9dd1f4176a12d640ddc9d81dbd5e19c3049  analysis/out/ft/ft_runs.csv
+bc300c35688d6307c18cccc81228147bc36f5df0da760d7304da7f8ce0ed2552  scoring_method.md
+e650579cdd4df70a476a63edc9c405994f5931228a533991a63a97ece3593e55  analysis/build_scoring.py
+
+OUTPUT FILES
+a27bd5bef74fb1ea6eba18f281c93dbfc9c258957cc824a4bc528818659647c7  analysis/out/scoring/scoring_perf_cells.csv
+c155b0a0c599d49947d5bddee47802e466b9a07d0f8b02917d4cc57fe65957af  analysis/out/scoring/scoring_ft.csv
+ac24263cd2124aecf9da9048d3d22e7278ac20f91f064c4b88771310339ed078  analysis/out/scoring/scoring_ft_observed.csv
+5c5e05b8c5e25708754227315be3ea3ca222756efca39a7ea70a3314a05c9d41  analysis/out/scoring/scoring_security_findings.csv
+c7f0bc6ce71415c5acf85d9dd16386633f8711bf99c154082671d5257b843c24  analysis/out/scoring/scoring_features.csv
+b1071492edf2563bbf2190ecee93647a10b38bdf7350411589b5c20f252dd796  analysis/out/scoring/scoring_features.tex
+5258aedeb64cf5f798a5d91e988d834fc7c0e059b431242ec1795a18ef2da822  analysis/out/scoring/scoring_profiles.csv
+934be9abd1cf266eb71492ddceb7f03bff034315d221e74f97118df1bba846be  analysis/out/scoring/scoring_base.csv
+b3fcef9e96ffba4817f01527d3cce7cb6619bf3adff29197a4bba4acb482da82  analysis/out/scoring/scoring_base.tex
+1451216d29884787e9998b9ba3e86704beec9e01873be1fb9e11878a4c981e6f  analysis/out/scoring/scoring_variants.csv
+c9a5d65b756b4d5245b751047f26480e67728b7590976a9c842af7d936b2bc4e  analysis/out/scoring/scoring_diagnostics_leave_one_out.csv
+69ab56f82e6491bbf8da8c11bc9f49dcea8c60533b723a824768808e9671cf6b  analysis/out/scoring/scoring_first_place_counts.csv
+bec29ab55af9f6bca71115d9ae98e71afd4d4eca7ebd55110429e6e65d1e3c98  analysis/out/scoring/scoring_result.csv

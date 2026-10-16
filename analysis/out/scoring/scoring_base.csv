@@ -1,0 +1,17 @@
+profile,system,eligible,performance,compatibility,security_common_checks,fault_tolerance,overall
+P0 equal weights,Ceph,yes,0.8889,0.9091,0.5714,1.0000,0.8423
+P0 equal weights,SeaweedFS,yes,0.9946,0.8182,0.7143,0.3742,0.7253
+P0 equal weights,RustFS,yes,0.4992,0.9091,0.5714,1.0000,0.7449
+P0 equal weights,Garage,yes,0.5054,0.3182,0.7143,0.4530,0.4977
+P1 S3 compatibility priority,Ceph,yes,0.8889,0.9091,0.5714,1.0000,0.8736
+P1 S3 compatibility priority,SeaweedFS,yes,0.9946,0.8182,0.7143,0.3742,0.7403
+P1 S3 compatibility priority,RustFS,yes,0.4992,0.9091,0.5714,1.0000,0.8151
+P1 S3 compatibility priority,Garage,yes,0.5054,0.3182,0.7143,0.4530,0.4327
+P2 read heavy throughput,Ceph,yes,0.8855,0.9091,0.5714,1.0000,0.8805
+P2 read heavy throughput,SeaweedFS,yes,0.9978,0.8182,0.7143,0.3742,0.8178
+P2 read heavy throughput,RustFS,yes,0.5501,0.9091,0.5714,1.0000,0.6961
+P2 read heavy throughput,Garage,yes,0.5251,0.3182,0.7143,0.4530,0.4985
+P3 availability on a small cluster,Ceph,yes,0.8889,0.9091,0.5714,1.0000,0.9268
+P3 availability on a small cluster,SeaweedFS,yes,0.9946,0.8182,0.7143,0.3742,0.5679
+P3 availability on a small cluster,RustFS,yes,0.4992,0.9091,0.5714,1.0000,0.8684
+P3 availability on a small cluster,Garage,yes,0.5054,0.3182,0.7143,0.4530,0.4668

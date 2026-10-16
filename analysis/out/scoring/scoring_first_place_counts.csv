@@ -1,0 +1,37 @@
+profile,category,"first place count (descriptive, not a probability)"
+P0 equal weights,base,Ceph 1
+P0 equal weights,weights,Ceph 16
+P0 equal weights,scoring a rank points,Ceph 15; no clear first 2
+P0 equal weights,scoring b compatibility without C18,Ceph 17
+P0 equal weights,scoring c RustFS without SSE-S3 key,Ceph 17
+P0 equal weights,scoring d plateau 25 s,Ceph 12; no clear first 5
+P0 equal weights,scoring d plateau 45 s,Ceph 15; no clear first 2
+P0 equal weights,scoring e margin 0.03,Ceph 17
+P0 equal weights,scoring e margin 0.10,Ceph 3; no clear first 14
+P1 S3 compatibility priority,base,Ceph 1
+P1 S3 compatibility priority,weights,Ceph 11; no clear first 5
+P1 S3 compatibility priority,scoring a rank points,Ceph 17
+P1 S3 compatibility priority,scoring b compatibility without C18,Ceph 17
+P1 S3 compatibility priority,scoring c RustFS without SSE-S3 key,Ceph 17
+P1 S3 compatibility priority,scoring d plateau 25 s,Ceph 2; no clear first 15
+P1 S3 compatibility priority,scoring d plateau 45 s,Ceph 12; no clear first 5
+P1 S3 compatibility priority,scoring e margin 0.03,Ceph 17
+P1 S3 compatibility priority,scoring e margin 0.10,no clear first 17
+P2 read heavy throughput,base,Ceph 1
+P2 read heavy throughput,weights,Ceph 12; no clear first 4
+P2 read heavy throughput,scoring a rank points,SeaweedFS 4; no clear first 13
+P2 read heavy throughput,scoring b compatibility without C18,Ceph 13; no clear first 4
+P2 read heavy throughput,scoring c RustFS without SSE-S3 key,Ceph 13; no clear first 4
+P2 read heavy throughput,scoring d plateau 25 s,Ceph 6; no clear first 11
+P2 read heavy throughput,scoring d plateau 45 s,Ceph 4; no clear first 13
+P2 read heavy throughput,scoring e margin 0.03,Ceph 13; no clear first 4
+P2 read heavy throughput,scoring e margin 0.10,Ceph 4; no clear first 13
+P3 availability on a small cluster,base,Ceph 1
+P3 availability on a small cluster,weights,Ceph 12; no clear first 4
+P3 availability on a small cluster,scoring a rank points,Ceph 17
+P3 availability on a small cluster,scoring b compatibility without C18,Ceph 15; no clear first 2
+P3 availability on a small cluster,scoring c RustFS without SSE-S3 key,Ceph 14; no clear first 3
+P3 availability on a small cluster,scoring d plateau 25 s,RustFS 2; no clear first 15
+P3 availability on a small cluster,scoring d plateau 45 s,Ceph 13; no clear first 4
+P3 availability on a small cluster,scoring e margin 0.03,Ceph 17
+P3 availability on a small cluster,scoring e margin 0.10,no clear first 17

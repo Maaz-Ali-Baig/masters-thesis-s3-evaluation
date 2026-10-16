@@ -41,6 +41,7 @@ For a clean manifest: commit the scripts first, run them, then commit `analysis/
 | `build_ft.py` | `out/ft/` | fault tolerance runs S1 and S2 of the four systems, read from `results/ft-*.tar.gz` |
 | `build_repair.py` | `out/repair/` | what the repair watch recorded after the stopped node(s) came back: file count lag (Garage, RustFS, SeaweedFS) and Ceph health |
 | `build_security.py` | `out/security/` | security comparison table (13 rows by 4 systems, tables only), cells in `analysis/cells/security_cells.py` checked against the raw archives |
+| `build_scoring.py` | `out/scoring/` | scoring matrix (4 profiles, 136 variants each) from the outputs of the other scripts, rules in `scoring_method.md` |
 | `build_compat.py` | `out/compat/` | S3 compatibility table (22 probe tests by 4 systems), verdicts recomputed from the sub-checks of five `summary.tsv`, readings in `analysis/cells/compat_cells.py` |
 
 Outputs of `build_perf.py`:
@@ -102,3 +103,7 @@ Tables only, no figures. Input: the `summary.tsv` of five probe runs (Ceph from 
 4. a cell that is not PASS has no reading, or its reading names a sub-check that did not fail.
 
 The readings are typed in `analysis/cells/compat_cells.py` with the record and point they come from. Only the sub-check they name is checked; the cause in the text is the claim of the record. State with the table: a FAIL means "differs from documented AWS S3 behaviour", not "defective"; the columns are deployments (C18 depends on a key or key service in Ceph, SeaweedFS and RustFS); the number of PASS cells weights all tests equally and is not a ranking; Ceph was probed on 2 October and not again; AWS CLI is the only client of the probe.
+
+## Scoring matrix (`build_scoring.py`)
+
+Reads only the generated outputs of the other scripts (`out/perf`, `out/compat`, `out/security`, `out/ft`) and implements `scoring_method.md` (revision 2, frozen before any score was computed; changes only through its section 9). It prints the excluded configurations and the gate result before any score, computes four profiles with 136 variants each (weights, scoring variants crossed with weights, tie margins), the leave one out diagnostics, and the robust winner rule. Outputs in `out/scoring/`. Record: `results/scoring-matrix-2026-10-16.txt`. A score is a decision aid under explicit assumptions, not evidence that a system is better.

@@ -1,0 +1,5 @@
+profile,eligible,base_first,variants,variants_where_first_place_changes,result
+P0 equal weights,"Ceph, SeaweedFS, RustFS, Garage",Ceph,136,23,no robust winner
+P1 S3 compatibility priority,"Ceph, SeaweedFS, RustFS, Garage",Ceph,136,42,no robust winner
+P2 read heavy throughput,"Ceph, SeaweedFS, RustFS, Garage",Ceph,136,70,no robust winner
+P3 availability on a small cluster,"Ceph, SeaweedFS, RustFS, Garage",Ceph,136,47,no robust winner

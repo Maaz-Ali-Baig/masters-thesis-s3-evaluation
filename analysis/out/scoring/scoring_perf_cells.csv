@@ -1,0 +1,69 @@
+configuration,system,median_MiB_s,client_limited,included,score_ratio,score_rank
+get_100MiB_c8,Ceph,1173.02,no,yes,0.9008,0.6667
+get_100MiB_c8,SeaweedFS,1302.15,no,yes,1.0000,1.0000
+get_100MiB_c8,RustFS,933.1,no,yes,0.7166,0.3333
+get_100MiB_c8,Garage,832.83,no,yes,0.6396,0.0000
+get_16MiB_c8,Ceph,1132.17,no,yes,0.8689,0.6667
+get_16MiB_c8,SeaweedFS,1302.95,no,yes,1.0000,1.0000
+get_16MiB_c8,RustFS,922.29,no,yes,0.7078,0.3333
+get_16MiB_c8,Garage,769.85,no,yes,0.5909,0.0000
+get_1MiB_c1,Ceph,147.16,no,yes,0.8080,0.6667
+get_1MiB_c1,SeaweedFS,182.12,no,yes,1.0000,1.0000
+get_1MiB_c1,RustFS,90.35,no,yes,0.4961,0.3333
+get_1MiB_c1,Garage,47.97,no,yes,0.2634,0.0000
+get_1MiB_c16,Ceph,1209.14,no,yes,0.9421,0.6667
+get_1MiB_c16,SeaweedFS,1283.49,no,yes,1.0000,1.0000
+get_1MiB_c16,RustFS,708.01,no,yes,0.5516,0.0000
+get_1MiB_c16,Garage,800.17,no,yes,0.6234,0.3333
+get_1MiB_c4,Ceph,612.21,no,yes,0.8676,0.6667
+get_1MiB_c4,SeaweedFS,705.61,no,yes,1.0000,1.0000
+get_1MiB_c4,RustFS,359.15,no,yes,0.5090,0.3333
+get_1MiB_c4,Garage,297.15,no,yes,0.4211,0.0000
+get_1MiB_c64,Ceph,1119.56,no,yes,0.9027,0.6667
+get_1MiB_c64,SeaweedFS,1240.18,no,yes,1.0000,1.0000
+get_1MiB_c64,RustFS,720.96,no,yes,0.5813,0.0000
+get_1MiB_c64,Garage,822.37,no,yes,0.6631,0.3333
+get_1MiB_c8,Ceph,1004.41,no,yes,0.8924,0.6667
+get_1MiB_c8,SeaweedFS,1125.51,no,yes,1.0000,1.0000
+get_1MiB_c8,RustFS,592.05,no,yes,0.5260,0.0000
+get_1MiB_c8,Garage,636.58,no,yes,0.5656,0.3333
+get_50KiB_c8,Ceph,95.36,no,no (a system is client limited),,
+get_50KiB_c8,SeaweedFS,193.46,no,no (a system is client limited),,
+get_50KiB_c8,RustFS,80.52,yes,no (a system is client limited),,
+get_50KiB_c8,Garage,59.01,no,no (a system is client limited),,
+mixed_1MiB_c16,Ceph,585.87,yes,no (a system is client limited),,
+mixed_1MiB_c16,SeaweedFS,580.94,yes,no (a system is client limited),,
+mixed_1MiB_c16,RustFS,225.18,no,no (a system is client limited),,
+mixed_1MiB_c16,Garage,253.62,no,no (a system is client limited),,
+put_100MiB_c8,Ceph,306.83,yes,no (a system is client limited),,
+put_100MiB_c8,SeaweedFS,231.81,yes,no (a system is client limited),,
+put_100MiB_c8,RustFS,216.17,yes,no (a system is client limited),,
+put_100MiB_c8,Garage,115.61,no,no (a system is client limited),,
+put_16MiB_c8,Ceph,298.87,yes,no (a system is client limited),,
+put_16MiB_c8,SeaweedFS,233.67,yes,no (a system is client limited),,
+put_16MiB_c8,RustFS,200.3,yes,no (a system is client limited),,
+put_16MiB_c8,Garage,128.04,no,no (a system is client limited),,
+put_1MiB_c1,Ceph,34.16,no,yes,0.9794,0.6667
+put_1MiB_c1,SeaweedFS,34.88,no,yes,1.0000,1.0000
+put_1MiB_c1,RustFS,19.54,no,yes,0.5602,0.3333
+put_1MiB_c1,Garage,19.1,no,yes,0.5476,0.0000
+put_1MiB_c16,Ceph,256.04,yes,no (a system is client limited),,
+put_1MiB_c16,SeaweedFS,212.12,no,no (a system is client limited),,
+put_1MiB_c16,RustFS,109.36,no,no (a system is client limited),,
+put_1MiB_c16,Garage,104.25,no,no (a system is client limited),,
+put_1MiB_c4,Ceph,118.26,no,yes,0.9777,0.6667
+put_1MiB_c4,SeaweedFS,120.96,no,yes,1.0000,1.0000
+put_1MiB_c4,RustFS,58.32,no,yes,0.4821,0.0000
+put_1MiB_c4,Garage,67.5,no,yes,0.5580,0.3333
+put_1MiB_c64,Ceph,277.35,yes,no (a system is client limited),,
+put_1MiB_c64,SeaweedFS,210.75,no,no (a system is client limited),,
+put_1MiB_c64,RustFS,130.29,no,no (a system is client limited),,
+put_1MiB_c64,Garage,103.03,no,no (a system is client limited),,
+put_1MiB_c8,Ceph,191.71,no,yes,1.0000,1.0000
+put_1MiB_c8,SeaweedFS,183.46,no,yes,0.9570,0.6667
+put_1MiB_c8,RustFS,86.7,no,yes,0.4522,0.0000
+put_1MiB_c8,Garage,88.27,no,yes,0.4604,0.3333
+put_50KiB_c8,Ceph,28.65,no,yes,0.6209,0.6667
+put_50KiB_c8,SeaweedFS,46.14,no,yes,1.0000,1.0000
+put_50KiB_c8,RustFS,7.49,no,yes,0.1623,0.0000
+put_50KiB_c8,Garage,14.98,no,yes,0.3247,0.3333

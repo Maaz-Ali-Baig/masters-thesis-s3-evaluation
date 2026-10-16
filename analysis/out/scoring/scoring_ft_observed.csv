@@ -1,0 +1,14 @@
+run,system,scenario,confirmed_write_gap_s,observed_outage_s,confirmed_writes_from_60s_to_outage_end
+ft-ceph-S1-20261015-141623,Ceph,S1,28.0,773.5,100
+ft-ceph-S1-20261015-144339,Ceph,S1,31.7,783.5,100
+ft-ceph-S2-20261015-154345,Ceph,S2,657.7,657.6,1
+ft-seaweedfs-S1-20261013-093344,SeaweedFS,S1,800.3,854.7,11
+ft-seaweedfs-S1-20261013-133927,SeaweedFS,S1,815.2,843.0,8
+ft-seaweedfs-S2-20261013-113256,SeaweedFS,S2,810.4,828.7,2
+ft-rustfs-S1-20261011-145627,RustFS,S1,26.8,784.2,100
+ft-rustfs-S1-20261012-204542,RustFS,S1,25.0,782.8,100
+ft-rustfs-S2-20261011-161345,RustFS,S2,534.4,535.8,1
+ft-garage-S1-20261014-083928,Garage,S1,108.4,1626.3,213
+ft-garage-S1-20261014-104306,Garage,S1,61.7,740.3,93
+ft-garage-S1-20261014-184630,Garage,S1,30.9,767.2,96
+ft-garage-S2-20261014-121535,Garage,S2,1281.9,1275.8,0

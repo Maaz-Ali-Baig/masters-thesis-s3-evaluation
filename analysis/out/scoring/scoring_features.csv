@@ -1,0 +1,9 @@
+test,what,Ceph,SeaweedFS,RustFS,Garage
+C09,"Object tagging: put, get, header form, delete",supported,supported,supported,unsupported
+C10,"Versioning: versions, delete marker, restore",supported,supported,supported,unsupported
+C14,Bucket policy: roundtrip and enforcement for anonymous reads,supported,supported,supported,unsupported
+C15,CORS: configuration roundtrip and preflight behaviour,supported,supported,supported,partial
+C16,Lifecycle configuration roundtrip (enforcement not tested),supported,supported,supported,partial
+C17,"Object lock (GOVERNANCE): retention enforced, bypass works",supported,supported,supported,unsupported
+C18,"SSE-S3 header and bucket default encryption (API only, at-rest not verified)",partial,partial,supported,unsupported
+C19,"ACLs: read, canned public-read, enforcement, revert to private (flat and prefixed keys)",supported,partial,partial,unsupported

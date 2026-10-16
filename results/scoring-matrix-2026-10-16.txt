@@ -1,0 +1,73 @@
+Scoring matrix, Ceph, SeaweedFS, RustFS and Garage: four profiles, 136 variants each (16 October 2026)
+=======================================================================================================
+
+Method:    scoring_method.md revision 2 (committed before any score existed: first version 83936b2, revision 2 bfc1e3c; the change log is its section 9). Script analysis/build_scoring.py (commit 1f44d3f),
+           outputs analysis/out/scoring/ (scoring_base.csv/.tex, scoring_variants.csv, scoring_result.csv, scoring_first_place_counts.csv, scoring_diagnostics_leave_one_out.csv, scoring_perf_cells.csv, scoring_ft.csv,
+           scoring_ft_observed.csv, scoring_security_findings.csv, scoring_features.csv/.tex, scoring_profiles.csv, MANIFEST.txt). Inputs: analysis/out/perf, compat, security, ft only.
+Status:    a decision aid under explicit assumptions (gate, formulas, weights, thresholds). A score is a derived result, not independent evidence that a system is better. The conclusion is bounded to technical
+           suitability under the tested conditions (three VMs, default deployments, one client); operating effort, cost, TLS impact and maturity are not measured and not scored. The four systems are compared as deployments.
+
+STEP 0 (printed before any score)
+------
+Client limited exclusion: PUT 16 MiB, PUT 100 MiB, PUT 1 MiB with 16 and 64 users, GET 50 KiB and the mixed workload are excluded for all systems (flagged systems: Ceph, SeaweedFS, RustFS as listed in the performance record).
+11 configurations are scored (PUT 4: 50 KiB, 1 MiB with 1, 4 and 8 users; GET 7: 1 MiB with 1, 4, 8, 16 and 64 users, 16 MiB, 100 MiB). Large object PUT and the mixed workload are therefore not scored.
+Gate G1 (basic object workflow): met by all four systems. No system is excluded in any profile.
+
+DIMENSION SCORES (0 to 1, higher is better; performance of P0, P1, P3 with GET and PUT weighted 0.5 each)
+----------------
+System      Performance  Compatibility  Security (common checks)  Fault tolerance
+Ceph        0.89         0.91 (20/22)   0.57 (4/7)                1.00
+SeaweedFS   0.99         0.82 (18/22)   0.71 (5/7)                0.37
+RustFS      0.50         0.91 (20/22)   0.57 (4/7)                1.00
+Garage      0.51         0.32 (7/22)    0.71 (5/7)                0.45
+Fault tolerance (S1, median of the longest gap between confirmed writes and between reads at a surviving endpoint, plateau 32 s): Ceph 29.9 and 30.1 s, RustFS 25.9 and 25.4 s (both at the plateau, score 1.00 each),
+SeaweedFS 807.8 and 45.2 s, Garage 61.7 and 82.6 s. No S1 value is censored.
+
+PROFILE SCORES (base case)
+--------------------------
+Profile (weights performance / compatibility / security / fault tolerance)   Ceph   SeaweedFS  RustFS  Garage
+P0 equal weights (0.25 each)                                                  0.84   0.73       0.74    0.50
+P1 S3 compatibility priority (0.15 / 0.50 / 0.15 / 0.20, gate G1)             0.87   0.74       0.82    0.43
+P2 read heavy throughput (0.55 with GET 0.8 / 0.15 / 0.10 / 0.20)             0.88   0.82       0.70    0.50
+P3 availability on a small cluster (0.15 / 0.15 / 0.10 / 0.60)                0.93   0.57       0.87    0.47
+The weights are assumptions without an empirical basis. A security conscious profile is not computed (method 4.3, 5.3): see the findings below.
+
+RESULT OF THE FROZEN RULE (method 6.5; 136 variants per profile: base, 16 weight combinations, 7 scoring variants each with 17 weight settings)
+------------------------
+No profile has a robust winner. What this means differs by profile:
+P0 and P1: Ceph is first in the base case and in ALL 136 variants. The rule is not met because the lead over the runner up (RustFS) is below the tie margin in 23 (P0) and 42 (P1) variants (tie margin 0.05, and 0.10 in the variants with the larger margin).
+P2: Ceph is first in the base case (0.88 against 0.82 for SeaweedFS). SeaweedFS has the highest score in 14 variants: 13 with rank points instead of ratios (4 of them by the margin) and 1 with the plateau of 45 s. In 56 more variants Ceph is first without the margin.
+P3: Ceph is first in the base case (0.93 against 0.87 for RustFS). RustFS has the highest score in 13 variants, all of them with the plateau of 25 s (which separates the median gaps of Ceph and RustFS). In 34 more variants Ceph is first without the margin.
+Therefore the thesis states: Ceph has the highest base score in all four profiles; no profile has a winner that is robust within the tested assumptions.
+
+PROVEN (from the generated tables)
+------
+P1. In every profile the base ranking is Ceph first. The second place is RustFS in P0, P1 and P3 and SeaweedFS in P2 (scoring_base.csv).
+P2. The lead of Ceph over RustFS comes from the performance dimension alone: compatibility (20 of 22 each) and fault tolerance (1.00 each, both at the plateau) are equal. With performance left out (diagnostic, not part of the rule) Ceph and
+    RustFS have the same score in P0 and P2 (scoring_diagnostics_leave_one_out.csv). RustFS lower throughput scores cannot be separated from its different redundancy (erasure coding 3+3, not tested separately).
+P3. SeaweedFS has the best performance score (0.99) and the lowest fault tolerance score of the three systems that kept writing (0.37): its confirmed write gap in S1 is 800 and 815 s. With fault tolerance left out in P2, SeaweedFS is first.
+P4. Garage has the lowest compatibility score (7 of 22 tests, 6 unsupported) and a performance score at the level of RustFS (0.51 and 0.50).
+P5. Common security checks (7 rows with PASS or FAIL for all systems): 4 of 7 for Ceph and RustFS, 5 of 7 for SeaweedFS and Garage. Six of the seven rows are identical in all four systems; the difference is only the failed login in the log (row 12). The score
+    does not contain the SeaweedFS filer finding (row 6, data readable without credentials on port 8888), because the equivalent check was not run as a pass or fail test on the other systems. Security is therefore reported with the findings list
+    (scoring_security_findings.csv), not as a profile.
+P6. Observed, not scored (confirmed writes from 60 s after time zero to the end of the outage, S1): Ceph 100 and 100, RustFS 100 and 100, Garage 213, 93 and 96, SeaweedFS 11 and 8 (writes resumed about 800 s after time zero, shortly before the stopped
+    endpoint answered again). The count is not a measure of capacity (a probe round takes several seconds). The values were cross checked by hand against the ledger of one run (101 to 103 writes in the window against 100 in the table; the difference is
+    the rounding of time zero).
+P7. Feature table (scoring_features.csv; supported, partial, unsupported): tagging, versioning, bucket policy, CORS, lifecycle and object lock supported by Ceph, SeaweedFS and RustFS; Garage unsupported for tagging, versioning, bucket policy and object lock and partial for CORS and
+    lifecycle. SSE-S3 (as deployed): RustFS supported (with its key), Ceph and SeaweedFS partial, Garage unsupported. ACLs: Ceph supported, SeaweedFS and RustFS partial, Garage unsupported.
+
+WHAT MAY NOT BE WRITTEN (method section 7)
+------------------------------------------
+That one system is the best replacement for MinIO in general; a robust winner for any profile; an interpretation of a score difference below the tie margin; a numerical statement about security as a profile; that Ceph is better than RustFS in compatibility or fault tolerance
+(they are equal on these two dimensions).
+
+LIMITS
+------
+L1. All limits of section 8 of the method apply. The performance score uses 11 of 17 configurations and is a ratio to the best median; GET data came mostly from memory (resource records). L2. Fault tolerance rests on 2 to 3 S1 runs per system, one failure type (hard stop) and
+    the assumed plateau of 32 s (4.4.3); with a plateau of 25 s Ceph and RustFS separate and the first place changes in P3. L3. Compatibility counts tests equally and is limited to the probe (22 tests, AWS CLI). L4. Redundancy differs, the load node ceph2 also runs a storage node.
+L5. Weights and profiles are assumptions of the author, reviewed by a second reader (two rounds, recorded in the method).
+
+OPEN
+----
+Q1. How much of the performance gap between Ceph and RustFS is due to erasure coding against replication (not tested). Q2. Whether the S1 write gaps of Ceph and RustFS differ at a longer client time out (Q6 of the fault tolerance record). Q3. A security conscious profile needs equivalent
+    exposure checks for all four systems (not run). Q4. Operating effort, cost and maturity are not measured.

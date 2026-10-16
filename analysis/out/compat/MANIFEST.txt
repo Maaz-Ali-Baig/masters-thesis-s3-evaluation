@@ -1,7 +1,7 @@
 S3 compatibility table: inputs and outputs
 ==========================================
 
-repository commit: 1194945274b8d52a6b5981f731897243a6e97d45
+repository commit: 1f44d3f91259baa7d6f69c27fc3ae387c9a41bcf
 working tree (analysis, results): clean
 python 3.12.3
 matplotlib 3.6.3
@@ -17,7 +17,7 @@ f4276797d492fccae3664e35c6e01054e5d71b9d81a904d257f4790360bf8412  results/compat
 3aa41af82684a96060a29cd386555fba856c9e49bcc213318949bd66f9470573  analysis/cells/compat_cells.py
 
 OUTPUT FILES
-c8bc47ae0bc660a6ad824c59d538079beb8fc62f2b318036414eb2152c961726  analysis/out/compat/compat_cells.csv
+c526ab6c2ab24741fd0d8150499d36a2610ca5263ec26ed176a4b3e557ec57ff  analysis/out/compat/compat_cells.csv
 5083dead7adc946a715ec72373f93459b2a7bc05a86153b364a8e7fa64d277b7  analysis/out/compat/compat_summary.tex
 ac19edf0cb1f5e9aaa2b31f194cbe6ad211d129592ed8ec3b1aae7af96c0466f  analysis/out/compat/compat_details_ceph.tex
 6c79b1e71a05a4678b135e37865a3dbf06bd450a3ad90dc05704a3c4ab1c5f8d  analysis/out/compat/compat_details_seaweedfs.tex

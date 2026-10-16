@@ -1,8 +1,8 @@
 Fault tolerance runs: inputs and outputs
 ========================================
 
-repository commit: 07f741365bc2b94f7dcee956641ba8b4a0c4cda8
-working tree (analysis, results): UNCOMMITTED CHANGES in analysis/ (outside out/) or results/
+repository commit: 1f44d3f91259baa7d6f69c27fc3ae387c9a41bcf
+working tree (analysis, results): clean
 python 3.12.3
 matplotlib 3.6.3
 
@@ -20,10 +20,10 @@ a0f523fd0c97b361ee9b20de05338fce9dadafd497e4fda8d27f9187d16e11cb  results/ft-rus
 b660123dc77a9460f74ff801b9126c8248888316090a1e3e06c0ceae0029e20a  results/ft-seaweedfs-S1-20261013-093344.tar.gz
 c2994331d972fcaae4942b923b645b492e2cde4bcbec37306d3dace42ebba85a  results/ft-seaweedfs-S1-20261013-133927.tar.gz
 4ba9a29df9174c79495e82b74374e4eef8876c75a8c80a5be7796ab1fde3a2a1  results/ft-seaweedfs-S2-20261013-113256.tar.gz
-45c9aedba90183142bae80115560287837321555156879dbfe13fb6c3edf2157  results/vm-archives-ceph0-SHA256SUMS.txt
+6d2251f92a5241273ab2f54362737995288ec4b0de909303ea32b84309d6f21d  results/vm-archives-ceph0-SHA256SUMS.txt
 
 OUTPUT FILES
-4e0bb418e75a81911ae99dfbdd1ce1ac2950decee0ffebfb4bbed67997faafa1  analysis/out/ft/ft_runs.csv
+7a8cc327d8f8b1235c716fc25520d9dd1f4176a12d640ddc9d81dbd5e19c3049  analysis/out/ft/ft_runs.csv
 f8f6413a764aed6d2e53909963adbe076af1251f0142559c0e4ec086380e9739  analysis/out/ft/ft_s1.tex
 8617d07e6d0b7a4211770c6174167780af6e8ecadcca22f61c3f94c05a347729  analysis/out/ft/ft_s2.tex
 b046f4e33d510a56684e88e5919d9f5e10d0c5191a4801487ded8e969f6a52f3  analysis/out/ft/ft_timeline_ceph.pdf

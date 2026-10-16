@@ -83,6 +83,10 @@ No VM run of the 22 test probe on Ceph is in this folder; the Ceph compatibility
 
 `compatibility-cross-system-2026-10-15.txt`: the 22 probe tests (C01 to C22) for the four systems, with the deployment behind each column, what is proven, limits and open points. Made by `analysis/build_compat.py` from the `summary.tsv` of five probe runs; the script checks each file against the sha256 in the records and recomputes every verdict from its sub-checks. Tables in `analysis/out/compat/`. The RustFS column of `compat-matrix-four-systems-2026-10-02.tsv` is RustFS 1.0.0-beta.8 on the laptop and is superseded by RustFS 1.0.1 in this record.
 
+## Scoring matrix record
+
+`scoring-matrix-2026-10-16.txt`: four profiles with 136 variants each, made by `analysis/build_scoring.py` from the rules in `scoring_method.md` (frozen before any score existed). It states what the scores show, which statements are not allowed, and the limits. Tables in `analysis/out/scoring/`.
+
 ## Raw run archives of the VM series (in this folder)
 
 The archives made by the scripts on the VMs (`ft.sh`, `sec.sh`, `security-presign-unsigned-header.sh`) are kept here as `.tar.gz`, 30 files, unchanged. They were copied from ceph0 on 15 October 2026. Their sha256 is in `vm-archives-ceph0-SHA256SUMS.txt` and in the records. `analysis/` reads them directly.

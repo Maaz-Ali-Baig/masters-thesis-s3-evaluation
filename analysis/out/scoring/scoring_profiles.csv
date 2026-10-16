@@ -1,0 +1,5 @@
+profile,gate,w_performance,w_compatibility,w_security,w_fault_tolerance,w_GET_in_performance
+P0 equal weights,none,0.25,0.25,0.25,0.25,0.5
+P1 S3 compatibility priority,G1,0.15,0.5,0.15,0.2,0.5
+P2 read heavy throughput,none,0.55,0.15,0.1,0.2,0.8
+P3 availability on a small cluster,none,0.15,0.15,0.1,0.6,0.5

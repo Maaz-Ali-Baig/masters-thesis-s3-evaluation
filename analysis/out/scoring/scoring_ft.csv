@@ -1,0 +1,5 @@
+system,S1_runs,median_write_gap_s,median_read_gap_s,any_censored,effective_write_gap_s,effective_read_gap_s,FT1,FT2,FT
+Ceph,2,29.9,30.1,no,32.0,32.0,1.0000,1.0000,1.0000
+SeaweedFS,2,807.8,45.2,no,807.8,45.2,0.0396,0.7087,0.3742
+RustFS,2,25.9,25.4,no,32.0,32.0,1.0000,1.0000,1.0000
+Garage,3,61.7,82.6,no,61.7,82.6,0.5186,0.3874,0.4530

@@ -1,0 +1,13 @@
+system,row,outcome,role
+Ceph,r8,FAIL,scored
+Ceph,r9,FAIL,scored
+Ceph,r12,FAIL,scored
+SeaweedFS,r6,FAIL,listed only (not scored)
+SeaweedFS,r8,FAIL,scored
+SeaweedFS,r9,FAIL,scored
+RustFS,r8,FAIL,scored
+RustFS,r9,FAIL,scored
+RustFS,r12,FAIL,scored
+Garage,r8,FAIL,scored
+Garage,r9,FAIL,scored
+Garage,r10,FAIL,listed only (not scored)
