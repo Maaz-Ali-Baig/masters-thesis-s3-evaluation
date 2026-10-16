@@ -1,0 +1,21 @@
+\begin{tabular}{@{}lp{2.0cm}p{3.6cm}p{7.0cm}@{}}
+\toprule
+Garage: test & Verdict & Failed sub-checks & Reading (record) \\
+\midrule
+C08 & FAIL & min\_part\_size\_enforced & Two parts of 1 MiB are accepted in a multipart upload (AWS: EntityTooSmall). Other multipart steps pass. \\
+C09 & unsupported & put\_tagging & NotImplemented (the Garage documentation lists tagging as missing). \\
+C10 & unsupported & enable & NotImplemented when versioning is enabled. \\
+C11 & FAIL & if\_match\_mismatch\_412, if\_unmodified\_since\_412 & If-Match with a wrong ETag and If-Unmodified-Since in the year 2000 are accepted and ignored (200, AWS 412). If-None-Match on GET works (304). \\
+C12 & FAIL & second\_write\_refused & If-None-Match: * on PUT of an existing key is ignored (200, AWS 412). \\
+C13 & FAIL & expired\_rejected & The URL works and a tampered signature is refused. An expired URL is refused with HTTP 400 where AWS answers 403 (the URL is refused either way; AWS CLI run only). \\
+C14 & unsupported & put\_policy & NotImplemented (PutBucketPolicy). \\
+C15 & FAIL & preflight\_allowed\_origin, preflight\_other\_origin\_refused, delete\_cors & CORS is applied on real requests, but the preflight answer is allow-origin * for allowed, unlisted and unconfigured origins, and reading the CORS configuration after deleting it returns 204 (AWS 404). \\
+C16 & FAIL & delete\_lifecycle & Reading the lifecycle configuration after deleting it returns 204 (AWS 404 NoSuchLifecycleConfiguration). \\
+C17 & unsupported & lock\_enabled, mode\_returned, delete\_blocked & NotImplemented for the object lock configuration; lock headers on a normal bucket are accepted (200, AWS 400). \\
+C18 & unsupported & sse\_echoed, bucket\_default\_roundtrip & SSE-S3 header accepted but not echoed; bucket default encryption NotImplemented. The documentation says server side encryption is not implemented. On the VMs the marker of an SSE-S3 object was found in clear on the drives (security table, SEC6). \\
+C19 & unsupported & get\_bucket\_acl, put\_acl\_flat, put\_acl\_prefixed & NotImplemented for ACL reads and writes. \\
+C20 & FAIL & CRC64NVME & CRC64NVME is accepted but the checksum is not returned (AWS CLI run only, no second client). Wrong SHA-256 and wrong MD5 are refused. \\
+C21 & FAIL & total\_917\_in\_10\_parts & Keys up to 479 bytes work; 480 bytes and above fail with HTTP 503 ServiceUnavailable (server message: LMDB MDB\_BAD\_VALSIZE). AWS allows 1024 and answers 400. The 479 = 511 minus 32 explanation is HYPOTHESIS H1, not proven. \\
+C22 & FAIL & invalid\_bucket\_name & Invalid bucket name returns InvalidRequest (AWS InvalidBucketName); a wrong Content-MD5 returns InvalidDigest (AWS BadDigest). \\
+\bottomrule
+\end{tabular}

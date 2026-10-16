@@ -1,0 +1,10 @@
+\begin{tabular}{@{}lp{2.0cm}p{3.6cm}p{7.0cm}@{}}
+\toprule
+SeaweedFS: test & Verdict & Failed sub-checks & Reading (record) \\
+\midrule
+C18 & FAIL & put\_sse, sse\_echoed, sse\_roundtrip & Header answered with HTTP 500 InternalError, nothing stored. Same image with an SSE key set: 200. The deployment has no SSE key; the key was not tested on the VM cluster. \\
+C19 & FAIL & public\_read\_enforced\_flat, put\_acl\_prefixed & Canned ACL on a key with a path prefix returns 500 (flat key 200). Object ACL public-read is listed but anonymous GET stays 403 (public read is decided per bucket). \\
+C21 & FAIL & trailing\_slash, component\_256 & A key ending in / reads back as 0 bytes. A path component of 256 bytes is refused (KeyTooLongError); total key length 1024 is accepted. \\
+C22 & FAIL & delete\_nonempty\_BucketNotEmpty, data\_survives\_delete & DeleteBucket of a bucket that still holds objects succeeds and destroys the data (HTTP 204). Cause: server option -s3.allowDeleteBucketNotEmpty, default true. Not an error code difference only. \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,24 @@
+S3 compatibility table: inputs and outputs
+==========================================
+
+repository commit: 9fec40a636ad2eb92317e21dde073db38c756cef
+working tree (analysis, results): clean
+python 3.12.3
+matplotlib 3.6.3
+
+INPUT FILES (results/)
+2dd6b3a5cab6a0726a559a50260b95e432c63265569bea762bc39b1bbc62bb1c  results/compat-ceph-20261002-072634-evidence.txt
+856dd82ca37a240925ac7eb29eccc4ef85be6b55ad4c9ad144111634bad6f483  results/compat-seaweedfs-20260930-205945.tar.gz
+071552ed63ce1c6f47de8644b5ab8629c634b6fb942dbe60dbda45223609654d  results/compat-rustfs101-laptop-ssekey-20261009.tar.gz
+2205f80b3dfb4d6b6b3c8b5e689df466ec06ab75d19655857fc66b0cba638c8b  results/compat-rustfs101-laptop-20261009-131301.tar.gz
+b637d344fb3cb7086bc4194c614014c8a3c7fb52c361ff9393409ce1877737f0  results/compat-garage-20260930-210449.tar.gz
+f4276797d492fccae3664e35c6e01054e5d71b9d81a904d257f4790360bf8412  results/compat-matrix-four-systems-2026-10-02.tsv
+24ff5e48fe502158fffc819ccd412bc2c901db1f0760f611a6bdb0899037d91f  analysis/cells/compat_cells.py
+
+OUTPUT FILES
+91ebaf70210c1815150bb2923bf092bea1c649198ca4bc325da5d7b18a2c5142  analysis/out/compat/compat_cells.csv
+5083dead7adc946a715ec72373f93459b2a7bc05a86153b364a8e7fa64d277b7  analysis/out/compat/compat_summary.tex
+ac19edf0cb1f5e9aaa2b31f194cbe6ad211d129592ed8ec3b1aae7af96c0466f  analysis/out/compat/compat_details_ceph.tex
+6c79b1e71a05a4678b135e37865a3dbf06bd450a3ad90dc05704a3c4ab1c5f8d  analysis/out/compat/compat_details_seaweedfs.tex
+a7bbd87f9b853cf0f975d3f29a77616d210e0e61151b301783cbb5c776587143  analysis/out/compat/compat_details_rustfs.tex
+c361e3720fe59dbdced8d19fd738807e9915ac992df774752edc729e44953ba1  analysis/out/compat/compat_details_garage.tex

@@ -1,0 +1,9 @@
+\begin{tabular}{@{}lp{2.0cm}p{3.6cm}p{7.0cm}@{}}
+\toprule
+RustFS: test & Verdict & Failed sub-checks & Reading (record) \\
+\midrule
+C18 (RustFS, no SSE key) & FAIL & put\_sse, sse\_echoed, sse\_roundtrip & Header refused with InvalidRequest: SSE-S3 needs RUSTFS\_SSE\_S3\_MASTER\_KEY when KMS is not configured. With the key set on all three nodes C18 passes (API only, encryption at rest not shown). \\
+C19 & FAIL & allusers\_grant\_listed\_flat, public\_read\_enforced\_flat, allusers\_grant\_listed\_prefixed, public\_read\_enforced\_prefixed & ACL calls succeed and change nothing: no AllUsers grant is shown and anonymous access stays 403 (RustFS ignores ACLs and fails closed). Bucket policy works (C14 PASS). \\
+C21 & FAIL & component\_256 & A path component of 256 bytes is refused (InvalidArgument); component limit 255 bytes, total key 1024 accepted and 1025 refused. \\
+\bottomrule
+\end{tabular}

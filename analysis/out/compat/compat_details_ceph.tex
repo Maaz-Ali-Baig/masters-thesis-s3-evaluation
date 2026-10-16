@@ -1,0 +1,8 @@
+\begin{tabular}{@{}lp{2.0cm}p{3.6cm}p{7.0cm}@{}}
+\toprule
+Ceph: test & Verdict & Failed sub-checks & Reading (record) \\
+\midrule
+C18 & FAIL & put\_sse, sse\_echoed, sse\_roundtrip & HTTP 400 InvalidArgument with an empty message. Cause: rgw\_crypt\_sse\_s3\_backend is vault and no Vault token file is configured (RGW log and source v20.2.4). Bucket default encryption round trip passes. SSE-S3 with a key service was not tested. \\
+C20 & FAIL & wrong\_sha256\_refused & A wrong SHA-256 sent as a header is accepted (success and ETag); curl shows the same for SHA-1 and no checksum header on HEAD. In the curl control the three laptop systems answered 400. That RGW ignores these headers entirely is HYPOTHESIS H1, not proven. The trailer form was not tested. \\
+\bottomrule
+\end{tabular}
