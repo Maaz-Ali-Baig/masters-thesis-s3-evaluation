@@ -1,7 +1,7 @@
 Latency tables of the performance series: inputs and outputs
 =============================================================
 
-repository commit: 6041b72d6d8c4b45bbf75f193f27920803f2219d
+repository commit: 5405f46add94f1ec0595102530d735d04d37aff2
 working tree (analysis, results): UNCOMMITTED CHANGES in analysis/ or results/
 python 3.12.3
 
@@ -14,4 +14,5 @@ INPUT FILES (results/), checked against analysis/out/perf/MANIFEST.txt
 
 OUTPUT FILES
 f4cf33445e7050061195fc8f400db99bc9f7f7beb0bb4a0fb54d41e1563b683c  analysis/out/perf_latency/perf_latency.csv
-ea6b0e40f7ba04b3feef9538e6459b7d00f10b442668aca3e7d99f73dbe80ffe  analysis/out/perf_latency/perf_latency.tex
+2dc6a7a4d07c9e9ea8761817bea9337df1bab0f9cc621951a8dee34adda3551b  analysis/out/perf_latency/perf_latency_put.tex
+5919cf92ef9679b8521199eb3ce399c40cf45d73c551c543409380597a58f2fe  analysis/out/perf_latency/perf_latency_get.tex

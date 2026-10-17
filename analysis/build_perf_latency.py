@@ -152,8 +152,8 @@ def main():
 
     try:
         commit = subprocess.check_output(["git", "-C", ROOT, "rev-parse", "HEAD"], text=True).strip()
-        state = subprocess.check_output(["git", "-C", ROOT, "status", "--porcelain", "analysis", "results"],
-                                        text=True).strip()
+        state = subprocess.check_output(["git", "-C", ROOT, "status", "--porcelain", "--", "analysis", "results",
+                                         ":(exclude)analysis/out"], text=True).strip()
         state = "clean" if not state else "UNCOMMITTED CHANGES in analysis/ or results/"
     except Exception:
         commit, state = "unknown", "unknown"
