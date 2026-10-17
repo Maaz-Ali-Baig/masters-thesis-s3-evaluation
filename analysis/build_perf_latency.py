@@ -124,22 +124,31 @@ def main():
     def fmt(x):
         return ("%.0f" % x) if x >= 100 else ("%.1f" % x)
 
-    lines = [r"\begin{tabular}{lrrrr}", r"\toprule",
-             r"Configuration & Ceph & SeaweedFS & RustFS & Garage \\", r"\midrule"]
-    for i, (config, label) in enumerate(CONFIGS):
-        if i in (4, 8, 12):
-            lines.append(r"\midrule")
-        cells = []
-        for system, _ in SYSTEMS:
-            d = data[(system, config)]
-            cell = "%s / %s" % (fmt(d["avg_median"]), fmt(d["p99_median"]))
-            if limited[(system, config)]:
-                cell += r"$^{\dagger}$"
-            cells.append(cell)
-        lines.append("%s & %s \\\\" % (label, " & ".join(cells)))
-    lines += [r"\bottomrule", r"\end{tabular}"]
-    with open(os.path.join(OUT, "perf_latency.tex"), "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(lines) + "\n")
+    # one table per operation, with the object size and the concurrency in their own columns;
+    # each cell is: median run average / median run 99th percentile (ms)
+    def split_config(config):
+        m = re.match(r"^(put|get)_(\w+)_c(\d+)$", config)
+        return m.group(1), m.group(2).replace("KiB", " KiB").replace("MiB", " MiB"), m.group(3)
+
+    for op in ("put", "get"):
+        lines = [r"\begin{tabular}{llrrrr}", r"\toprule",
+                 r"Object size & Concurrency & Ceph & SeaweedFS & RustFS & Garage \\", r"\midrule"]
+        rows = [c for c, _ in CONFIGS if c.startswith(op + "_")]
+        for i, config in enumerate(rows):
+            if i == 4:
+                lines.append(r"\midrule")
+            _, size, conc = split_config(config)
+            cells = []
+            for system, _ in SYSTEMS:
+                d = data[(system, config)]
+                cell = "%s / %s" % (fmt(d["avg_median"]), fmt(d["p99_median"]))
+                if limited[(system, config)]:
+                    cell += r"$^{\dagger}$"
+                cells.append(cell)
+            lines.append("%s & %s & %s \\\\" % (size, conc, " & ".join(cells)))
+        lines += [r"\bottomrule", r"\end{tabular}"]
+        with open(os.path.join(OUT, "perf_latency_%s.tex" % op), "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(lines) + "\n")
 
     try:
         commit = subprocess.check_output(["git", "-C", ROOT, "rev-parse", "HEAD"], text=True).strip()
@@ -158,7 +167,7 @@ def main():
             f.write("%s  results/%s\n" % (sha256(os.path.join(RES, name)), name))
         f.write("%s  analysis/out/perf/perf_long.csv\n\n" % sha256(PERF_LONG))
         f.write("OUTPUT FILES\n")
-        for name in ("perf_latency.csv", "perf_latency.tex"):
+        for name in ("perf_latency.csv", "perf_latency_put.tex", "perf_latency_get.tex"):
             f.write("%s  analysis/out/perf_latency/%s\n" % (sha256(os.path.join(OUT, name)), name))
     print("written to", OUT)
 
