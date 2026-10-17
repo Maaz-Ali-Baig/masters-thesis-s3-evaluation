@@ -1,8 +1,8 @@
 Latency tables of the performance series: inputs and outputs
 =============================================================
 
-repository commit: 5405f46add94f1ec0595102530d735d04d37aff2
-working tree (analysis, results): UNCOMMITTED CHANGES in analysis/ or results/
+repository commit: 58754218486536fe2a4448f1c0f9971b84181d2b
+working tree (analysis, results): clean
 python 3.12.3
 
 INPUT FILES (results/), checked against analysis/out/perf/MANIFEST.txt
