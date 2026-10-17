@@ -1,0 +1,8 @@
+Range table of the performance series: inputs and outputs
+==========================================================
+
+repository commit: 6041b72d6d8c4b45bbf75f193f27920803f2219d
+python 3.12.3
+
+9384f16196b823b7107bee90a0520a3275c6bf4c1230f2f05fb93204a1fbdbc9  analysis/out/perf/perf_long.csv
+2ac68449592e01cfefc72d4fa3d145145f2fa5d9b2f70d29808cdfba7bb26e13  analysis/out/perf_ranges/perf_ranges.tex

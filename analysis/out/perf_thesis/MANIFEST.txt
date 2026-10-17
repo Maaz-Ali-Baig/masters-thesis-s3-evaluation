@@ -1,0 +1,31 @@
+Thesis versions of the performance figures and tables
+=====================================================
+
+repository commit: 6041b72d6d8c4b45bbf75f193f27920803f2219d
+working tree (analysis, results): clean
+python 3.12.3
+matplotlib 3.6.3
+
+INPUT FILES (results/)
+8622184a04d1c8fc0ab689e57549b303616e0633665bcebb959d6cd4358cd88d  results/perf-ceph-vm-3node-20261015-table-runs.tsv
+a21360dd0f2fd4a4f8e658969ac4727878636b25ac7b90fd58fad06cb29afaf4  results/perf-ceph-vm-3node-20261015-table-configs.tsv
+5647b198b0241b35c8820c6679ffb22e3e01e40277213e73a3870a815d6dff40  results/perf-ceph-vm-3node-20261015-sar-runs-ceph2.tsv
+321c283abb182adef897391b372464e09bd4a4dff16bae9e5c11177a4014b579  results/perf-seaweedfs-vm-3node-20261012-table-runs.tsv
+7bef6987cd224be33eb395477d26cb19c14ed78b1e3c169c3dbddd03f12588b3  results/perf-seaweedfs-vm-3node-20261012-table-configs.tsv
+dc349388afcbd759f3f1a3157fed58ed3d0147876c75b6f7751872ef3ee286de  results/perf-seaweedfs-vm-3node-20261012-sar-configs.tsv
+79efdebc85fb0924d2125dc6bc0317f8b59397517126aba363bc936469acdcc0  results/perf-rustfs-vm-3node-20261010-table-runs.tsv
+6d428ab2e30e01250156c13d182cdc0adeca146e6fd61fae6bfd10d3ed532736  results/perf-rustfs-vm-3node-20261010-table-configs.tsv
+10cb92cf95f2c6d6af999ee7f151b5747c26190067024b9f2f3eff792b8ef7c3  results/perf-rustfs-vm-3node-20261010-sar-configs.tsv
+61b6394ca320c00eb56ed694e6f3ce7bac80a0784a3f111e0bf0954f97158a22  results/perf-garage-vm-3node-20261013-table-runs.tsv
+9f061d427d5ac625c800f5dc8c9d5172c320ce6d44e3766c4280c2b04d2f969e  results/perf-garage-vm-3node-20261013-table-configs.tsv
+41951fa5d596509907bcb9c6fcd495cb36483a004d468568dadf72db1ef6632b  results/perf-garage-vm-3node-20261013-sar-runs-ceph2.tsv
+
+OUTPUT FILES
+c37deda98938d2cac256f1a5f8eff2368b8ef79fcfa01a0da2610d523b4ae04a  analysis/out/perf_thesis/perf_size.tex
+f82ee3e607132e16d60a3c6813e25c136eecfb4f3e6f7e7e8eabb676b1bcb178  analysis/out/perf_thesis/perf_concurrency.tex
+0ee8eab07374e74a0cd08fbcf411c53973e72b083243d99c5b4b024584c876e2  analysis/out/perf_thesis/perf_size.pdf
+e9e7f8ec5ef6042ed4d9cd958661a89f35febbb6eb83415abc12ae5662a76fcf  analysis/out/perf_thesis/perf_size.png
+3ca07b9cb1191aa1d23b00a5822f0f5e98fe1c3fd609562d68d4f07caa473048  analysis/out/perf_thesis/perf_concurrency.pdf
+d16cc4bc01aea92f4744080018500847e3b7fdab8564a0f9f0ad78ab5861da57  analysis/out/perf_thesis/perf_concurrency.png
+fb01c181c6485fb91e275ccd5e87f9c5200033b8f920000b56f1a20e93fc81ec  analysis/out/perf_thesis/perf_mixed.pdf
+e880861a7ac3d61a8d0a2968a43bbb13170614442ba803c3fe2df10eb4e6470f  analysis/out/perf_thesis/perf_mixed.png
