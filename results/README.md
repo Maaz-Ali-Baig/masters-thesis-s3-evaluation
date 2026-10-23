@@ -1,8 +1,9 @@
-# Raw Benchmark Data
+# Supporting Results and Evidence
 
-Raw output from Warp/ossperf runs — throughput, latency, concurrency, and compatibility results
-per system (maps to Appendix B — "Raw Benchmark Data" — in the thesis). Kept as plain CSV/JSON
-where possible so results are diffable and reviewable in git.
+Result records and raw output from the Warp and ossperf runs and from the compatibility, security
+and fault tolerance series (they support Appendix B, "Supporting Results and Evidence", of the
+thesis). The files are plain text, TSV, CSV and JSON where possible, so that results can be compared
+and reviewed in git.
 
 ## How to read this folder
 

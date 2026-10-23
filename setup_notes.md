@@ -14,7 +14,8 @@
   into the current working directory, which is how `warp-put-…json.zst` ended up in the repository root
   after the first run. The benchdata file is not a by-product — `warp analyze` can regenerate reports,
   re-slice by time window and export CSV from it without re-running the benchmark, so for real
-  measurement runs these files *are* the raw data behind Appendix B.
+  measurement runs these files *are* the raw data behind the performance results of the thesis (see
+  Appendix B, "Supporting Results and Evidence").
 - Garage additionally requires `--region garage`; without it Warp signs with `us-east-1` and fails with
   `AuthorizationHeaderMalformed` (Issue 6). Pass credentials via shell variables sourced from
   `~/.thesis-s3-env` rather than typing them on the command line, to keep the secret out of shell history
