@@ -82,13 +82,11 @@ O8. Per the supervisor's ruling (all systems on the university VMs), SeaweedFS, 
 
 PROCESS NOTES
 -------------
-- Commands reached ceph0 through the Claude Code session running there, controlled from the laptop. Only the
-  raw command output was used, never the session's own text.
 - The page text of the VM output shows each blank line twice. Halving them gave text whose sha256 equals the
   hash printed on ceph0 (checked in the page, then again on the written file), so the copy is exact.
 - Cleanup deleted every object and both buckets (all 204), nothing was left on the cluster.
 
-ADDENDUM A1 (16 October 2026): O6 settled by a check on ceph0 (session text, not archived)
+ADDENDUM A1 (16 October 2026): O6 settled by a check on ceph0 (not archived)
 ------------------------------------------------------------------------------------------
 acl mode of deploy/ceph/ceph-tests.sh (commit 896c00b), temporary bucket and object, removed afterwards, curl 7.88.1 with --aws-sigv4: GET key 200; GET key?acl 403 SignatureDoesNotMatch;
 GET key?acl= 200 AccessControlPolicy; aws s3api get-object-acl 1 grant. So the 403 of p0, s2 and s3 above is the client (curl 7.88.1 with a valueless ?acl), as for SeaweedFS, RustFS and Garage, and

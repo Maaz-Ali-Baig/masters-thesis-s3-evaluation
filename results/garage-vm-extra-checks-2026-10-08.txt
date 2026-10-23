@@ -3,7 +3,7 @@ Garage v1.0.0, three nodes on the university VMs: four further checks (8 October
 
 Cluster:  ceph0 (hostname debian, 192.168.1.72), ceph1 (192.168.1.71), ceph2 (192.168.1.70), replication factor 3,
           zones z1, z2, z3, layout version 1 (setup_notes.md, section "Garage v1.0.0 on the three VMs").
-Method:   commands typed into the Claude sessions on the three VMs, output read from the screen and checked, where
+Method:   commands run on the three VMs in terminal sessions with an AI coding assistant, only the raw output read from the screen and checked, where
           it carries a hash, against a second value. The hostname is printed first in every output.
 Times:    UTC on the VMs, afternoon of 8 October 2026 (the clock readings that matter are given per check).
 

@@ -92,7 +92,7 @@ safe.)
 
 1. Never a write to /dev/sdb on the Ceph VMs.
 2. The result files get hashes on the VM and on the laptop (as for the compat probe).
-3. The VM Claude sessions are used as before: hostname first in every command, output copied character for character,
+3. The VM terminal sessions with the AI coding assistant are used as before: hostname first in every command, output copied character for character,
    important values checked by hash on the VM.
 4. The first system is RustFS and its run is a dry run for the scripts. If the script has to be corrected, the first run
    stays in the record as a first run.

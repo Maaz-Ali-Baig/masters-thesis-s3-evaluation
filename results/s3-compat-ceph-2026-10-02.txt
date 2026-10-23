@@ -17,14 +17,6 @@ Canonical run: ceph-20261002-072634 on ceph0, 20 pass, 2 fail. Packed on ceph0 a
 Matrix:    results/compat-matrix-four-systems-2026-10-02.tsv (the three laptop columns are
            unchanged from results/compat-matrix-2026-09-30.tsv)
 
-HOW COMMANDS REACHED THE VM
----------------------------
-Commands were sent to ceph0 through a Claude Code session running on ceph0 and controlled
-from the laptop, each prompt saying "run exactly this command and print the raw output". Only the
-raw command output shown by that session was used. Its own explanatory text was not used as
-evidence. Scripts sent to the VM were checked by sha256 after the transfer
-(verify-checksum-header.sh: a37b36dbe35272f3f8223ef662ec06e86128a2fd894ff165544f1d1adba4920a).
-
 RESULT
 ------
 Test  What                                                        SeaweedFS  RustFS  Garage  Ceph

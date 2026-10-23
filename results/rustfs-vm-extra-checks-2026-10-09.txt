@@ -4,7 +4,7 @@ RustFS 1.0.1, three nodes on the university VMs: four further checks (9 October 
 Cluster:  ceph0 (hostname debian, 192.168.1.72), ceph1 (192.168.1.71), ceph2 (192.168.1.70), one container each, rustfs 1.0.1
           (image sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c), one volume list of six drives (two per node), S3 on
           port 9000, console on port 9001 (setup_notes.md, sections "RustFS on the three VMs").
-Method:   commands typed into the Claude sessions on the three VMs, output read from the screen and checked, where it carries a hash, against a
+Method:   commands run on the three VMs in terminal sessions with an AI coding assistant, only the raw output read from the screen and checked, where it carries a hash, against a
           second value on the VM itself (sha256sum -c). The hostname is printed first in every output.
 Times:    the VM clock shows local time (UTC+2) in the date lines and the file names.
 Objects:  bucket ecbucket with ec6.bin (6291456 bytes, sha256 2f9ead59f6b4c63533322575c1fa0aa4c90af5e2d86a59b80ac0802bee7b0bc8) and ec100.bin

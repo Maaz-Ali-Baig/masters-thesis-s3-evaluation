@@ -118,7 +118,7 @@ thesis says so and does not treat the difference between systems as clean.
 2. Pre flight.
 3. Series 1, 2 and 3 in this order, each configuration: warm up, three recorded runs, free space check, clean state.
 4. Control measurements again. Result files hashed and archived the same day. Output of the load node pulled out by
-   the usual route (the VM Claude session or scp typed by the user).
+   the usual route (a terminal session with the AI coding assistant on the VM, or scp typed by the user).
 Each step is a script with a pinned hash (like deploy/*/ *-tests.sh), run on the load node and ceph0 as needed.
 
 ## 10. Threats to validity (written down now, to be repeated in the thesis)

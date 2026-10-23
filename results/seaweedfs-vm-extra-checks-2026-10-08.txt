@@ -4,7 +4,7 @@ SeaweedFS 4.25, three nodes on the university VMs: four further checks (8 Octobe
 Cluster:  ceph0 (hostname debian, 192.168.1.72), ceph1 (192.168.1.71), ceph2 (192.168.1.70), three masters, three volume
           servers, three filers with S3, default replication 002, one data center dc1 and one rack rack1 (setup_notes.md,
           section "SeaweedFS on the three VMs"). Buckets are collections, so a volume file is named <bucket>_<volume id>.dat.
-Method:   commands typed into the Claude sessions on the three VMs, output read from the screen and checked, where it
+Method:   commands run on the three VMs in terminal sessions with an AI coding assistant, only the raw output read from the screen and checked, where it
           carries a hash, against a second value on the VM itself. The hostname is printed first in every output.
 Times:    the VM clock shows local time (UTC+2) in file names and in the podman messages, UTC where stated.
 
