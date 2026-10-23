@@ -1,0 +1,9 @@
+Thesis layout of the compatibility matrix: inputs and outputs
+=============================================================
+
+repository commit: f27fa5d6f86c873665e31977fb314b4f686b45c6
+working tree (analysis, results): clean
+python 3.12.3
+
+c526ab6c2ab24741fd0d8150499d36a2610ca5263ec26ed176a4b3e557ec57ff  analysis/out/compat/compat_cells.csv
+f3d142584c1eb9de9711bda061835f66b7ff8d6158be751e471ebea7acad6cff  analysis/out/compat_thesis/compat_matrix.tex

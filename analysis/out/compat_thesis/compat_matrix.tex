@@ -1,0 +1,33 @@
+\begin{tabularx}{\textwidth}{@{}lXllll@{}}
+\toprule
+Test & Feature & Ceph & SeaweedFS & RustFS & Garage \\
+\midrule
+C01 & Buckets & PASS & PASS & PASS & PASS \\
+C02 & Objects & PASS & PASS & PASS & PASS \\
+C03 & Headers and metadata & PASS & PASS & PASS & PASS \\
+C04 & Range reads & PASS & PASS & PASS & PASS \\
+C05 & Server-side copy & PASS & PASS & PASS & PASS \\
+C06 & Listing & PASS & PASS & PASS & PASS \\
+C07 & Deletion & PASS & PASS & PASS & PASS \\
+\midrule
+C08 & Multipart upload & PASS & PASS & PASS & FAIL \\
+C09 & Tagging & PASS & PASS & PASS & UNSUPPORTED \\
+C10 & Versioning & PASS & PASS & PASS & UNSUPPORTED \\
+C11 & Conditional reads & PASS & PASS & PASS & FAIL \\
+C12 & Conditional writes & PASS & PASS & PASS & FAIL \\
+C13 & Presigned URLs & PASS & PASS & PASS & FAIL \\
+C14 & Bucket policy & PASS & PASS & PASS & UNSUPPORTED \\
+C15 & CORS & PASS & PASS & PASS & FAIL \\
+C16 & Lifecycle configuration & PASS & PASS & PASS & FAIL \\
+C17 & Object lock & PASS & PASS & PASS & UNSUPPORTED \\
+C18 & SSE-S3 (API only) & FAIL\textsuperscript{a} & FAIL\textsuperscript{a} & PASS\textsuperscript{a} & UNSUPPORTED \\
+C19 & ACLs & PASS & FAIL & FAIL & UNSUPPORTED \\
+C20 & Integrity checksums & FAIL & PASS & PASS & FAIL \\
+C21 & Unusual object keys & PASS & FAIL & FAIL & FAIL \\
+C22 & Error codes & PASS & FAIL & PASS & FAIL \\
+\midrule
+ & PASS (of 22) & 20 & 18 & 20 & 7 \\
+ & FAIL (of 22) & 2 & 4 & 2 & 9 \\
+ & UNSUPPORTED (of 22) & 0 & 0 & 0 & 6 \\
+\bottomrule
+\end{tabularx}

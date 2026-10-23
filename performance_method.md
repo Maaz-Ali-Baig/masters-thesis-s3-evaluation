@@ -1,6 +1,6 @@
 # Performance method for the four systems on the university VMs
 
-Status: DRAFT of 10 October 2026, not yet approved. Nothing in this file has been run. Every number below that is a
+Status: written on 10 October 2026, before the runs on the VMs. The runs and any deviations from this method are in the records in `results/`. Every number below that is a
 setting (not a result) is a proposal, and the places where a proposal rests on an earlier measurement name the record.
 
 ## 1. Question and scope

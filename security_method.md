@@ -1,6 +1,6 @@
 # Security method for the four systems on the university VMs
 
-Status: DRAFT of 10 October 2026, not yet approved. Nothing in this file has been run. The same checks are done on
+Status: written on 10 October 2026, before the runs on the VMs. The runs and any deviations from this method are in the records in `results/`. The same checks are done on
 Ceph, SeaweedFS, RustFS and Garage, as deployed (defaults, no hardening), one system at a time. "As deployed" is the
 point: the question is what an operator gets without extra work, and then what is possible with a small change.
 

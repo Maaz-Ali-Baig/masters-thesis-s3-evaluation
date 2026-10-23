@@ -1,6 +1,6 @@
 # Fault tolerance method for the four systems on the university VMs
 
-Status: DRAFT of 10 October 2026, not yet approved. Nothing in this file has been run. Statements about what a system
+Status: written on 10 October 2026, before the runs on the VMs. The runs and any deviations from this method are in the records in `results/`. Statements about what a system
 will do under failure are HYPOTHESES to be settled by the test, never findings.
 
 ## 1. Question

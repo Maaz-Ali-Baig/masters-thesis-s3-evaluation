@@ -31,8 +31,9 @@ __pycache__/
 awscliv2.zip
 aws/
 
-# Internal planning docs, not for the tracked repo history
+# Local working files, not part of the repository
 Context/
+.claude/
 
 
 # Probe evidence folders hold thousands of small files. The canonical runs are committed as
