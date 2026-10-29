@@ -2044,7 +2044,7 @@ CONSISTENT WITH, NOT PROVEN: the crash is this AVX2 instruction running on a CPU
 
 **A failed test of mine:** a single node run with four directories on one disk (control beta.8 and 1.0.1) exited with code 1 for both. The log of 1.0.1 says `[FATAL] Server runtime failed: local erasure endpoints must use distinct physical disks; detected shared devices [8:32 => ...]`. So 1.0.1 checks that the drives of a node are on distinct devices. This did not test the AVX2 question (the control did not crash either), and the test folder was removed.
 
-**Decision (Maaz, 8 October 2026):** redo RustFS before reporting anything, with the 1.0.1 image (pinned by digest in `rustfs-node.sh`, commit 760cdd0). The small `.rustfs.sys` folders (4 KB each) of the failed start were removed on all three VMs (looked at first, size under 16 KB). Consequence: the laptop RustFS runs (compat probe, presign, SigV4 test) used beta.8 and have to be repeated on 1.0.1 and labelled by version.
+**Decision (8 October 2026):** redo RustFS before reporting anything, with the 1.0.1 image (pinned by digest in `rustfs-node.sh`, commit 760cdd0). The small `.rustfs.sys` folders (4 KB each) of the failed start were removed on all three VMs (looked at first, size under 16 KB). Consequence: the laptop RustFS runs (compat probe, presign, SigV4 test) used beta.8 and have to be repeated on 1.0.1 and labelled by version.
 Still open: whether 1.0.1 starts and stays up on the 3 nodes (first test), whether RustFS accepts 3 nodes (the docs say 4 servers), whether the two drives of a node count as distinct physical disks (disk1 and disk2 are different devices on the VMs, the device numbers were not printed).
 
 ## RustFS 1.0.1 on the three VMs: start and roundtrip (9 October 2026)

@@ -33,7 +33,7 @@ results/warp-ceph-coresidency-2026-09-23.txt). A co-resident client takes CPU fr
 bias is larger for a system that spends more CPU per request. So the load generator must not share a node with the
 storage it measures.
 
-Decision of 10 October 2026 (Maaz): nobody is asked for an extra VM, this is not a critical decision. Warp runs on ceph2
+Decision of 10 October 2026: nobody is asked for an extra VM, this is not a critical decision. Warp runs on ceph2
 and talks to the S3 endpoints of all three nodes (option B). Then ceph2 carries the client cost for every system. The
 bias is the same in kind for all four systems but not in size, and the thesis states it as a limit. An extra load VM
 (option A, 4 vCPU on the same subnet) would be better and is named in the thesis as the improvement for later work.
@@ -135,13 +135,13 @@ Each step is a script with a pinned hash (like deploy/*/ *-tests.sh), run on the
 8. The S3 endpoint list per system (does each system answer S3 on all three nodes?) is assumed from the deployments and is
    checked in the pre flight. OPEN until then.
 
-## 11. Decisions needed from Maaz before the first run
+## 11. Decisions needed before the first run
 
 1. Load node: settled on 10 October, Warp on ceph2, nobody asked (section 3).
 2. Series and sizes as in section 5 (16 configurations of 3.5 minutes plus the mixed run)?
 3. drop_caches before every GET run on the storage nodes: yes (needs decision 5).
 4. ossperf as small secondary set at the end: yes, or only if time remains?
-5. Key based ssh from ceph2 to ceph0 and ceph1 (two commands typed by Maaz, the key pair is removed at the end of the VM
+5. Key based ssh from ceph2 to ceph0 and ceph1 (the key pair is removed at the end of the VM
    work): needed for the free space check, the cache drop and sar on the storage nodes. The script scripts/perf-warp.sh also runs
    without it, but then only ceph2 is monitored and the record says so.
 

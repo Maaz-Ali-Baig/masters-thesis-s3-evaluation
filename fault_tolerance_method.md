@@ -22,7 +22,7 @@ with the common method.
 
 ## 2. How the failure is made
 
-Hard stop of the virtual machine through Proxmox (power off, not a shutdown), done by Maaz. This is the closest to a power
+Hard stop of the virtual machine through Proxmox (power off, not a shutdown). This is the closest to a power
 loss that the platform allows and it is identical for all four systems. A container kill is not used as the main test
 (the page cache of the host survives it). The containers have --restart no, so after the VM boots the system is started
 again with its node script (Ceph starts by itself through its systemd target). The time between VM boot and system start
